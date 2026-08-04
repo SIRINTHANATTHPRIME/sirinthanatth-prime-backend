@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIRINTHANATTH PRIME - Enterprise AI SaaS & Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --bg-card: #131b2e;
+            --gold-primary: #D4AF37;
+            --gold-hover: #F3E5AB;
+            --cyan-accent: #00f2fe;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(212, 175, 55, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', 'Sarabun', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: rgba(10, 14, 23, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gold-primary);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .btn-line {
+            background: linear-gradient(135deg, #00B900 0%, #009900 100%);
+            color: #ffffff;
+            padding: 10px 24px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 185, 0, 0.3);
+        }
+
+        .btn-line:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 185, 0, 0.5); }
+
+        /* Hero */
+        .hero { padding: 80px 0 60px; text-align: center; }
+        .hero-title {
+            font-size: 42px; font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, var(--gold-primary) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 20px; line-height: 1.3;
+        }
+        .hero-subtitle { font-size: 18px; color: var(--text-muted); max-width: 800px; margin: 0 auto 40px; font-family: 'Sarabun', sans-serif; }
+
+        /* Video Section */
+        .video-section { padding: 60px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .video-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 20px; padding: 30px; display: flex; flex-direction: column; gap: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease;
+        }
+        .video-card:hover { transform: translateY(-5px); border-color: var(--gold-primary); }
+        .video-badge {
+            display: inline-block; background: rgba(212, 175, 55, 0.15); color: var(--gold-primary);
+            padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 10px; border: 1px solid var(--gold-primary);
+        }
+        .video-title { font-size: 26px; color: var(--text-main); margin-bottom: 12px; }
+        .video-desc { color: var(--text-muted); font-size: 15px; font-family: 'Sarabun', sans-serif; line-height: 1.8; }
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 12px; background: #000; border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-wrapper video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+
+        /* Trust Guarantee */
+        .trust-guarantee {
+            padding: 80px 0; text-align: center;
+            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.08) 0%, rgba(10, 14, 23, 1) 70%);
+            border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin: 40px 0;
+        }
+        .trust-seal-img { width: 260px; height: auto; margin-bottom: 30px; filter: drop-shadow(0px 10px 25px rgba(212, 175, 55, 0.3)); transition: transform 0.4s ease; }
+        .trust-seal-img:hover { transform: scale(1.05); }
+        .trust-title { color: var(--gold-primary); font-size: 32px; font-weight: 700; margin-bottom: 15px; }
+        .trust-desc { color: #cbd5e1; font-size: 16px; max-width: 850px; margin: 0 auto 30px; font-family: 'Sarabun', sans-serif; line-height: 1.8; }
+        .trust-features { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; }
+        .trust-item { background: rgba(19, 27, 46, 0.8); border: 1px solid var(--border-color); padding: 12px 20px; border-radius: 30px; font-size: 14px; color: var(--text-main); }
+        .trust-item span { color: var(--gold-primary); margin-right: 8px; }
+
+        /* VIP Presale Section */
+        .vip-presale {
+            background: linear-gradient(180deg, #0a0e17 0%, #161f33 100%);
+            padding: 80px 20px; border-top: 2px solid var(--gold-primary); border-bottom: 2px solid var(--gold-primary);
+        }
+        .vip-card {
+            background: rgba(19, 27, 46, 0.95); border: 2px solid var(--gold-primary); border-radius: 20px;
+            padding: 40px; box-shadow: 0 0 35px rgba(212, 175, 55, 0.25);
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1000px; margin: 0 auto;
+        }
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 20px; border-radius: 15px; max-width: 600px; margin: 0 auto 40px;
+        }
+        
+        /* Pricing Normal */
+        .pricing-section { padding: 80px 0; text-align: center; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 50px; }
+        .price-card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
+            padding: 40px 30px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s ease;
+        }
+        .price-amount { font-size: 38px; font-weight: 700; color: var(--text-main); margin: 20px 0; }
+        .price-amount span { font-size: 16px; color: var(--text-muted); font-weight: 400; }
+        .price-features { list-style: none; text-align: left; margin: 20px 0 30px; font-family: 'Sarabun', sans-serif; font-size: 15px; }
+        .price-features li { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-muted); }
+        .price-features li::before { content: "✓"; color: var(--cyan-accent); margin-right: 10px; font-weight: bold; }
+        .btn-upgrade {
+            background: linear-gradient(135deg, var(--gold-primary) 0%, #B8860B 100%);
+            color: #000; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: block; transition: all 0.3s ease;
+        }
+        .btn-upgrade:hover { background: linear-gradient(135deg, var(--gold-hover) 0%, var(--gold-primary) 100%); box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4); }
+
+        footer { padding: 40px 0; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-muted); font-size: 14px; font-family: 'Sarabun', sans-serif; }
+
+        @media (max-width: 900px) {
+            .vip-card { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .hero-title { font-size: 30px; }
+            .trust-title { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container nav-container">
+            <a href="#" class="logo">SIRINTHANATTH PRIME</a>
+            <a href="https://lin.ee/xxxxxx" class="btn-line" target="_blank">💬 เชื่อมต่อผ่าน LINE OA</a>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">เมื่อปัญญาประดิษฐ์ระดับบริหาร<br>สอดประสานเข้ากับทุกจังหวะธุรกิจของคุณ</h1>
+            <p class="hero-subtitle">
+                ยินดีต้อนรับสู่ SIRINTHANATTH PRIME แพลตฟอร์ม AI SaaS อัจฉริยะที่ถูกออกแบบมาเพื่อเป็นเลขาผู้ช่วยส่วนตัวระดับท็อป 
+                เข้าถึงง่ายผ่าน LINE คุ้มครองความเสี่ยงทางกฎหมาย 360 องศา พร้อมสตูดิโอสร้างสื่อ 4K อัตโนมัติ
+            </p>
+        </div>
+    </section>
+
+    <section class="video-section">
+        <div class="container">
+            <div class="video-card">
+                <div class="video-header">
+                    <span class="video-badge">MODULE 1: GRAND OVERVIEW</span>
+                    <h2 class="video-title">1. ขุมพลังสมองกลผู้บริหารและสถาปัตยกรรมระดับโลก</h2>
+                    <p class="video-desc">รับชมวิดีโอแนะนำนวัตกรรม SIRINTHANATTH PRIME ขับเคลื่อนด้วยขุมพลัง Google Generative AI ผสานสถาปัตยกรรม Hybrid Router อัจฉริยะ สลับการประมวลผลเรียลไทม์เพื่อความรวดเร็วและแม่นยำขั้นสุด พร้อมระบบ RAG Long-term Memory จดจำบริบทธุรกิจของคุณประดุจ CEO ส่วนตัว</p>
+                </div>
+                <div class="video-wrapper">
+                    <video controls poster="bg_template.jpg">
+                        <source src="SIRINTHANATTH_PRIME_Promo.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="video-section">
+        <div class="container">
+            <div class="video-card">
+                <div class="video-header">
+                    <span class="video-badge">MODULE 2: WORKER 11 MEDIA STUDIO</span>
+                    <h2 class="video-title">2. สตูดิโอผลิตสื่อโฆษณา 4K และเสียงพากย์ AI อัตโนมัติ</h2>
+                    <p class="video-desc">เนรมิตโฆษณาระดับสตูดิโอ 4K และเสียงพากย์ทรงพลังในเวลาเพียงไม่กี่นาที ผ่านการสั่งงานทาง LINE OA ระบบ Worker 11 (GPU Engine) จะช่วยร่างสคริปต์ให้คุณตรวจอนุมัติก่อนเรนเดอร์จริง พร้อมระบบคิดราคาตามจริงรายนาที (Per-Minute Billing) ช่วยประหยัดงบโฆษณาได้กว่า 90%</p>
+                </div>
+                <div class="video-wrapper">
+                    <video controls poster="bg_template.jpg">
+                        <source src="worker_11_demo.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="video-section">
+        <div class="container">
+            <div class="video-card">
+                <div class="video-header">
+                    <span class="video-badge">MODULE 3: LOGISTICS & LEGAL PROTECTION</span>
+                    <h2 class="video-title">3. ระบบช่วยขาย ออเดอร์อัตโนมัติ และเกราะป้องกันทางกฎหมาย</h2>
+                    <p class="video-desc">เปลี่ยนทุกแชทเป็นยอดขาย ตรวจสลิปโอนเงินอัตโนมัติ พร้อมเรียกรถขนส่ง Flash Express และออกใบปะหน้าให้อัตโนมัติผ่าน Smart Wallet เสริมด้วยเกราะป้องกัน 360° Legal Shield คอยสแกนข้อความโฆษณา ตรวจสอบความถูกต้องตามกฎหมาย อย., สคบ., และ PDPA</p>
+                </div>
+                <div class="video-wrapper">
+                    <video controls poster="bg_template.jpg">
+                        <source src="ecommerce_legal_demo.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="trust-guarantee">
+        <div class="container">
+            <img src="1000098274.png" alt="SIRINTHANATTH PRIME Guarantee Seal" class="trust-seal-img">
+            <h2 class="trust-title">มาตรฐานระดับสากล ที่ผู้บริหารองค์กรไว้วางใจ</h2>
+            <p class="trust-desc">ทุกระบบปฏิบัติการและสื่อทุกชิ้นที่ถูกสร้างขึ้น ผ่านการประมวลผลด้วยสถาปัตยกรรม AI มิติสูง ภายใต้การกำกับดูแลและรับรองคุณภาพโดย <strong>Marketing Spark Combine Co., Ltd.</strong> เราให้คำมั่นสัญญาในการปกป้องข้อมูล ความลับทางธุรกิจ และส่งมอบผลลัพธ์ที่เหนือความคาดหมายในทุกมิติ</p>
+            <div class="trust-features">
+                <div class="trust-item"><span>✓</span> เข้ารหัสข้อมูลขั้นสูงสุด (End-to-End Encryption)</div>
+                <div class="trust-item"><span>✓</span> รับรองความถูกต้องทางกฎหมาย (Legal Compliance)</div>
+                <div class="trust-item"><span>✓</span> จ่ายตามการใช้งานจริงผ่าน Smart Wallet</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="vip-presale">
+        <div class="container" style="text-align: center;">
+            <div style="display: inline-block; background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 6px 18px; border-radius: 30px; font-size: 14px; font-weight: 700; margin-bottom: 20px; letter-spacing: 1px;">
+                🚨 LIMITED PRESALE OFFER: จำกัดสิทธิ์เพียง 100 องค์กรแรกเท่านั้น
+            </div>
+            
+            <h2 style="font-size: 36px; color: var(--gold-primary); font-weight: 700; margin-bottom: 15px;">SIRINTHANATTH PRIME - VIP FOUNDER</h2>
+            <p style="color: #cbd5e1; font-size: 16px; max-width: 800px; margin: 0 auto 30px; font-family: 'Sarabun', sans-serif;">
+                ร่วมเป็น "ผู้ขับเคลื่อนระบบยุคบุกเบิก" กับเรา เพื่อสร้างอำนาจต่อรองระดับองค์กร<br>
+                ผู้ถือสิทธิ์ 100 ท่านแรก จะได้รับสิทธิ์การใช้งาน AI ขั้นสูงสุดทันที พร้อมการันตีล็อกราคาพิเศษนี้ตลอดชีพ
+            </p>
+
+            <div class="progress-container">
+                <div style="display: flex; justify-content: space-between; color: #f8fafc; font-size: 15px; font-weight: 600; margin-bottom: 10px;">
+                    <span>สิทธิ์ VIP ที่ถูกจับจองแล้ว</span>
+                    <span style="color: var(--gold-primary);">สิทธิ์คงเหลือ: <strong style="color: #ff4d4d; font-size: 18px;">18</strong> / 100</span>
+                </div>
+                <div style="background: #1e293b; height: 16px; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div style="background: linear-gradient(90deg, var(--gold-primary) 0%, #ff4d4d 100%); width: 82%; height: 100%; border-radius: 10px;"></div>
+                </div>
+            </div>
+
+            <div class="vip-card">
+                <div style="text-align: left;">
+                    <h3 style="color: #ffffff; font-size: 24px; margin-bottom: 15px;">สิทธิประโยชน์ระดับ VIP Founder:</h3>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <span style="display: inline-block; background: #00B900; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 5px; margin-bottom: 5px; font-weight: bold;">ใช้งานได้ทันทีวันนี้</span>
+                        <ul class="price-features" style="margin: 10px 0;">
+                            <li><strong>ใช้งานระบบ AI เลขาส่วนตัวบน LINE OA</strong> เต็มรูปแบบ</li>
+                            <li><strong>ฟรีเครดิต 50 คลิป/เดือน</strong> (สื่อ 4K + เสียงพากย์จาก Worker 11)</li>
+                            <li><strong>คุ้มครองด้วย 360° Legal Shield</strong> ตรวจโฆษณา อย./สคบ.</li>
+                        </ul>
+                    </div>
+
+                    <div style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gold-primary); margin-bottom: 15px;">
+                        <span style="display: inline-block; background: var(--gold-primary); color: #000; font-size: 12px; padding: 2px 8px; border-radius: 5px; margin-bottom: 5px; font-weight: bold;">ปลดล็อกสิทธิ์พิเศษเฟส 2</span>
+                        <ul style="list-style: none; color: #cbd5e1; font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6;">
+                            <li>🚚 <strong>ล็อกค่าส่ง Flash Express เรท VIP (12 บาท/ชิ้น)</strong></li>
+                            <li style="color: #94a3b8; font-size: 12px; margin-top: 5px;">*เงื่อนไข: พัสดุน้ำหนักไม่เกิน 1 กก. และขนาดตามที่กำหนด (หักชำระผ่าน Smart Token)<br>*สิทธิ์ขนส่งจะปลดล็อกอัตโนมัติเมื่อรวมยอดสมาชิกระบบสำเร็จและเซ็นสัญญากับพาร์ทเนอร์</li>
+                        </ul>
+                    </div>
+
+                    <div style="background: rgba(255, 77, 77, 0.1); border: 1px dashed #ff4d4d; padding: 10px 15px; border-radius: 8px;">
+                        <span style="color: #ff4d4d; font-size: 14px; font-weight: bold;">🔒 LIFETIME PRICE LOCK GUARANTEE</span>
+                        <p style="color: #f8fafc; font-size: 13px; font-family: 'Sarabun', sans-serif; margin-top: 5px; line-height: 1.5;">สงวนสิทธิ์เฉพาะ 100 ท่านแรก: การันตีต่ออายุในราคานี้ตลอดชีพ ไม่ปรับราคาขึ้น</p>
+                    </div>
+                </div>
+
+                <div style="text-align: center; background: rgba(10, 14, 23, 0.8); padding: 30px; border-radius: 15px; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <div style="display: inline-block; background: var(--gold-primary); color: #000; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;">
+                        แพ็กเกจชำระรายปีเท่านั้น
+                    </div>
+                    <br>
+                    <span style="color: #94a3b8; font-size: 14px; text-decoration: line-through;">ราคาปกติ 12,000 บาท/ปี</span>
+                    <div style="color: var(--gold-primary); font-size: 46px; font-weight: 700; margin: 10px 0;">
+                        ฿4,490 <span style="font-size: 16px; color: #f8fafc; font-weight: 400;">/ จ่ายครั้งเดียว</span>
+                    </div>
+                    <p style="color: var(--cyan-accent); font-size: 13px; margin-bottom: 20px;">(เฉลี่ยตกเพียงเดือนละ 374 บาท)</p>
+
+                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="font-size: 18px; padding: 16px;">🔥 ชำระเงินจองสิทธิ์ VIP (PromptPay / บัตรเครดิต)</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing-section" id="pricing">
+        <div class="container">
+            <h2 style="font-size: 32px; color: var(--text-main); margin-bottom: 15px;">แพ็กเกจการใช้งานทั่วไป</h2>
+            <p style="color: var(--text-muted); font-family: 'Sarabun', sans-serif;">หรือเริ่มต้นใช้งานง่ายๆ ตามขนาดธุรกิจของคุณ</p>
+
+            <div class="pricing-grid">
+                <div class="price-card">
+                    <div class="price-header">
+                        <h3 style="color: var(--text-main);">Smart Wallet</h3>
+                        <p style="color: var(--text-muted); font-size: 14px;">เติมเงินตัดตามการใช้งานจริง</p>
+                    </div>
+                    <div class="price-amount">฿500 <span>/ เติมขั้นต่ำ</span></div>
+                    <ul class="price-features">
+                        <li>สร้างวิดีโอ 4K / เสียงพากย์ (คิดเป็นนาที)</li>
+                        <li>หักค่าจัดส่ง Flash Express อัตโนมัติ</li>
+                        <li>ใช้งานฟีเจอร์แชทวิเคราะห์ทั่วไปฟรี</li>
+                        <li>ไม่มีค่าบริการรายเดือนผูกมัด</li>
+                    </ul>
+                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="background: #334155; color: #fff;">เติมเงินเข้า Wallet</a>
+                </div>
+
+                <div class="price-card">
+                    <div class="price-header">
+                        <h3 style="color: var(--text-main);">Enterprise VIP</h3>
+                        <p style="color: var(--text-muted); font-size: 14px;">สำหรับองค์กรขนาดใหญ่</p>
+                    </div>
+                    <div class="price-amount">฿4,900 <span>/ เดือน</span></div>
+                    <ul class="price-features">
+                        <li>ไม่จำกัดการประมวลผลข้อมูล RAG</li>
+                        <li>การวิเคราะห์งบการเงินและหุ้น Real-time</li>
+                        <li>เชื่อมต่อระบบ ERP / Big Data องค์กร</li>
+                        <li>ผู้ช่วยดูแลระบบระดับ VIP 24/7</li>
+                    </ul>
+                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="background: #334155; color: #fff;">ติดต่อแผนกองค์กร</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 Marketing Spark Combine Co., Ltd. All Rights Reserved. | SIRINTHANATTH PRIME</p>
+        </div>
+    </footer>
+
+</body>
+</html>

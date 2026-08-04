@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-dotenv
+line-bot-sdk
+stripe
+google-generativeai
+supabase
+redis
+pydantic
+aiohttp
+moviepy==1.0.3
+gTTS
+Pillow
