@@ -3,363 +3,771 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIRINTHANATTH PRIME - Enterprise AI SaaS & Assistant</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>SIRINTHANATTH PRIME | Executive AI Ecosystem</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        :root {
-            --bg-dark: #0a0e17;
-            --bg-card: #131b2e;
-            --gold-primary: #D4AF37;
-            --gold-hover: #F3E5AB;
-            --cyan-accent: #00f2fe;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: rgba(212, 175, 55, 0.25);
-        }
-
-        * {
-            box-sizing: border-box;
+        * { box-sizing: border-box; }
+        
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
             margin: 0;
             padding: 0;
-            font-family: 'Prompt', 'Sarabun', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            line-height: 1.6;
+            font-family: 'Prompt', sans-serif;
+            background-color: #020202;
+            color: #ffffff;
             overflow-x: hidden;
+            position: relative;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Header */
-        header {
-            padding: 20px 0;
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
+        /* 🖼️ แบ็กกราวด์ปรับความจางลง 30% และเพิ่มความคมชัดระดับ 4K */
+        .page-bg-overlay {
+            position: fixed;
             top: 0;
-            background: rgba(10, 14, 23, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/1000097983.png'); 
+            background-size: cover;
+            background-position: center;
+            opacity: 0.7; 
+            z-index: -2;
+            pointer-events: none;
+            image-rendering: high-quality;
+            transform: translateZ(0); 
+            -webkit-backface-visibility: hidden;
+            filter: brightness(0.35) contrast(1.4) saturate(1.2); 
         }
 
-        .nav-container {
+        .page-dark-shade {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(2,2,4,0.6) 0%, rgba(0,0,1,0.98) 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        img { max-width: 100%; height: auto; }
+
+        /* ✨ เลเซอร์วิ่งด้านบนสุด */
+        .laser-sweep {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
+            animation: laserMove 5s infinite linear;
+            z-index: 1001;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        @keyframes laserMove {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* 🌟 Navbar Responsive */
+        .top-navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: clamp(10px, 2vw, 20px) clamp(15px, 4vw, 40px);
+            background: rgba(3, 3, 5, 0.95);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            width: 100%;
         }
-
-        .logo {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--gold-primary);
+        .nav-brand {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: clamp(1rem, 2vw, 1.25rem);
             letter-spacing: 1px;
-            text-decoration: none;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(255,255,255,0.25);
         }
 
-        .btn-line {
-            background: linear-gradient(135deg, #00B900 0%, #009900 100%);
+        /* 🚀 3D Embossed Typography & 4K Sharp Look สำหรับทุกตัวอักษร */
+        h1, h2, h3, p, span, li, a, label, input, button {
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(255, 255, 255, 0.15);
+        }
+
+        .main-title { 
+            font-size: clamp(2rem, 5vw, 4.2rem); 
+            text-align: center; 
+            line-height: 1.2; 
+            margin-top: 20px; 
+            font-weight: 800;
             color: #ffffff;
-            padding: 10px 24px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 185, 0, 0.3);
+            letter-spacing: clamp(1px, 0.5vw, 3px);
+            text-wrap: balance;
+            text-shadow: 0 3px 6px rgba(0,0,0,0.98), 0 5px 15px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.25);
         }
 
-        .btn-line:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 185, 0, 0.5); }
+        @keyframes primeGlow {
+            0% { text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(255, 215, 0, 0.2); color: #FFD700; }
+            50% { text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 40px rgba(255, 215, 0, 0.95), 0 0 60px rgba(255, 215, 0, 0.6); color: #ffffff; }
+            100% { text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(255, 215, 0, 0.2); color: #FFD700; }
+        }
 
-        /* Hero */
-        .hero { padding: 80px 0 60px; text-align: center; }
-        .hero-title {
-            font-size: 42px; font-weight: 700;
-            background: linear-gradient(135deg, #ffffff 0%, var(--gold-primary) 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 20px; line-height: 1.3;
+        .gold-text {
+            color: #FFD700;
+            animation: primeGlow 4s infinite ease-in-out;
         }
-        .hero-subtitle { font-size: 18px; color: var(--text-muted); max-width: 800px; margin: 0 auto 40px; font-family: 'Sarabun', sans-serif; }
 
-        /* Video Section */
-        .video-section { padding: 60px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .video-card {
-            background: var(--bg-card); border: 1px solid var(--border-color);
-            border-radius: 20px; padding: 30px; display: flex; flex-direction: column; gap: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease;
+        .section-title {
+            font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+            font-weight: 800;
+            color: #E0E0E0;
+            letter-spacing: 1px;
+            text-wrap: balance;
+            text-align: center;
+            text-shadow: 0 3px 6px rgba(0,0,0,0.95), 0 0 18px rgba(0, 150, 255, 0.35);
         }
-        .video-card:hover { transform: translateY(-5px); border-color: var(--gold-primary); }
-        .video-badge {
-            display: inline-block; background: rgba(212, 175, 55, 0.15); color: var(--gold-primary);
-            padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 10px; border: 1px solid var(--gold-primary);
-        }
-        .video-title { font-size: 26px; color: var(--text-main); margin-bottom: 12px; }
-        .video-desc { color: var(--text-muted); font-size: 15px; font-family: 'Sarabun', sans-serif; line-height: 1.8; }
-        .video-wrapper {
-            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
-            border-radius: 12px; background: #000; border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .video-wrapper video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 
-        /* Trust Guarantee */
-        .trust-guarantee {
-            padding: 80px 0; text-align: center;
-            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.08) 0%, rgba(10, 14, 23, 1) 70%);
-            border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin: 40px 0;
-        }
-        .trust-seal-img { width: 260px; height: auto; margin-bottom: 30px; filter: drop-shadow(0px 10px 25px rgba(212, 175, 55, 0.3)); transition: transform 0.4s ease; }
-        .trust-seal-img:hover { transform: scale(1.05); }
-        .trust-title { color: var(--gold-primary); font-size: 32px; font-weight: 700; margin-bottom: 15px; }
-        .trust-desc { color: #cbd5e1; font-size: 16px; max-width: 850px; margin: 0 auto 30px; font-family: 'Sarabun', sans-serif; line-height: 1.8; }
-        .trust-features { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; }
-        .trust-item { background: rgba(19, 27, 46, 0.8); border: 1px solid var(--border-color); padding: 12px 20px; border-radius: 30px; font-size: 14px; color: var(--text-main); }
-        .trust-item span { color: var(--gold-primary); margin-right: 8px; }
-
-        /* VIP Presale Section */
-        .vip-presale {
-            background: linear-gradient(180deg, #0a0e17 0%, #161f33 100%);
-            padding: 80px 20px; border-top: 2px solid var(--gold-primary); border-bottom: 2px solid var(--gold-primary);
-        }
-        .vip-card {
-            background: rgba(19, 27, 46, 0.95); border: 2px solid var(--gold-primary); border-radius: 20px;
-            padding: 40px; box-shadow: 0 0 35px rgba(212, 175, 55, 0.25);
-            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; max-width: 1000px; margin: 0 auto;
-        }
-        .progress-container {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.3);
-            padding: 20px; border-radius: 15px; max-width: 600px; margin: 0 auto 40px;
+        .card h3 {
+            font-weight: 800;
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            text-wrap: balance;
         }
         
-        /* Pricing Normal */
-        .pricing-section { padding: 80px 0; text-align: center; }
-        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 50px; }
-        .price-card {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
-            padding: 40px 30px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s ease;
-        }
-        .price-amount { font-size: 38px; font-weight: 700; color: var(--text-main); margin: 20px 0; }
-        .price-amount span { font-size: 16px; color: var(--text-muted); font-weight: 400; }
-        .price-features { list-style: none; text-align: left; margin: 20px 0 30px; font-family: 'Sarabun', sans-serif; font-size: 15px; }
-        .price-features li { padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-muted); }
-        .price-features li::before { content: "✓"; color: var(--cyan-accent); margin-right: 10px; font-weight: bold; }
-        .btn-upgrade {
-            background: linear-gradient(135deg, var(--gold-primary) 0%, #B8860B 100%);
-            color: #000; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: block; transition: all 0.3s ease;
-        }
-        .btn-upgrade:hover { background: linear-gradient(135deg, var(--gold-hover) 0%, var(--gold-primary) 100%); box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4); }
+        .card-prime h3 { color: #FFD700; }
 
-        footer { padding: 40px 0; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-muted); font-size: 14px; font-family: 'Sarabun', sans-serif; }
+        .subtitle { 
+            font-size: clamp(1rem, 1.9vw, 1.3rem); 
+            padding: 0 clamp(10px, 3vw, 20px); 
+            text-align: center; 
+            color: #e2e8f0; 
+            line-height: 1.8; 
+            margin: 20px auto;
+            max-width: 850px;
+            font-weight: 400;
+            text-wrap: pretty;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.98), 0 0 12px rgba(255, 255, 255, 0.2);
+            border-left: 3px solid rgba(255, 215, 0, 0.5);
+            border-right: 3px solid rgba(255, 215, 0, 0.5);
+            background: rgba(10, 10, 15, 0.6); 
+            padding-top: 12px;
+            padding-bottom: 12px;
+            border-radius: 8px;
+        }
+        
+        .features li { 
+            line-height: 1.6;
+            margin-bottom: 12px;
+            font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+            color: #e2e8f0;
+        }
+        .feature-highlight { color: #00e5ff; font-weight: 600; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+        .legal-highlight { color: #FFD700; font-weight: 600; text-shadow: 0 0 12px rgba(255,215,0,0.5); }
 
-        @media (max-width: 900px) {
-            .vip-card { grid-template-columns: 1fr; }
+        /* ✨ ปุ่มทุกปุ่ม นูน 3D คมชัด 4K ทันสมัย */
+        .btn-3d {
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            position: relative;
+            z-index: 1;
+            padding: clamp(10px, 1.5vw, 14px) clamp(20px, 3vw, 28px);
+            border-radius: 10px;
+            font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.6);
         }
-        @media (max-width: 768px) {
-            .hero-title { font-size: 30px; }
-            .trust-title { font-size: 24px; }
+        .btn-3d:active {
+            transform: translateY(2px);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.8);
         }
-    </style>
+
+        .btn-gold { 
+            background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #C59B1B 100%); 
+            color: #020202 !important; 
+            font-weight: 800; 
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(255, 215, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        }
+        .btn-gold:hover { 
+            transform: translateY(-2px); 
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(255, 215, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); 
+        }
+
+        .btn-cyan { 
+            background: linear-gradient(135deg, #33EDFF 0%, #00e5ff 50%, #008299 100%); 
+            color: #020202 !important; 
+            font-weight: 800; 
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(0, 229, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        }
+        .btn-cyan:hover { 
+            transform: translateY(-2px); 
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(0, 229, 255, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); 
+        }
+
+        .hero-section { padding: clamp(40px, 8vw, 90px) 20px; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .content-container { max-width: 1100px; width: 100%; margin: 0 auto; }
+        .logo { width: clamp(100px, 18vw, 160px); height: auto; cursor: pointer; transition: transform 0.3s ease; filter: drop-shadow(0 0 20px rgba(255,215,0,0.4)); }
+        .logo:hover { transform: scale(1.05); }
+
+        .action-buttons { display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; padding: 0 20px; margin-top: 30px; }
+        
+        .pricing-section { padding: clamp(40px, 6vw, 80px) 20px; }
+        .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 40px auto 0; }
+        
+        .card { padding: 30px 20px; background: rgba(10, 10, 15, 0.92); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        .card-prime { border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.96); position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12); }
+
+        /* 🎚️ Billing Switch Styling */
+        .billing-toggle { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 30px; }
+        .billing-label { font-size: 0.95rem; color: #888; font-weight: 600; transition: color 0.3s; }
+        .billing-label.active { color: #FFD700; text-shadow: 0 0 12px rgba(255,215,0,0.5); }
+        .switch { position: relative; display: inline-block; width: 52px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.2); transition: .4s; border-radius: 34px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: linear-gradient(135deg, #FFE84D, #DAA520); transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.7); }
+        input:checked + .slider { background-color: #080808; border-color: #FFD700; }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        .site-footer { text-align: center; padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 60px; font-size: 0.85rem; color: #666; background: #010101; }
+        .site-footer a { color: #888; text-decoration: none; margin: 0 10px; transition: color 0.3s; }
+        .site-footer a:hover { color: #FFD700; }
+
+        @media (min-width: 992px) {
+            .action-buttons { flex-direction: row; justify-content: center; }
+            .card-prime { transform: scale(1.04); z-index: 2; }
+        }
+    
+        /* =========================================
+           ส่วนที่แทรกใหม่ (วิดีโอ 3D และ Core Values)
+           ========================================= */
+        .title-3d {
+            font-size: 3.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin: 50px 0 20px;
+            color: #D4AF37;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 
+                0 1px 0 #b3922e,
+                0 2px 0 #a38529,
+                0 3px 0 #927725,
+                0 4px 0 #826a20,
+                0 5px 10px rgba(0,0,0,0.5),
+                0 0 20px rgba(212, 175, 55, 0.6),
+                0 0 40px rgba(212, 175, 55, 0.4);
+        }
+
+        .subtitle-3d {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #aaaaaa;
+            margin-bottom: 60px;
+            font-weight: 300;
+        }
+
+        .core-values {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 80px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .value-card {
+            background: rgba(17, 17, 17, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            border-top: 2px solid #333;
+            transition: border-color 0.3s, transform 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .value-card:hover {
+            border-top-color: #D4AF37;
+            transform: translateY(-5px);
+        }
+        
+        .value-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .video-showcase {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            margin-bottom: 80px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .video-card {
+            display: flex;
+            flex-direction: column;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px rgba(212, 175, 55, 0.2);
+            border-color: rgba(212, 175, 55, 0.6);
+        }
+
+        @media (min-width: 768px) {
+            .video-card { flex-direction: row; align-items: stretch; }
+            .video-card:nth-child(even) { flex-direction: row-reverse; }
+            .video-content { flex: 1; min-height: 300px; }
+            .video-text { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        }
+
+        .video-content {
+            position: relative;
+            width: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+        }
+
+        .video-content video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-text {
+            padding: 30px 20px;
+        }
+
+        .video-text h3 {
+            color: #D4AF37;
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .video-text p {
+            color: #dddddd;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.1);
+            color: #D4AF37;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .founder-letter {
+            background: linear-gradient(145deg, rgba(17,17,17,0.9), rgba(10,10,10,0.9));
+            border: 1px solid #333;
+            border-left: 4px solid #D4AF37;
+            padding: 40px;
+            border-radius: 10px;
+            margin: 60px auto;
+            max-width: 1000px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 2;
+            backdrop-filter: blur(5px);
+        }
+
+        .founder-letter::before {
+            content: '"';
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 4rem;
+            color: rgba(212, 175, 55, 0.2);
+            font-family: serif;
+        }
+
+        .founder-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #cccccc;
+            font-style: italic;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+            text-align: left;
+        }
+
+        .signature-box {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .signature-img {
+            max-width: 200px;
+            height: auto;
+            filter: drop-shadow(0px 0px 2px rgba(255,255,255,0.2));
+            margin-bottom: 10px;
+        }
+
+        .ceo-name {
+            color: #D4AF37;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .ceo-title {
+            color: #888;
+            font-size: 0.9rem;
+            margin: 5px 0 0;
+        }
+</style>
 </head>
 <body>
+    <div class="page-bg-overlay"></div>
+    <div class="page-dark-shade"></div>
+    <div id="laserBeam" class="laser-sweep"></div>
 
-    <header>
-        <div class="container nav-container">
-            <a href="#" class="logo">SIRINTHANATTH PRIME</a>
-            <a href="https://lin.ee/xxxxxx" class="btn-line" target="_blank">💬 เชื่อมต่อผ่าน LINE OA</a>
+    <nav class="top-navbar">
+        <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
+        <div>
+            <a href="agent.html" class="btn-3d btn-cyan" style="padding: 8px 16px; font-size: 0.85rem;">💼 สมัครสมาชิกพาร์ทเนอร์ (Agent)</a>
         </div>
-    </header>
+    </nav>
 
-    <section class="hero">
-        <div class="container">
-            <h1 class="hero-title">เมื่อปัญญาประดิษฐ์ระดับบริหาร<br>สอดประสานเข้ากับทุกจังหวะธุรกิจของคุณ</h1>
-            <p class="hero-subtitle">
-                ยินดีต้อนรับสู่ SIRINTHANATTH PRIME แพลตฟอร์ม AI SaaS อัจฉริยะที่ถูกออกแบบมาเพื่อเป็นเลขาผู้ช่วยส่วนตัวระดับท็อป 
-                เข้าถึงง่ายผ่าน LINE คุ้มครองความเสี่ยงทางกฎหมาย 360 องศา พร้อมสตูดิโอสร้างสื่อ 4K อัตโนมัติ
-            </p>
-        </div>
-    </section>
-
-    <section class="video-section">
-        <div class="container">
-            <div class="video-card">
-                <div class="video-header">
-                    <span class="video-badge">MODULE 1: GRAND OVERVIEW</span>
-                    <h2 class="video-title">1. ขุมพลังสมองกลผู้บริหารและสถาปัตยกรรมระดับโลก</h2>
-                    <p class="video-desc">รับชมวิดีโอแนะนำนวัตกรรม SIRINTHANATTH PRIME ขับเคลื่อนด้วยขุมพลัง Google Generative AI ผสานสถาปัตยกรรม Hybrid Router อัจฉริยะ สลับการประมวลผลเรียลไทม์เพื่อความรวดเร็วและแม่นยำขั้นสุด พร้อมระบบ RAG Long-term Memory จดจำบริบทธุรกิจของคุณประดุจ CEO ส่วนตัว</p>
-                </div>
-                <div class="video-wrapper">
-                    <video controls poster="bg_template.jpg">
-                        <source src="SIRINTHANATTH_PRIME_Promo.mp4" type="video/mp4">
-                    </video>
-                </div>
+    <!-- 📍 หน้า 1: หน้าแรกโปรโมทเว็บ (รูปแบบและโลโก้คงเดิม) -->
+    <div class="hero-section">
+        <div class="content-container">
+            <img src="assets/1000097983.png" alt="Logo" class="logo" onmouseenter="playHoverBell()" onclick="playWelcomeAudio()">
+            <h1 class="main-title">SIRINTHANATTH <span class="gold-text">PRIME</span></h1>
+            <p class="subtitle">ระบบผู้ช่วยปัญญาประดิษฐ์ผู้บริหารระดับสากล ยกระดับการจัดการธุรกิจ ลดต้นทุน และเฝ้าระวังความเสี่ยงองค์กรอย่างเต็มรูปแบบ</p>
+            <div class="action-buttons">
+                <button class="btn-3d btn-gold" onclick="document.getElementById('promo-section').scrollIntoView({behavior: 'smooth'})">ดูรายละเอียดระบบ</button>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section class="video-section">
-        <div class="container">
-            <div class="video-card">
-                <div class="video-header">
-                    <span class="video-badge">MODULE 2: WORKER 11 MEDIA STUDIO</span>
-                    <h2 class="video-title">2. สตูดิโอผลิตสื่อโฆษณา 4K และเสียงพากย์ AI อัตโนมัติ</h2>
-                    <p class="video-desc">เนรมิตโฆษณาระดับสตูดิโอ 4K และเสียงพากย์ทรงพลังในเวลาเพียงไม่กี่นาที ผ่านการสั่งงานทาง LINE OA ระบบ Worker 11 (GPU Engine) จะช่วยร่างสคริปต์ให้คุณตรวจอนุมัติก่อนเรนเดอร์จริง พร้อมระบบคิดราคาตามจริงรายนาที (Per-Minute Billing) ช่วยประหยัดงบโฆษณาได้กว่า 90%</p>
-                </div>
-                <div class="video-wrapper">
-                    <video controls poster="bg_template.jpg">
-                        <source src="worker_11_demo.mp4" type="video/mp4">
-                    </video>
-                </div>
+    <!-- 🎬 หน้า 2: ส่วนวิดีโอโปรโมท (แทรกตรงกลางตามคำขอ) -->
+    <section id="promo-section" style="padding: 20px 20px 60px; text-align: center; position: relative; z-index: 2; width: 100%;">
+        
+        <h1 class="title-3d">The Future of AI</h1>
+        <p class="subtitle-3d">ระบบผู้ช่วยอัจฉริยะระดับองค์กร ที่เข้าใจคุณ ดั่งเลขาคนสนิท 24 ชั่วโมง</p>
+
+        <!-- Core Values Section (ความจำ & การเรียนรู้) -->
+        <div class="core-values">
+            <div class="value-card">
+                <div class="value-icon">🧠</div>
+                <h3 style="color:#fff; margin-top:0;">Infinite Memory Engine</h3>
+                <p style="color:#aaa; font-size:0.95rem; line-height:1.6;">ระบบความเข้าใจจดจำทุกรูปแบบธุรกิจของคุณ ประหนึ่งเลขาคนสนิทที่รู้ใจ ไม่ต้องสั่งซ้ำซ้อน</p>
+            </div>
+            <div class="value-card">
+                <div class="value-icon">⚙️</div>
+                <h3 style="color:#fff; margin-top:0;">Self-Improving Core</h3>
+                <p style="color:#aaa; font-size:0.95rem; line-height:1.6;">สถาปัตยกรรมอัตโนมัติ ยิ่งใช้งาน ระบบยิ่งฉลาดขึ้น เพิ่มระดับการตัดสินใจให้เฉียบคมตามผลลัพธ์จริง</p>
+            </div>
+            <div class="value-card">
+                <div class="value-icon">🛡️</div>
+                <h3 style="color:#fff; margin-top:0;">Absolute Legal Shield</h3>
+                <p style="color:#aaa; font-size:0.95rem; line-height:1.6;">เกราะช่วยระวังทางกฎหมาย 360 องศา วิเคราะห์และเตือนความเสี่ยง (ก.ล.ต., สคบ., อย.) โดยอัตโนมัติกรองความปลอดภัยเพื่อคุณ</p>
             </div>
         </div>
-    </section>
 
-    <section class="video-section">
-        <div class="container">
-            <div class="video-card">
-                <div class="video-header">
-                    <span class="video-badge">MODULE 3: LOGISTICS & LEGAL PROTECTION</span>
-                    <h2 class="video-title">3. ระบบช่วยขาย ออเดอร์อัตโนมัติ และเกราะป้องกันทางกฎหมาย</h2>
-                    <p class="video-desc">เปลี่ยนทุกแชทเป็นยอดขาย ตรวจสลิปโอนเงินอัตโนมัติ พร้อมเรียกรถขนส่ง Flash Express และออกใบปะหน้าให้อัตโนมัติผ่าน Smart Wallet เสริมด้วยเกราะป้องกัน 360° Legal Shield คอยสแกนข้อความโฆษณา ตรวจสอบความถูกต้องตามกฎหมาย อย., สคบ., และ PDPA</p>
-                </div>
-                <div class="video-wrapper">
-                    <video controls poster="bg_template.jpg">
-                        <source src="ecommerce_legal_demo.mp4" type="video/mp4">
-                    </video>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="trust-guarantee">
-        <div class="container">
-            <img src="1000098274.png" alt="SIRINTHANATTH PRIME Guarantee Seal" class="trust-seal-img">
-            <h2 class="trust-title">มาตรฐานระดับสากล ที่ผู้บริหารองค์กรไว้วางใจ</h2>
-            <p class="trust-desc">ทุกระบบปฏิบัติการและสื่อทุกชิ้นที่ถูกสร้างขึ้น ผ่านการประมวลผลด้วยสถาปัตยกรรม AI มิติสูง ภายใต้การกำกับดูแลและรับรองคุณภาพโดย <strong>Marketing Spark Combine Co., Ltd.</strong> เราให้คำมั่นสัญญาในการปกป้องข้อมูล ความลับทางธุรกิจ และส่งมอบผลลัพธ์ที่เหนือความคาดหมายในทุกมิติ</p>
-            <div class="trust-features">
-                <div class="trust-item"><span>✓</span> เข้ารหัสข้อมูลขั้นสูงสุด (End-to-End Encryption)</div>
-                <div class="trust-item"><span>✓</span> รับรองความถูกต้องทางกฎหมาย (Legal Compliance)</div>
-                <div class="trust-item"><span>✓</span> จ่ายตามการใช้งานจริงผ่าน Smart Wallet</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="vip-presale">
-        <div class="container" style="text-align: center;">
-            <div style="display: inline-block; background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 6px 18px; border-radius: 30px; font-size: 14px; font-weight: 700; margin-bottom: 20px; letter-spacing: 1px;">
-                🚨 LIMITED PRESALE OFFER: จำกัดสิทธิ์เพียง 100 องค์กรแรกเท่านั้น
-            </div>
+        <!-- Cinematic Video Showcase -->
+        <div class="video-showcase">
             
-            <h2 style="font-size: 36px; color: var(--gold-primary); font-weight: 700; margin-bottom: 15px;">SIRINTHANATTH PRIME - VIP FOUNDER</h2>
-            <p style="color: #cbd5e1; font-size: 16px; max-width: 800px; margin: 0 auto 30px; font-family: 'Sarabun', sans-serif;">
-                ร่วมเป็น "ผู้ขับเคลื่อนระบบยุคบุกเบิก" กับเรา เพื่อสร้างอำนาจต่อรองระดับองค์กร<br>
-                ผู้ถือสิทธิ์ 100 ท่านแรก จะได้รับสิทธิ์การใช้งาน AI ขั้นสูงสุดทันที พร้อมการันตีล็อกราคาพิเศษนี้ตลอดชีพ
+            <!-- Video 1 -->
+            <div class="video-card">
+                <div class="video-content">
+                    <video autoplay loop muted playsinline>
+                        <source src="D:\SIRINTHANATTH_PRIME_BACKEND\PR SIRINTHANATTH PRIME 1.mp4" type="video/mp4">
+                        (เบราว์เซอร์ของคุณไม่รองรับวิดีโอ)
+                    </video>
+                </div>
+                <div class="video-text">
+                    <h3>วิสัยทัศน์เหนือระดับ สู่การตัดสินใจที่แม่นยำ</h3>
+                    <p>ในโลกธุรกิจที่หมุนไว ข้อมูลคืออำนาจ SIRINTHANATTH PRIME ประมวลผล Big Data และวิเคราะห์ตลาดการลงทุนแบบ Real-Time เพื่อระดับความเป็นผู้นำเช่นคุณ</p>
+                    <div>
+                        <span class="feature-tag">Market Analysis</span>
+                        <span class="feature-tag">Data Driven</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video 2 -->
+            <div class="video-card">
+                <div class="video-content">
+                    <video autoplay loop muted playsinline>
+                        <source src="D:\SIRINTHANATTH_PRIME_BACKEND\PR SIRINTHANATTH PRIME 2.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="video-text">
+                    <h3>สร้างสรรค์สื่อไร้ขีดจำกัด ด้วยขุมพลังระดับโลก</h3>
+                    <p>เปลี่ยนไอเดียให้เป็นภาพและเสียงระดับสตูดิโอ เราพร้อมผลิตสื่อวิดีโอคุณภาพระดับ 4K พร้อมเสียงพากย์คุณภาพสูง เพื่อยกระดับแบรนด์ของคุณในพริบตา</p>
+                    <div>
+                        <span class="feature-tag">4K Video Gen</span>
+                        <span class="feature-tag">Voice Studio</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video 3 -->
+            <div class="video-card">
+                <div class="video-content">
+                    <video autoplay loop muted playsinline>
+                        <source src="D:\SIRINTHANATTH_PRIME_BACKEND\PR SIRINTHANATTH PRIME 3.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="video-text">
+                    <h3>ระบบนิเวศแห่งความสำเร็จ ที่คุณควบคุมได้</h3>
+                    <p>รวมทุกเครื่องมือบริหารจัดการไว้ในแอปพลิเคชันที่คุณคุ้นเคย (LINE OA) สั่งงานง่าย ด้วยภาษามนุษย์ พร้อมที่ปรึกษาส่วนตัว ไร้รอยต่อ ไร้แรงต้าน สู่ผลกำไรที่จับต้องได้จริง</p>
+                    <div>
+                        <span class="feature-tag">Zero Friction</span>
+                        <span class="feature-tag">Smart Wallet</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Smart Decision & Disclaimer Card (Upgraded) -->
+            <div class="value-card" style="margin-top: 30px; background: linear-gradient(145deg, #1a1a1a, #0d0d0d); border: 1px solid rgba(212, 175, 55, 0.4); border-left: 4px solid #D4AF37; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div class="value-icon" style="margin-bottom: 0; margin-right: 15px; font-size: 2rem;">🛡️</div>
+                    <h3 style="color:#D4AF37; margin-top:0; font-size: 1.3rem; letter-spacing: 0.5px;">Smart Decision & Responsible AI Guidance</h3>
+                </div>
+    
+                <div style="color:#cccccc; font-size:0.95rem; line-height:1.7; text-align: left; font-weight: 300;">
+                    <p style="margin-bottom: 15px;">
+                        <strong style="color: #ffffff; font-weight: 600;">ความมุ่งมั่นเพื่อความโปร่งใส (Transparency & Compliance):</strong><br>
+                        ทุกข้อมูล บทวิเคราะห์เชิงลึก สถิติการตลาด และสื่อมัลติมีเดียที่สร้างสรรค์ผ่านเทคโนโลยีของ <strong>SIRINTHANATTH PRIME</strong> 
+                        ถูกขับเคลื่อนด้วยสถาปัตยกรรม AI ขั้นสูง เพื่อทำหน้าที่เป็น <em>"ที่ปรึกษาเชิงกลยุทธ์ (Strategic Co-Pilot)"</em> ในการเพิ่มศักยภาพทางธุรกิจของคุณ
+                    </p>
+        
+                    <p style="margin-bottom: 15px;">
+                        <strong style="color: #ffffff; font-weight: 600;">ขอบเขตและการตัดสินใจขั้นสุดท้าย (Decision Empowerment):</strong><br>
+                        ระบบของเราทำงานภายใต้มาตรฐานความปลอดภัยระดับโลก โดย<strong>ไม่มีนโยบายหรือเจตนา</strong>ในการชี้ชวนการลงทุน 
+                        ชี้นำผลลัพธ์ทางการเงิน หรือการันตีความสำเร็จทางธุรกิจที่ตายตัว 
+                        ความสำเร็จที่ยั่งยืนเกิดจากการผสานข้อมูลอัจฉริยะเข้ากับวิจารณญาณที่เฉียบขาดของคุณ 
+                        ผู้ใช้บริการยังคงเป็นผู้ถือสิทธิ์และรับผิดชอบในการพิจารณาปัจจัยแวดล้อมก่อนการตัดสินใจขั้นสุดท้ายเสมอ
+                    </p>
+        
+                    <p style="margin: 0; font-size: 0.85rem; color: #888888; font-style: italic;">
+                        *การให้บริการเป็นไปตามมาตรฐานพาณิชย์อิเล็กทรอนิกส์สากล และปฏิบัติตามแนวทางการคุ้มครองผู้บริโภคทางดิจิทัลอย่างเคร่งครัด
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- สาส์นจากผู้ก่อตั้ง (Founder's Letter) -->
+        <div class="founder-letter">
+            <p class="founder-text">
+                "เทคโนโลยีที่แท้จริง ไม่ได้ถูกสร้างมาเพื่อแทนที่มนุษย์ แต่ถูกสร้างมาเพื่อ 'ปลดล็อก' ศักยภาพที่ซ่อนอยู่ภายในตัวเรา 
+                <br><br>
+                ที่ SIRINTHANATTH PRIME เราไม่ได้พัฒนาแค่โปรแกรมคอมพิวเตอร์ แต่เรากำลังสร้างระบบ AI ที่ง่าย เข้าใจคุณ "ครบ จบ ที่เดียว" ที่ปรึกษาส่วนตัวเฉพาะคุณ จดจำรายละเอียด วางแผนกลยุทธ์ บริหารจัดการ และเฝ้าระวังความเสี่ยง เพื่อมอบเวลาอันมีค่า ให้คุณได้โฟกัสกับสิ่งที่คุณรัก และเป้าหมายที่ยิ่งใหญ่กว่า"
             </p>
+            <div class="signature-box">
+                <img src="D:\SIRINTHANATTH_PRIME_BACKEND\PR SIRINTHANATTH PRIME.png" alt="Signature" class="signature-img">
+                <p class="ceo-name">วีระชัย สิรินทร์ธนัตถ์</p>
+                <p class="ceo-title">Founder & CEO, Marketing Spark Combine Co., Ltd.</p>
+            </div>
+        </div>
 
-            <div class="progress-container">
-                <div style="display: flex; justify-content: space-between; color: #f8fafc; font-size: 15px; font-weight: 600; margin-bottom: 10px;">
-                    <span>สิทธิ์ VIP ที่ถูกจับจองแล้ว</span>
-                    <span style="color: var(--gold-primary);">สิทธิ์คงเหลือ: <strong style="color: #ff4d4d; font-size: 18px;">18</strong> / 100</span>
+    </section>
+    
+    <!-- 💳 หน้าสมัคร: Pricing Section (รูปแบบแพ็กเกจเดิม) -->
+    <section id="pricing" class="pricing-section">
+        <h2 class="section-title">เลือกแพ็กเกจผู้ช่วยที่เหมาะกับธุรกิจของคุณ</h2>
+        <p style="color: #aaa; margin-bottom: 25px; text-align: center;">โปร่งใส ไร้ข้อผูกมัด ภายใต้สัญญาบริการดิจิทัลที่ถูกต้องตามกฎหมายไทย</p>
+        
+        <div class="billing-toggle">
+            <span class="billing-label active" id="label-monthly">รายเดือน</span>
+            <label class="switch">
+                <input type="checkbox" id="billingSwitch" onchange="toggleBilling()">
+                <span class="slider"></span>
+            </label>
+            <span class="billing-label" id="label-yearly">รายปี <span style="color: #FFD700; font-size: 0.85em;">(ประหยัด 20%)</span></span>
+        </div>
+
+        <div class="pricing-cards">
+            <!-- Tier 1 -->
+            <div class="card">
+                <div>
+                    <h3>เพื่อนคู่คิด (ESSENTIAL)</h3>
+                    <div style="font-size: 2rem; font-weight: 600; margin: 15px 0; color: #fff;">
+                        ฿ <span class="amount" data-monthly="590" data-yearly="4,900">590</span> 
+                        <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
+                    </div>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li><span class="feature-highlight">ยิ่งส่งเยอะยิ่งถูก ลดต้นทุนขนส่ง ด้วยค่าส่งพัสดุเริ่มต้นเพียง 12 บาท*</span></li>
+                        <li>ช่วยวิเคราะห์แคปชันและสร้างสรรค์คอนเทนต์อัตโนมัติ</li>
+                        <li>ดูแลงานจัดการพื้นฐานรายวัน (50 เครดิต AI)</li>
+                    </ul>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 10px; line-height: 1.4;">
+                        *\*เงื่อนไขค่าส่ง 12 บาท: สำหรับพัสดุน้ำหนักไม่เกิน 1 กก. และขนาดพัสดุผ่านผู้ให้บริการขนส่งพาร์ทเนอร์ที่บริษัทฯ กำหนดเท่านั้น*
+                    </div>
                 </div>
-                <div style="background: #1e293b; height: 16px; border-radius: 10px; overflow: hidden; position: relative;">
-                    <div style="background: linear-gradient(90deg, var(--gold-primary) 0%, #ff4d4d 100%); width: 82%; height: 100%; border-radius: 10px;"></div>
-                </div>
+                <button class="btn-3d btn-cyan" style="width: 100%; margin-top: 20px;" onclick="openDisclaimer(() => checkoutDynamic('ESSENTIAL'))">เลือกแพ็กเกจ Essential</button>
             </div>
 
-            <div class="vip-card">
-                <div style="text-align: left;">
-                    <h3 style="color: #ffffff; font-size: 24px; margin-bottom: 15px;">สิทธิประโยชน์ระดับ VIP Founder:</h3>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <span style="display: inline-block; background: #00B900; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 5px; margin-bottom: 5px; font-weight: bold;">ใช้งานได้ทันทีวันนี้</span>
-                        <ul class="price-features" style="margin: 10px 0;">
-                            <li><strong>ใช้งานระบบ AI เลขาส่วนตัวบน LINE OA</strong> เต็มรูปแบบ</li>
-                            <li><strong>ฟรีเครดิต 50 คลิป/เดือน</strong> (สื่อ 4K + เสียงพากย์จาก Worker 11)</li>
-                            <li><strong>คุ้มครองด้วย 360° Legal Shield</strong> ตรวจโฆษณา อย./สคบ.</li>
-                        </ul>
+            <!-- Tier 2 -->
+            <div class="card card-prime">
+                <div style="position: absolute; top: -15px; right: -15px; background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; padding: 5px 15px; font-weight: 800; border-radius: 20px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">ยอดนิยม</div>
+                <div>
+                    <h3>ที่ปรึกษาส่วนตัว (PRIME)</h3>
+                    <div class="gold-text" style="font-size: 2.2rem; font-weight: 800; margin: 15px 0;">
+                        ฿ <span class="amount" data-monthly="1,490" data-yearly="12,900">1,490</span> 
+                        <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
                     </div>
-
-                    <div style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid var(--gold-primary); margin-bottom: 15px;">
-                        <span style="display: inline-block; background: var(--gold-primary); color: #000; font-size: 12px; padding: 2px 8px; border-radius: 5px; margin-bottom: 5px; font-weight: bold;">ปลดล็อกสิทธิ์พิเศษเฟส 2</span>
-                        <ul style="list-style: none; color: #cbd5e1; font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6;">
-                            <li>🚚 <strong>ล็อกค่าส่ง Flash Express เรท VIP (12 บาท/ชิ้น)</strong></li>
-                            <li style="color: #94a3b8; font-size: 12px; margin-top: 5px;">*เงื่อนไข: พัสดุน้ำหนักไม่เกิน 1 กก. และขนาดตามที่กำหนด (หักชำระผ่าน Smart Token)<br>*สิทธิ์ขนส่งจะปลดล็อกอัตโนมัติเมื่อรวมยอดสมาชิกระบบสำเร็จและเซ็นสัญญากับพาร์ทเนอร์</li>
-                        </ul>
-                    </div>
-
-                    <div style="background: rgba(255, 77, 77, 0.1); border: 1px dashed #ff4d4d; padding: 10px 15px; border-radius: 8px;">
-                        <span style="color: #ff4d4d; font-size: 14px; font-weight: bold;">🔒 LIFETIME PRICE LOCK GUARANTEE</span>
-                        <p style="color: #f8fafc; font-size: 13px; font-family: 'Sarabun', sans-serif; margin-top: 5px; line-height: 1.5;">สงวนสิทธิ์เฉพาะ 100 ท่านแรก: การันตีต่ออายุในราคานี้ตลอดชีพ ไม่ปรับราคาขึ้น</p>
-                    </div>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li>รวมสิทธิประโยชน์ทั้งหมดจากแพ็กเกจ Essential</li>
+                        <li><span class="legal-highlight">วิเคราะห์งบการเงินและกลยุทธ์ธุรกิจระดับผู้บริหาร</span></li>
+                        <li>จัดการเอกสารและระบบหลังบ้านอัตโนมัติ 24/7</li>
+                    </ul>
                 </div>
+                <button class="btn-3d btn-gold" style="width: 100%; margin-top: 20px;" onclick="openDisclaimer(() => checkoutDynamic('PRIME'))">เลือกแพ็กเกจ Prime</button>
+            </div>
 
-                <div style="text-align: center; background: rgba(10, 14, 23, 0.8); padding: 30px; border-radius: 15px; border: 1px solid rgba(212, 175, 55, 0.3);">
-                    <div style="display: inline-block; background: var(--gold-primary); color: #000; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;">
-                        แพ็กเกจชำระรายปีเท่านั้น
+            <!-- Tier 3 -->
+            <div class="card">
+                <div>
+                    <h3>พันธมิตรองค์กร (ENTERPRISE)</h3>
+                    <div style="font-size: 2rem; font-weight: 600; margin: 15px 0; color: #fff;">
+                        ฿ <span class="amount" data-monthly="4,900" data-yearly="39,900">4,900</span> 
+                        <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
                     </div>
-                    <br>
-                    <span style="color: #94a3b8; font-size: 14px; text-decoration: line-through;">ราคาปกติ 12,000 บาท/ปี</span>
-                    <div style="color: var(--gold-primary); font-size: 46px; font-weight: 700; margin: 10px 0;">
-                        ฿4,490 <span style="font-size: 16px; color: #f8fafc; font-weight: 400;">/ จ่ายครั้งเดียว</span>
-                    </div>
-                    <p style="color: var(--cyan-accent); font-size: 13px; margin-bottom: 20px;">(เฉลี่ยตกเพียงเดือนละ 374 บาท)</p>
-
-                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="font-size: 18px; padding: 16px;">🔥 ชำระเงินจองสิทธิ์ VIP (PromptPay / บัตรเครดิต)</a>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li>เชื่อมต่อข้อมูลตลาดแบบ Real-time แม่นยำสูง</li>
+                        <li>สิทธิพิเศษ Whitelisting และการปกป้องแบรนด์องค์กร</li>
+                        <li>ทีมวิศวกรดูแลความปลอดภัยระบบแบบเอ็กซ์คลูซีฟ</li>
+                    </ul>
                 </div>
+                <button class="btn-3d btn-cyan" style="width: 100%; margin-top: 20px;" onclick="openDisclaimer(() => checkoutDynamic('ENTERPRISE'))">เลือกแพ็กเกจ Enterprise</button>
             </div>
         </div>
     </section>
 
-    <section class="pricing-section" id="pricing">
-        <div class="container">
-            <h2 style="font-size: 32px; color: var(--text-main); margin-bottom: 15px;">แพ็กเกจการใช้งานทั่วไป</h2>
-            <p style="color: var(--text-muted); font-family: 'Sarabun', sans-serif;">หรือเริ่มต้นใช้งานง่ายๆ ตามขนาดธุรกิจของคุณ</p>
-
-            <div class="pricing-grid">
-                <div class="price-card">
-                    <div class="price-header">
-                        <h3 style="color: var(--text-main);">Smart Wallet</h3>
-                        <p style="color: var(--text-muted); font-size: 14px;">เติมเงินตัดตามการใช้งานจริง</p>
-                    </div>
-                    <div class="price-amount">฿500 <span>/ เติมขั้นต่ำ</span></div>
-                    <ul class="price-features">
-                        <li>สร้างวิดีโอ 4K / เสียงพากย์ (คิดเป็นนาที)</li>
-                        <li>หักค่าจัดส่ง Flash Express อัตโนมัติ</li>
-                        <li>ใช้งานฟีเจอร์แชทวิเคราะห์ทั่วไปฟรี</li>
-                        <li>ไม่มีค่าบริการรายเดือนผูกมัด</li>
-                    </ul>
-                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="background: #334155; color: #fff;">เติมเงินเข้า Wallet</a>
-                </div>
-
-                <div class="price-card">
-                    <div class="price-header">
-                        <h3 style="color: var(--text-main);">Enterprise VIP</h3>
-                        <p style="color: var(--text-muted); font-size: 14px;">สำหรับองค์กรขนาดใหญ่</p>
-                    </div>
-                    <div class="price-amount">฿4,900 <span>/ เดือน</span></div>
-                    <ul class="price-features">
-                        <li>ไม่จำกัดการประมวลผลข้อมูล RAG</li>
-                        <li>การวิเคราะห์งบการเงินและหุ้น Real-time</li>
-                        <li>เชื่อมต่อระบบ ERP / Big Data องค์กร</li>
-                        <li>ผู้ช่วยดูแลระบบระดับ VIP 24/7</li>
-                    </ul>
-                    <a href="https://lin.ee/xxxxxx" class="btn-upgrade" style="background: #334155; color: #fff;">ติดต่อแผนกองค์กร</a>
-                </div>
-            </div>
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div>
+            <a href="#" onclick="alert('ข้อกำหนดการให้บริการ: อยู่ภายใต้กฎหมายพาณิชย์อิเล็กทรอนิกส์ไทย')">ข้อกำหนดการให้บริการ</a> | 
+            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">นโยบายความเป็นส่วนตัว (PDPA)</a> | 
+            <a href="#" onclick="alert('นโยบายการคืนเงิน: สงวนสิทธิ์การคืนเงินเนื่องจากเป็นบริการดิจิทัลที่เริ่มประมวลผลทันที')">นโยบายการคืนเงิน</a>
         </div>
-    </section>
-
-    <footer>
-        <div class="container">
-            <p>© 2026 Marketing Spark Combine Co., Ltd. All Rights Reserved. | SIRINTHANATTH PRIME</p>
-        </div>
+        <div style="margin-top: 15px;">&copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved. จัดทำขึ้นภายใต้มาตรฐานกฎหมายไทยและสากล</div>
     </footer>
 
+    <!-- 🛡️ Modal กฎหมาย (เหมือนเดิม) -->
+    <div id="disclaimerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: rgba(14,14,18,0.98); border: 1px solid rgba(255,215,0,0.5); border-radius: 16px; max-width: 700px; width: 100%; padding: 30px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.95);">
+            <h3 style="color: #FFD700; margin-top: 0; font-size: 1.3rem; text-align: center;">ข้อกำหนด เงื่อนไข และคำเตือนทางกฎหมาย</h3>
+            <div style="font-size: 0.85rem; color: #ccc; line-height: 1.6; overflow-y: auto; padding-right: 10px; margin: 15px 0; flex-grow: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding-top: 12px; padding-bottom: 12px;">
+                <p><strong>1. ขอบเขตการให้บริการ AI และการจำกัดความรับผิดชอบ:</strong> ระบบ SIRINTHANATTH PRIME เป็นเครื่องมือปัญญาประดิษฐ์เพื่อสนับสนุนการวิเคราะห์ทางธุรกิจ ผลลัพธ์จากการประมวลผลเป็นเพียงคำแนะนำประกอบการตัดสินใจ บริษัทฯ ไม่รับประกันความสำเร็จหรือกำไรทางธุรกิจ 100% ผู้ใช้ต้องใช้วิจารณญาณและรับผิดชอบการตัดสินใจทางธุรกิจด้วยตนเอง</p>
+                <p><strong>2. นโยบายการไม่คืนเงิน (Strict No-Refund Policy):</strong> เนื่องจากบริการนี้เป็นซอฟต์แวร์ระบบดิจิทัล (Digital Service / SaaS) ที่มีการจัดสรรทรัพยากรระบบและเริ่มต้นให้บริการแก่ท่านทันทีหลังการชำระเงินสำเร็จ บริษัทฯ <strong>ขอสงวนสิทธิ์การคืนเงินทุกกรณี</strong> สอดคล้องตามประกาศสำนักงานคณะกรรมการคุ้มครองผู้บริโภค (สคบ.) ท่านสามารถยกเลิกการต่ออายุอัตโนมัติได้ล่วงหน้าก่อนครบรอบบิลถัดไปผ่านระบบสมาชิก</p>
+                <p><strong>3. การคุ้มครองข้อมูลส่วนบุคคล (PDPA):</strong> ท่านรับทราบและยินยอมให้บริษัทฯ เก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคลของท่านภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เพื่อวัตถุประสงค์ในการให้บริการ ออกเอกสารทางบัญชี และรักษาความปลอดภัยระบบ</p>
+                <p><strong>4. กฎหมายพาณิชย์อิเล็กทรอนิกส์และภาษีอากร:</strong> การทำธุรกรรมผ่านเว็บไซต์นี้มีผลผูกพันทางกฎหมายตามพระราชบัญญัติว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ และอยู่ภายใต้การกำกับดูแลของประมวลรัษฎากรแห่งประเทศไทย การออกใบกำกับภาษี/ใบเสร็จรับเงินจะดำเนินการตามข้อมูลที่ท่านลงทะเบียนไว้จริงเท่านั้น</p>
+            </div>
+            <div style="margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
+                <input type="checkbox" id="acceptCheck" onchange="toggleConsent()" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
+                <label for="acceptCheck" style="font-size: 0.83rem; color: #eee; cursor: pointer; line-height: 1.4;">
+                    ข้าพเจ้าได้อ่าน เข้าใจ และตกลงยอมรับข้อกำหนดการให้บริการ นโยบายการไม่คืนเงิน นโยบาย PDPA และเงื่อนไขทางกฎหมายทั้งหมดโดยสมบูรณ์
+                </label>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <button id="confirmBtn" class="btn-3d" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); font-weight: 800; background: #222; color: #666; cursor: not-allowed;">ยอมรับและดำเนินการต่อ</button>
+                <button class="btn-3d" onclick="closeDisclaimer()" style="padding: 12px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #fff; cursor: pointer;">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔊 เสียงเอฟเฟกต์ -->
+    <audio id="hoverBellAudio" src="assets/kave_msri-ding-sfx-330333.mp3" preload="auto"></audio> 
+    <audio id="welcomeAudio" src="assets/voice_preview_sirinthanatth prime ceo.mp3" preload="auto"></audio>
+
+    <script>
+        function toggleBilling() {
+            const isYearly = document.getElementById('billingSwitch').checked;
+            document.getElementById('label-monthly').classList.toggle('active', !isYearly);
+            document.getElementById('label-yearly').classList.toggle('active', isYearly);
+            
+            const amounts = document.querySelectorAll('.amount');
+            const periods = document.querySelectorAll('.period');
+            
+            amounts.forEach((el, index) => {
+                el.innerText = isYearly ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+                periods[index].innerText = isYearly ? '/ ปี' : '/ เดือน';
+            });
+        }
+
+        let pendingActionCallback = null;
+        function openDisclaimer(actionCallback) {
+            pendingActionCallback = actionCallback;
+            document.getElementById('disclaimerModal').style.display = 'flex';
+            document.getElementById('acceptCheck').checked = false;
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true; 
+            btn.style.background = '#222'; 
+            btn.style.color = '#666'; 
+            btn.style.cursor = 'not-allowed';
+        }
+        function closeDisclaimer() { document.getElementById('disclaimerModal').style.display = 'none'; }
+        function toggleConsent() {
+            const isChecked = document.getElementById('acceptCheck').checked;
+            const btn = document.getElementById('confirmBtn');
+            if (isChecked) {
+                btn.disabled = false; 
+                btn.style.background = 'linear-gradient(135deg, #FFE84D, #FFD700)'; 
+                btn.style.color = '#020202'; 
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true; 
+                btn.style.background = '#222'; 
+                btn.style.color = '#666'; 
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+        function proceedAfterConsent() {
+            closeDisclaimer();
+            if (typeof pendingActionCallback === 'function') { pendingActionCallback(); }
+        }
+        function checkoutDynamic(planName) {
+            alert('เชื่อมต่อระบบชำระเงินปลอดภัยสำหรับแพ็กเกจ: ' + planName);
+        }
+
+        function playHoverBell() {
+            const bell = document.getElementById('hoverBellAudio');
+            if (bell) { bell.volume = 0.15; bell.currentTime = 0; bell.play().catch(e => {}); }
+        }
+        function playWelcomeAudio() {
+            const audio = document.getElementById('welcomeAudio');
+            if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
+        }
+    </script>
 </body>
 </html>

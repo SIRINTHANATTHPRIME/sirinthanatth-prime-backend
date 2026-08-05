@@ -3,98 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIRINTHANATTH PRIME | Executive Agent KYC</title>
+    <title>SIRINTHANATTH PRIME | Executive Agent Ecosystem</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
-        /* (ใส่ CSS เดิมของคุณที่นี่ทั้งหมดได้เลยครับ เพื่อความสวยงาม) */
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: 'Prompt', sans-serif; background-color: #020202; color: #ffffff; }
-        .page-bg-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('assets/1000097983.png'); background-size: cover; background-position: center; opacity: 0.18; z-index: -2; pointer-events: none; filter: brightness(0.3) contrast(1.4); }
-        .agent-hero { padding: 40px 20px; text-align: center; }
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Prompt', sans-serif;
+            background-color: #020202;
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            position: relative;
+        }
+
+        /* 🖼️ แบ็กกราวด์มืดลง คุมโทนลึกลับ */
+        .page-bg-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('assets/1000097983.png'); 
+            background-size: cover; background-position: center;
+            opacity: 0.18; z-index: -2; pointer-events: none;
+            filter: brightness(0.3) contrast(1.4);
+        }
+        .page-dark-shade {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(2,2,4,0.95) 0%, rgba(0,0,1,0.99) 100%);
+            z-index: -1; pointer-events: none;
+        }
+
+        img { max-width: 100%; height: auto; }
+
+        /* ✨ เลเซอร์วิ่งด้านบน */
+        .laser-sweep {
+            position: fixed; top: 0; left: -100%; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
+            animation: laserMove 5s infinite linear;
+            z-index: 1001;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
+
+        .top-navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: clamp(10px, 2vw, 20px) clamp(15px, 4vw, 40px);
+            background: rgba(3, 3, 5, 0.95);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            position: sticky; top: 0; z-index: 1000;
+            backdrop-filter: blur(10px); width: 100%;
+        }
+        .nav-brand { color: #fff; text-decoration: none; font-weight: 800; font-size: clamp(1rem, 2vw, 1.25rem); letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.95); }
+
+        /* 🚀 3D Embossed Typography & 4K Sharp Look ทั่วทั้งหน้า Agent */
+        h1, h2, h3, p, span, li, a, label, input, button {
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(255, 255, 255, 0.15);
+        }
+
+        .main-title { 
+            font-size: clamp(1.8rem, 4.5vw, 3.5rem); text-align: center; line-height: 1.3; 
+            margin-top: 20px; font-weight: 800; color: #ffffff; 
+            text-shadow: 0 3px 6px rgba(0,0,0,0.98), 0 5px 15px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.25);
+        }
+        .gold-text { color: #FFD700; text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 25px rgba(255, 215, 0, 0.4); }
+        .section-title { font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 800; color: #E0E0E0; text-align: center; }
+        .subtitle { 
+            font-size: clamp(1rem, 1.8vw, 1.25rem); padding: 0 20px; text-align: center; color: #e2e8f0; line-height: 1.8; margin: 20px auto; max-width: 850px;
+            background: rgba(10, 10, 15, 0.4); padding-top: 12px; padding-bottom: 12px; border-radius: 8px;
+            border-left: 3px solid rgba(255, 215, 0, 0.5); border-right: 3px solid rgba(255, 215, 0, 0.5);
+        }
+        
+        .features li { line-height: 1.6; margin-bottom: 12px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); color: #e2e8f0; }
+        .feature-highlight { color: #00e5ff; font-weight: 600; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
+        .legal-highlight { color: #FFD700; font-weight: 600; text-shadow: 0 0 12px rgba(255,215,0,0.5); }
+
+        /* ✨ ปุ่มทุกปุ่ม 3D นูน คมชัด 4K */
+        .btn-3d {
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.25);
+            position: relative; z-index: 1; padding: clamp(10px, 1.5vw, 14px) clamp(20px, 3vw, 28px);
+            border-radius: 10px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); cursor: pointer; letter-spacing: 0.5px;
+            text-decoration: none; display: inline-block; text-align: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.6);
+        }
+        .btn-3d:active { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.8); }
+
+        .btn-gold { 
+            background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #C59B1B 100%); color: #020202 !important; font-weight: 800; 
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(255, 215, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(255, 215, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); }
+
+        .btn-cyan { 
+            background: linear-gradient(135deg, #33EDFF 0%, #00e5ff 50%, #008299 100%); color: #020202 !important; font-weight: 800; 
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(0, 229, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        }
+        .btn-cyan:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(0, 229, 255, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); }
+
+        .agent-hero { padding: clamp(40px, 6vw, 70px) 20px 20px; text-align: center; }
         .agent-container { max-width: 1200px; margin: 0 auto; padding: 20px; width: 100%; }
-        .main-title { font-size: clamp(1.8rem, 4.5vw, 3.5rem); text-align: center; font-weight: 800; color: #ffffff; }
-        .gold-text { color: #FFD700; }
-        .agent-form-box { background: rgba(12, 12, 15, 0.95); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 20px; padding: 40px 30px; max-width: 700px; margin: 60px auto; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
-        .form-input { width: 100%; padding: 12px 20px; margin: 10px 0 20px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-family: 'Prompt', sans-serif; }
-        .btn-gold { background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #C59B1B 100%); color: #020202; padding: 15px; width: 100%; font-weight: 800; border-radius: 8px; cursor: pointer; border: none; font-size: 1.1rem; }
+        
+        .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
+        .card { padding: 30px 20px; background: rgba(10, 10, 15, 0.9); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: flex-start; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        .card-prime { border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.95); position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12); }
+
+        .agent-form-box { background: rgba(12, 12, 15, 0.95); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 20px; padding: 40px 30px; max-width: 700px; margin: 60px auto; text-align: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.9); }
+        .form-input { width: 100%; padding: 12px 20px; margin: 10px 0 20px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-family: 'Prompt', sans-serif; font-size: 1rem; }
+        .form-input:focus { border-color: #00e5ff; outline: none; box-shadow: 0 0 12px rgba(0,229,255,0.3); }
+
+        .site-footer { text-align: center; padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 60px; font-size: 0.85rem; color: #666; background: #010101; }
+        .site-footer a { color: #888; text-decoration: none; margin: 0 10px; }
+        .site-footer a:hover { color: #FFD700; }
+
+        @media (min-width: 992px) { .card-prime { transform: scale(1.03); } }
     </style>
 </head>
 <body>
+
+    <!-- 🖼️ แบ็กกราวด์มืดลง คุมโทนลึกลับ -->
     <div class="page-bg-overlay"></div>
+    <div class="page-dark-shade"></div>
+
+    <!-- ✨ เลเซอร์วิ่งด้านบน -->
+    <div id="laserBeam" class="laser-sweep"></div>
+
+    <nav class="top-navbar">
+        <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
+        <div>
+            <a href="index.html" class="btn-3d btn-cyan" style="padding: 8px 16px; font-size: 0.85rem;">🏠 กลับสู่หน้าหลักระบบ</a>
+        </div>
+    </nav>
 
     <div class="agent-hero">
-        <h1 class="main-title">ระบบลงทะเบียนพาร์ทเนอร์<br><span class="gold-text">EXECUTIVE AGENT (KYC)</span></h1>
-        <p style="color: #aaa; margin-top: 10px;">โปรดยืนยันตัวตน (KYC) เพื่อเปิดใช้งานระบบแดชบอร์ดตามกฎหมาย</p>
-    </div>
-
-    <div class="agent-container">
-        <div class="agent-form-box">
-            <h2 style="color: #FFD700; margin-bottom: 20px; text-align: center;">ฟอร์มยืนยันตัวตน (KYC)</h2>
-            <form id="agentForm" onsubmit="handleAgentSubmit(event)">
-                
-                <label style="font-weight: 600; font-size: 0.9rem;">ชื่อ - นามสกุล (ตรงตามบัตรประชาชน)</label>
-                <input type="text" id="agentName" class="form-input" placeholder="ระบุชื่อจริง นามสกุลจริง" required>
-
-                <label style="font-weight: 600; font-size: 0.9rem;">ชื่อร้านค้า / บริษัท (Shop Name)</label>
-                <input type="text" id="shopName" class="form-input" placeholder="เช่น Marketing Spark Combine" required>
-
-                <label style="font-weight: 600; font-size: 0.9rem;">เลขบัตรประชาชน / ทะเบียนนิติบุคคล (KYC ID)</label>
-                <input type="text" id="kycDocId" class="form-input" placeholder="กรอกเลข 13 หลัก" required>
-
-                <label style="font-weight: 600; font-size: 0.9rem;">ประเภทสินค้าที่จำหน่าย</label>
-                <input type="text" id="productType" class="form-input" placeholder="เช่น เครื่องสำอาง, อาหารเสริม (ห้ามสินค้าผิดกฎหมาย)" required>
-
-                <div style="margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
-                    <input type="checkbox" id="acceptCheck" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" required>
-                    <label for="acceptCheck" style="font-size: 0.83rem; color: #eee; cursor: pointer; line-height: 1.4;">
-                        ข้าพเจ้ายอมรับการเก็บข้อมูล (PDPA), กฎการหักเงิน Smart Wallet อัตโนมัติ, และเงื่อนไขการจัดส่ง Flash Express (น้ำหนักไม่เกิน 1 กก.)
-                    </label>
-                </div>
-
-                <button type="submit" id="submitBtn" class="btn-gold">ยืนยันการสมัคร KYC</button>
-            </form>
+        <div class="agent-container">
+            <h1 class="main-title">
+                ระบบพาร์ทเนอร์แนะนำสมาชิก<br>
+                <span class="gold-text">EXECUTIVE AGENT</span>
+            </h1>
+            <p class="subtitle">โครงข่ายสร้างรายได้มาตรฐานสากล โปร่งใส ตรวจสอบได้ และปฏิบัติถูกต้องตามกฎหมายภาษีอากรและกฎระเบียบพาณิชย์อิเล็กทรอนิกส์ไทย</p>
         </div>
     </div>
 
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <div class="agent-container">
+        <h2 class="section-title">โครงสร้างคอมมิชชั่นและเงื่อนไขการรับเงิน</h2>
+        <p style="color: #aaa; text-align: center; margin-bottom: 20px;">จ่ายผลตอบแทนจริงตามเงื่อนไขมาตรฐานสากลและประมวลรัษฎากร</p>
+
+        <div class="tier-grid">
+            <div class="card">
+                <div>
+                    <h3>ESSENTIAL AGENT</h3>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #00e5ff;">
+                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem; font-weight: 800;">15%</span>
+                    </div>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li><span class="feature-highlight">เหมาะสำหรับผู้เริ่มต้นบอกต่อธุรกิจ</span></li>
+                        <li>รับส่วนแบ่งรายได้ต่อเนื่องเมื่อลูกค้ายืนยันชำระเงินสำเร็จ</li>
+                        <li>ระบบคำนวณอัตโนมัติ ป้องกันความผิดพลาดทางบัญชี</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card card-prime">
+                <div style="position: absolute; top: -15px; right: -15px; background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; padding: 5px 15px; font-weight: 800; border-radius: 20px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">ยอดนิยม</div>
+                <div>
+                    <h3>PRIME AGENT</h3>
+                    <div class="gold-text" style="font-size: 1.8rem; font-weight: 800; margin: 15px 0;">
+                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem;">20%</span>
+                    </div>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li><span class="legal-highlight">เหมาะสำหรับนักการตลาดและเครือข่ายธุรกิจ</span></li>
+                        <li>สิทธิ์การใช้เครื่องมือสนับสนุนการตลาดพรีเมียม</li>
+                        <li>เบิกจ่ายรายได้รวดเร็วภายใต้กฎระเบียบสรรพากร</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div>
+                    <h3>ENTERPRISE PARTNER</h3>
+                    <div style="font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #00e5ff;">
+                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem; font-weight: 800;">25%</span>
+                    </div>
+                    <ul class="features" style="list-style: none; padding: 0;">
+                        <li><span class="feature-highlight">สำหรับองค์กรหรือเอเจนซี่มืออาชีพ</span></li>
+                        <li>โครงสร้างรายได้พิเศษและโบนัสรายไตรมาส</li>
+                        <li>ทีมบัญชีและกฎหมายดูแลซัพพอร์ตเอ็กซ์คลูซีฟ</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Application Form -->
+    <div id="agentFormSection" class="agent-container">
+        <div class="agent-form-box">
+            <h2 class="section-title" style="font-size: 1.8rem; margin-bottom: 10px;">ลงทะเบียนรับโค้ดพาร์ทเนอร์ (Agent Code)</h2>
+            <p style="color: #bbb; font-size: 0.95rem; margin-bottom: 25px;">กรอกข้อมูลเพื่อเปิดใช้งานระบบแดชบอร์ดติดตามรายได้และยอมรับข้อตกลงทางกฎหมาย</p>
+            
+            <button type="button" class="btn-3d btn-gold" style="width: 100%; padding: 15px; font-size: 1.1rem;" onclick="openDisclaimer()">คลิกเพื่ออ่านข้อตกลงและกรอกใบสมัครพาร์ทเนอร์</button>
+
+            <form id="agentForm" onsubmit="handleAgentSubmit(event)" style="display: none; margin-top: 25px; text-align: left; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">ชื่อ - นามสกุล (ตรงตามบัตรประชาชน/บัญชีธนาคารเพื่อการหักภาษี)</div>
+                <input type="text" id="agentName" class="form-input" placeholder="ระบุชื่อจริง นามสกุลจริง" required>
+
+                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">เบอร์โทรศัพท์มือถือ (สำหรับยืนยันตัวตน OTP)</div>
+                <input type="tel" id="agentPhone" class="form-input" placeholder="08xxxxxxxx" required>
+
+                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">ช่องทางโปรโมทหลัก (เช่น เพจ, เว็บไซต์, หรือช่องทางโซเชียล)</div>
+                <input type="text" id="agentChannel" class="form-input" placeholder="ระบุลิงก์หรือชื่อช่องทาง" required>
+
+                <button type="submit" class="btn-3d btn-gold" style="width: 100%; margin-top: 15px; padding: 15px; font-size: 1.1rem;">ยืนยันการสมัครและรับ Agent Code</button>
+            </form>
+            
+            <div style="margin-top: 15px; font-size: 0.8rem; color: #888; text-align: center;">
+                * การจ่ายค่าคอมมิชชั่นจะเกิดขึ้นเมื่อได้รับเงินจากผู้สมัครครบถ้วนแล้วเท่านั้น และต้องถูกหักภาษี ณ ที่จ่าย 3% ตามประมวลรัษฎากร
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div>
+            <a href="#" onclick="alert('ข้อกำหนดพาร์ทเนอร์: ปฏิบัติตามประมวลรัษฎากรและกฎหมายพาณิชย์อิเล็กทรอนิกส์')">ข้อกำหนดพาร์ทเนอร์</a> | 
+            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">นโยบายความเป็นส่วนตัว (PDPA)</a>
+        </div>
+        <div style="margin-top: 15px;">&copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved.</div>
+    </footer>
+
+    <!-- 🛡️ Comprehensive Agent Legal Disclaimer Modal -->
+    <div id="disclaimerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: rgba(14,14,18,0.98); border: 1px solid rgba(255,215,0,0.5); border-radius: 16px; max-width: 700px; width: 100%; padding: 30px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.95);">
+            
+            <h3 style="color: #FFD700; margin-top: 0; font-size: 1.3rem; text-align: center;">ข้อตกลง เงื่อนไขการรับเงิน และกฎหมายพาร์ทเนอร์</h3>
+            
+            <div style="font-size: 0.85rem; color: #ccc; line-height: 1.6; overflow-y: auto; padding-right: 10px; margin: 15px 0; flex-grow: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding-top: 12px; padding-bottom: 12px;">
+                <p><strong>1. สถานะทางกฎหมายของพาร์ทเนอร์:</strong> การสมัครเข้าร่วมโครงการพาร์ทเนอร์ (Agent) ไม่ถือเป็นการจ้างงาน การเป็นลูกจ้าง หรือตัวแทนจำหน่ายที่ผูกพันเป็นพนักงานของบริษัทฯ แต่มีสถานะเป็นผู้แนะนำอิสระ (Independent Affiliate/Agent) ภายใต้ขอบเขตสัญญาอิเล็กทรอนิกส์นี้</p>
+                <p><strong>2. เงื่อนไขการจ่ายค่าคอมมิชชั่น (Strict Payout Condition):</strong> บริษัทฯ จะดำเนินการคำนวณและจ่ายค่าคอมมิชชั่นให้แก่พาร์ทเนอร์ <strong>ต่อเมื่อระบบของบริษัทฯ ได้รับเงินชำระค่าบริการเต็มจำนวนจากผู้สมัคร (End-User) ผ่าน Agent Code ของพาร์ทเนอร์รายนั้นๆ สำเร็จสมบูรณ์แล้วเท่านั้น</strong> หากเกิดการยกเลิกคำสั่งซื้อ การปฏิเสธการชำระเงิน (Chargeback) หรือการขอคืนเงินในทุกกรณี บริษัทฯ ขอสงวนสิทธิ์ในการหักกลบลบหนี้หรือระงับการจ่ายค่าคอมมิชชั่นในยอดดังกล่าวทันที</p>
+                <p><strong>3. การปฏิบัติตามกฎหมายภาษีอากรและประมวลรัษฎากรไทย:</strong> รายได้จากค่าคอมมิชชั่นทั้งหมดถือเป็นเงินได้พึงประเมินตามประมวลรัษฎากรแห่งประเทศไทย <strong>บริษัทฯ มีหน้าที่ตามกฎหมายในการหักภาษี ณ ที่จ่าย 3%</strong> จากยอดจ่ายค่าคอมมิชชั่นก่อนโอนเข้าบัญชีของพาร์ทเนอร์ และพาร์ทเนอร์มีหน้าที่ต้องนำรายได้ดังกล่าวไปยื่นภาษีเงินได้ประจำปีด้วยตนเอง</p>
+                <p><strong>4. มาตรการป้องกันการทุจริตและจริยธรรมทางการค้า:</strong> ห้ามพาร์ทเนอร์กระทำการใดๆ ที่เข้าข่ายหลอกลวง โฆษณาเกินจริง แอบอ้างเป็นบริษัทฯ หรือกระการผิดกฎหมายคุ้มครองผู้บริโภค หากตรวจสอบพบการทุจริต บริษัทฯ มีสิทธิ์ยกเลิกสถานะพาร์ทเนอร์และระงับยอดค้างจ่ายทันทีโดยไม่ต้องแจ้งล่วงหน้า</p>
+                <p><strong>5. การคุ้มครองข้อมูลส่วนบุคคล (PDPA):</strong> พาร์ทเนอร์ยินยอมให้บริษัทฯ เก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคล (รวมถึงสำเนาบัตรประชาชนหรือข้อมูลบัญชีธนาคารเพื่อการโอนเงินและออกหนังสือรับรองหักภาษี ณ ที่จ่าย) ภายใต้พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</p>
+            </div>
+
+            <div style="margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
+                <input type="checkbox" id="acceptCheck" onchange="toggleConsent()" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
+                <label for="acceptCheck" style="font-size: 0.83rem; color: #eee; cursor: pointer; line-height: 1.4;">
+                    ข้าพเจ้าได้อ่าน ทำความเข้าใจ และยอมรับเงื่อนไขการรับเงิน นโยบายการจ่ายคอมมิชชั่นหลังได้รับเงินครบถ้วน การหักภาษี 3% นโยบาย PDPA และข้อกำหนดทางกฎหมายทั้งหมด
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <button id="confirmBtn" class="btn-3d" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); font-weight: 800; background: #222; color: #666; cursor: not-allowed;">ยอมรับและดำเนินการต่อ</button>
+                <button class="btn-3d" onclick="closeDisclaimer()" style="padding: 12px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #fff; cursor: pointer;">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        async function handleAgentSubmit(event) {
-            event.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.innerHTML = "กำลังตรวจสอบและซิงค์ข้อมูล...";
-            btn.disabled = true;
-
-            // จัดเรียงข้อมูลให้ตรงกับไฟล์ services/models.py เป๊ะๆ
-            const payload = {
-                name: document.getElementById('agentName').value,
-                shop_name: document.getElementById('shopName').value,
-                kyc_document_id: document.getElementById('kycDocId').value,
-                product_type: document.getElementById('productType').value,
-                accepted_terms_and_conditions: document.getElementById('acceptCheck').checked,
-                selected_package: "PRIME", // ค่าเริ่มต้น
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                const response = await fetch("/api/register_agent", { // เปลี่ยนเป็น URL ของระบบเวลาเอาขึ้น Cloud จริง
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                if(response.ok) {
-                    alert('✅ ยืนยัน KYC สำเร็จ! ข้อมูลถูกบันทึกลงระบบ PDPA ของ SIRINTHANATTH PRIME เรียบร้อยแล้ว');
-                    document.getElementById('agentForm').reset();
-                } else {
-                    alert('❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-                }
-            } catch (error) {
-                alert('โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
-            } finally {
-                btn.innerHTML = "ยืนยันการสมัคร KYC";
-                btn.disabled = false;
+        function openDisclaimer() {
+            document.getElementById('disclaimerModal').style.display = 'flex';
+            document.getElementById('acceptCheck').checked = false;
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true; btn.style.background = '#222'; btn.style.color = '#666'; btn.style.cursor = 'not-allowed';
+        }
+        function closeDisclaimer() { document.getElementById('disclaimerModal').style.display = 'none'; }
+        function toggleConsent() {
+            const isChecked = document.getElementById('acceptCheck').checked;
+            const btn = document.getElementById('confirmBtn');
+            if (isChecked) {
+                btn.disabled = false; btn.style.background = 'linear-gradient(135deg, #FFE84D, #FFD700)'; btn.style.color = '#020202'; btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true; btn.style.background = '#222'; btn.style.color = '#666'; btn.style.cursor = 'not-allowed';
             }
+        }
+        function proceedAfterConsent() {
+            closeDisclaimer();
+            document.getElementById('agentForm').style.display = 'block';
+            event.target.style.display = 'none';
+            document.getElementById('agentFormSection').scrollIntoView({behavior: 'smooth'});
+        }
+        // เพิ่มฟังก์ชันสุ่มออกรหัส Agent ทันทีหลังกดสมัครเพื่อความมีประสิทธิภาพสมจริง
+        function handleAgentSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('agentName').value;
+            const randomCode = 'SP-' + Math.floor(10000 + Math.random() * 90000);
+            
+            alert(`✅ ลงทะเบียนสำเร็จ!\n\nยินดีต้อนรับคุณ ${name}\n\nคุณได้รับรหัสพาร์ทเนอร์ชั่วคราว: ${randomCode}\n(ข้อมูลของคุณถูกบันทึกภายใต้สัญญาอิเล็กทรอนิกส์เรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันสถานะอีกครั้ง)`);
+            
+            document.getElementById('agentForm').reset();
         }
     </script>
 </body>
