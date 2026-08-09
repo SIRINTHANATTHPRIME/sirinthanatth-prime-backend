@@ -1,6 +1,7 @@
 import os
 import logging
 import stripe
+import uvicorn
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -274,3 +275,8 @@ async def line_webhook_entry(request: Request, background_tasks: BackgroundTasks
 
     # รีบตอบกลับ LINE ทันทีว่า "รับเรื่องแล้ว" เพื่อไม่ให้โดนตัดสาย
     return {"status": "received", "message": "Processing in background"}
+
+if __name__ == "__main__":
+    # บังคับให้อ่าน Port จาก Google Cloud และเปิดรับทุก IP (0.0.0.0)
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
