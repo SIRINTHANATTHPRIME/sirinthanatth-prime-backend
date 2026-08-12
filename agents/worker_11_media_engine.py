@@ -1,5 +1,6 @@
 import os
 import time
+import google.generativeai as genai
 
 # ดึงฟังก์ชันเรนเดอร์วิดีโอ 4K ของจริงมาใช้งาน
 try:

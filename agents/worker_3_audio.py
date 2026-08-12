@@ -1,6 +1,7 @@
 import asyncio
 import os
 from gtts import gTTS
+import google.generativeai as genai
 
 class AudioProductionWorker:
     """🎙️ Worker 3: ระบบผลิตเสียงพากย์คุณภาพสูง (High-Fidelity Audio Engine)"""
