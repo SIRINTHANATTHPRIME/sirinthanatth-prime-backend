@@ -21,7 +21,8 @@ RUN sed -i 's/none/read,write/g' /etc/ImageMagick-6/policy.xml || true
 COPY . .
 
 # เปิดพอร์ต 8080 (Google Cloud Run บังคับใช้พอร์ตนี้)
+ENV PORT=8080
 EXPOSE 8080
 
 # คำสั่งสตาร์ทเครื่องยนต์ FastAPI แบบรองรับพอร์ต Dynamic ของ Cloud Run
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

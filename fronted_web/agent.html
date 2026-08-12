@@ -25,273 +25,486 @@
             background-image: url('assets/1000097983.png'); 
             background-size: cover; background-position: center;
             opacity: 0.18; z-index: -2; pointer-events: none;
-            filter: brightness(0.3) contrast(1.4);
-        }
-        .page-dark-shade {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(2,2,4,0.95) 0%, rgba(0,0,1,0.99) 100%);
-            z-index: -1; pointer-events: none;
+            filter: grayscale(80%) contrast(1.2);
         }
 
-        img { max-width: 100%; height: auto; }
-
-        /* ✨ เลเซอร์วิ่งด้านบน */
+        /* ✨ เลเซอร์วิ่งด้านบนสุด */
         .laser-sweep {
             position: fixed; top: 0; left: -100%; width: 100%; height: 2px;
             background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
-            animation: laserMove 5s infinite linear;
-            z-index: 1001;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+            animation: laserMove 5s infinite linear; z-index: 1001;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.7);
         }
         @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
 
+        /* 🌟 Navbar */
         .top-navbar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: clamp(10px, 2vw, 20px) clamp(15px, 4vw, 40px);
-            background: rgba(3, 3, 5, 0.95);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            position: sticky; top: 0; z-index: 1000;
-            backdrop-filter: blur(10px); width: 100%;
+            padding: 15px 40px; background: rgba(5, 5, 8, 0.95);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+            position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px);
         }
-        .nav-brand { color: #fff; text-decoration: none; font-weight: 800; font-size: clamp(1rem, 2vw, 1.25rem); letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.95); }
+        .nav-brand { color: #fff; text-decoration: none; font-weight: 800; font-size: 1.25rem; letter-spacing: 1px; }
+        .gold-text { color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
 
-        /* 🚀 3D Embossed Typography & 4K Sharp Look ทั่วทั้งหน้า Agent */
-        h1, h2, h3, p, span, li, a, label, input, button {
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(255, 255, 255, 0.15);
+        /* 🚀 ปุ่มกลับหน้าหลัก นีออน 3D ขั้นสูง */
+        .btn-back-neon {
+            position: relative; display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 22px; background: linear-gradient(135deg, rgba(10, 25, 45, 0.95) 0%, rgba(2, 8, 18, 0.98) 100%);
+            color: #00e5ff; text-decoration: none; font-size: 0.9rem; font-weight: 700; border-radius: 12px;
+            border: 1px solid #00e5ff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 229, 255, 0.2);
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
         }
+        .btn-back-neon::after {
+            content: ''; position: absolute; bottom: -8px; left: 10%; width: 80%; height: 6px;
+            background: #00e5ff; border-radius: 50%; filter: blur(6px); opacity: 0.4; transition: all 0.35s ease; pointer-events: none;
+        }
+        .btn-back-neon:hover {
+            transform: translateY(-4px) scale(1.03); color: #ffffff; border-color: #ffffff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 25px rgba(0, 229, 255, 0.6), 0 0 15px #00e5ff;
+        }
+        .btn-back-neon:hover::after { bottom: -12px; opacity: 1; filter: blur(10px); background: #00e5ff; width: 90%; left: 5%; }
 
-        .main-title { 
-            font-size: clamp(1.8rem, 4.5vw, 3.5rem); text-align: center; line-height: 1.3; 
-            margin-top: 20px; font-weight: 800; color: #ffffff; 
-            text-shadow: 0 3px 6px rgba(0,0,0,0.98), 0 5px 15px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.25);
+        /* ส่วนเนื้อหาหลัก */
+        .agent-hero {
+            padding: 60px 20px; text-align: center;
+            background: radial-gradient(circle at center, rgba(10,14,23,0.9) 0%, rgba(2,2,2,1) 100%);
         }
-        .gold-text { color: #FFD700; text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 25px rgba(255, 215, 0, 0.4); }
-        .section-title { font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 800; color: #E0E0E0; text-align: center; }
-        .subtitle { 
-            font-size: clamp(1rem, 1.8vw, 1.25rem); padding: 0 20px; text-align: center; color: #e2e8f0; line-height: 1.8; margin: 20px auto; max-width: 850px;
-            background: rgba(10, 10, 15, 0.4); padding-top: 12px; padding-bottom: 12px; border-radius: 8px;
-            border-left: 3px solid rgba(255, 215, 0, 0.5); border-right: 3px solid rgba(255, 215, 0, 0.5);
+        .agent-hero h1 { font-size: clamp(2rem, 4vw, 3.5rem); margin-bottom: 10px; font-weight: 800; color: #00e5ff; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,229,255,0.4); }
+        .agent-hero p { font-size: 1.1rem; color: #aaa; max-width: 800px; margin: 0 auto 40px; line-height: 1.6; }
+
+        /* แผนผังประโยชน์ */
+        .benefit-cards {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1050px; margin: 0 auto 50px;
         }
+        .b-card {
+            background: rgba(20, 20, 25, 0.8); border: 1px solid rgba(255,215,0,0.15); border-radius: 15px; padding: 30px; text-align: left;
+            transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .b-card:hover { transform: translateY(-5px); border-color: rgba(255,215,0,0.5); box-shadow: 0 15px 40px rgba(255,215,0,0.2); }
+        .b-card h3 { color: #FFD700; font-size: 1.4rem; margin-top: 0; }
+        .b-card p { color: #ccc; font-size: 0.95rem; line-height: 1.6; }
+
+        /* 💰 สไตล์การ์ด COMMISSION RATE TIERS */
+        .commission-container { max-width: 1050px; margin: 40px auto 60px; padding: 0 10px; }
         
-        .features li { line-height: 1.6; margin-bottom: 12px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); color: #e2e8f0; }
-        .feature-highlight { color: #00e5ff; font-weight: 600; text-shadow: 0 0 12px rgba(0,229,255,0.5); }
-        .legal-highlight { color: #FFD700; font-weight: 600; text-shadow: 0 0 12px rgba(255,215,0,0.5); }
-
-        /* ✨ ปุ่มทุกปุ่ม 3D นูน คมชัด 4K */
-        .btn-3d {
-            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid rgba(255, 255, 255, 0.25);
-            position: relative; z-index: 1; padding: clamp(10px, 1.5vw, 14px) clamp(20px, 3vw, 28px);
-            border-radius: 10px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); cursor: pointer; letter-spacing: 0.5px;
-            text-decoration: none; display: inline-block; text-align: center;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.6);
+        /* 🔥 VIP FOUNDER EXCLUSIVE CARD (โดดเด่นที่สุด) */
+        .vip-founder-card {
+            background: linear-gradient(145deg, #1a1608 0%, #0d0a02 100%);
+            border: 2px solid #FFD700; border-radius: 20px; padding: 40px; text-align: center;
+            position: relative; margin-bottom: 50px;
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25), inset 0 0 30px rgba(255, 215, 0, 0.05);
+            animation: floatGlow 4s infinite ease-in-out;
         }
-        .btn-3d:active { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.8); }
-
-        .btn-gold { 
-            background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #C59B1B 100%); color: #020202 !important; font-weight: 800; 
-            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(255, 215, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        @keyframes floatGlow {
+            0% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); }
+            50% { box-shadow: 0 25px 60px rgba(255, 215, 0, 0.4); transform: translateY(-5px); }
+            100% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); }
         }
-        .btn-gold:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(255, 215, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); }
-
-        .btn-cyan { 
-            background: linear-gradient(135deg, #33EDFF 0%, #00e5ff 50%, #008299 100%); color: #020202 !important; font-weight: 800; 
-            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 22px rgba(0, 229, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.7);
+        .vip-tag {
+            position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000;
+            font-weight: 800; padding: 8px 30px; border-radius: 30px; font-size: 1rem;
+            box-shadow: 0 5px 15px rgba(255,215,0,0.5); border: 2px solid #fff; letter-spacing: 1.5px; white-space: nowrap;
         }
-        .btn-cyan:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(0, 229, 255, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7); }
-
-        .agent-hero { padding: clamp(40px, 6vw, 70px) 20px 20px; text-align: center; }
-        .agent-container { max-width: 1200px; margin: 0 auto; padding: 20px; width: 100%; }
+        .vip-rate { font-size: 4rem; font-weight: 800; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin: 15px 0 5px; line-height: 1; }
         
-        .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
-        .card { padding: 30px 20px; background: rgba(10, 10, 15, 0.9); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: flex-start; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
-        .card-prime { border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.95); position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12); }
+        /* สไตล์ Dashboard ตัวเลข Live Counter */
+        .live-counter-box {
+            background: rgba(0,0,0,0.8); border: 1px solid #FFD700; border-radius: 12px; padding: 20px;
+            max-width: 450px; margin: 20px auto; display: flex; align-items: center; justify-content: space-around;
+        }
+        .counter-item { text-align: center; }
+        .counter-label { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .counter-number { font-size: 2.5rem; font-weight: 800; color: #fff; margin: 5px 0; font-variant-numeric: tabular-nums; }
+        .counter-number.highlight { color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
+        
+        .progress-container { margin: 15px auto 0; width: 100%; background: rgba(255,255,255,0.1); border-radius: 20px; height: 8px; position: relative; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #ff0000); border-radius: 20px; transition: width 2s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        .agent-form-box { background: rgba(12, 12, 15, 0.95); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 20px; padding: 40px 30px; max-width: 700px; margin: 60px auto; text-align: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.9); }
-        .form-input { width: 100%; padding: 12px 20px; margin: 10px 0 20px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-family: 'Prompt', sans-serif; font-size: 1rem; }
-        .form-input:focus { border-color: #00e5ff; outline: none; box-shadow: 0 0 12px rgba(0,229,255,0.3); }
+        /* ตาราง Standard Tiers */
+        .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
+        .tier-card {
+            background: rgba(12, 16, 26, 0.85); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 16px;
+            padding: 30px 20px; text-align: center; position: relative; transition: 0.3s;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+        }
+        .tier-card:hover { transform: translateY(-5px); border-color: #00e5ff; box-shadow: 0 15px 35px rgba(0,229,255,0.25); }
+        .tier-card.tier-gold { border-color: rgba(255, 215, 0, 0.5); background: rgba(18, 16, 10, 0.9); }
+        .tier-card.tier-gold:hover { border-color: #FFD700; box-shadow: 0 15px 35px rgba(255, 215, 0, 0.3); }
 
-        .site-footer { text-align: center; padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 60px; font-size: 0.85rem; color: #666; background: #010101; }
-        .site-footer a { color: #888; text-decoration: none; margin: 0 10px; }
-        .site-footer a:hover { color: #FFD700; }
+        .tier-badge { font-size: 1.1rem; font-weight: 800; color: #fff; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+        .tier-rate { font-size: 2.8rem; font-weight: 800; color: #00e5ff; margin: 10px 0; text-shadow: 0 0 15px rgba(0,229,255,0.3); }
+        .rate-unit { font-size: 0.9rem; color: #aaa; font-weight: 400; }
+        .tier-target { font-size: 0.85rem; color: #ddd; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px; display: inline-block; margin-bottom: 20px; }
+        .tier-list { list-style: none; padding: 0; margin: 0; text-align: left; font-size: 0.85rem; color: #bbb; line-height: 1.8; }
 
-        @media (min-width: 992px) { .card-prime { transform: scale(1.03); } }
+        .legal-note { font-size: 0.8rem; color: #777; margin-top: 20px; text-align: center; }
+
+        /* ส่วนฟอร์มสมัคร */
+        .form-section {
+            max-width: 600px; margin: 0 auto 80px; padding: 40px; background: rgba(10,10,12,0.9);
+            border-radius: 20px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .form-group { margin-bottom: 25px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; color: #FFD700; font-weight: 600; font-size: 0.95rem; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 15px; background: #050505; border: 1px solid #444; border-radius: 8px;
+            color: #fff; font-size: 1rem; font-family: 'Prompt', sans-serif; outline: none; transition: 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #00e5ff; box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #00e5ff 0%, #008299 100%); color: #000; border: none;
+            padding: 16px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: 800;
+            cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 20px rgba(0,229,255,0.3);
+            font-family: 'Prompt', sans-serif;
+        }
+        .btn-submit:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,229,255,0.5); }
+        .btn-submit:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* 🛡️ โมดอล (Pop-up) */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9998; backdrop-filter: blur(8px); }
+        .modal-box {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; background: rgba(10,14,23,0.98); border: 1px solid #00e5ff;
+            border-radius: 20px; z-index: 9999; padding: 35px; text-align: left; box-shadow: 0 20px 50px rgba(0,229,255,0.2);
+        }
+        .modal-box h3 { color: #00e5ff; margin-top: 0; font-size: 1.3rem; text-align: center; }
+
+        .accordion-btn {
+            background: rgba(0, 229, 255, 0.08); color: #00e5ff; cursor: pointer; padding: 14px 18px; width: 100%;
+            border: 1px solid rgba(0, 229, 255, 0.3); text-align: left; outline: none; font-size: 0.95rem; font-weight: 600;
+            transition: 0.4s; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .accordion-btn:hover, .accordion-btn.active { background: rgba(0, 229, 255, 0.2); }
+        .accordion-btn:after { content: '\002B'; font-size: 1.5rem; font-weight: bold; }
+        .accordion-btn.active:after { content: "\2212"; }
+        
+        .accordion-panel {
+            padding: 0 18px; background: rgba(0, 0, 0, 0.3); max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease; border-left: 2px solid rgba(0, 229, 255, 0.3);
+            margin-top: -10px; margin-bottom: 15px; font-size: 0.85rem; color: #ccc; line-height: 1.6;
+        }
+        .accordion-panel.show { max-height: 600px; padding: 15px 18px; }
+
+        .checkbox-container { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border-left: 3px solid #00e5ff; }
+        .checkbox-container input { margin-top: 4px; width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-container label { font-size: 0.85rem; color: #fff; cursor: pointer; line-height: 1.5; }
+
+        .site-footer { text-align: center; padding: 30px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: #666; }
     </style>
 </head>
 <body>
-
-    <!-- 🖼️ แบ็กกราวด์มืดลง คุมโทนลึกลับ -->
     <div class="page-bg-overlay"></div>
-    <div class="page-dark-shade"></div>
-
-    <!-- ✨ เลเซอร์วิ่งด้านบน -->
-    <div id="laserBeam" class="laser-sweep"></div>
+    <div class="laser-sweep"></div>
 
     <nav class="top-navbar">
         <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
-        <div>
-            <a href="index.html" class="btn-3d btn-cyan" style="padding: 8px 16px; font-size: 0.85rem;">🏠 กลับสู่หน้าหลักระบบ</a>
-        </div>
+        
+        <a href="index.html" class="btn-back-neon">
+            <span>🏠 กลับสู่หน้าหลัก</span>
+        </a>
     </nav>
 
     <div class="agent-hero">
-        <div class="agent-container">
-            <h1 class="main-title">
-                ระบบพาร์ทเนอร์แนะนำสมาชิก<br>
-                <span class="gold-text">EXECUTIVE AGENT</span>
-            </h1>
-            <p class="subtitle">โครงข่ายสร้างรายได้มาตรฐานสากล โปร่งใส ตรวจสอบได้ และปฏิบัติถูกต้องตามกฎหมายภาษีอากรและกฎระเบียบพาณิชย์อิเล็กทรอนิกส์ไทย</p>
-        </div>
-    </div>
+        <h1>Global Partner Program</h1>
+        <p>ยกระดับขีดความสามารถทางธุรกิจ ร่วมเป็นส่วนหนึ่งในการขยายระบบปัญญาประดิษฐ์ระดับองค์กร และรับโครงสร้างผลตอบแทนระดับพรีเมียมอย่างไร้ขีดจำกัด</p>
 
-    <div class="agent-container">
-        <h2 class="section-title">โครงสร้างคอมมิชชั่นและเงื่อนไขการรับเงิน</h2>
-        <p style="color: #aaa; text-align: center; margin-bottom: 20px;">จ่ายผลตอบแทนจริงตามเงื่อนไขมาตรฐานสากลและประมวลรัษฎากร</p>
-
-        <div class="tier-grid">
-            <div class="card">
-                <div>
-                    <h3>ESSENTIAL AGENT</h3>
-                    <div style="font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #00e5ff;">
-                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem; font-weight: 800;">15%</span>
-                    </div>
-                    <ul class="features" style="list-style: none; padding: 0;">
-                        <li><span class="feature-highlight">เหมาะสำหรับผู้เริ่มต้นบอกต่อธุรกิจ</span></li>
-                        <li>รับส่วนแบ่งรายได้ต่อเนื่องเมื่อลูกค้ายืนยันชำระเงินสำเร็จ</li>
-                        <li>ระบบคำนวณอัตโนมัติ ป้องกันความผิดพลาดทางบัญชี</li>
-                    </ul>
-                </div>
+        <div class="benefit-cards">
+            <div class="b-card">
+                <h3>🚀 Commission Structure</h3>
+                <p>รับส่วนแบ่งรายได้ (Revenue Share) อัตโนมัติทุกครั้งที่องค์กรหรือลูกค้าที่คุณแนะนำทำการสั่งซื้อแพ็กเกจ หรือเติม Token เข้าระบบ (Recurring Income)</p>
             </div>
-
-            <div class="card card-prime">
-                <div style="position: absolute; top: -15px; right: -15px; background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; padding: 5px 15px; font-weight: 800; border-radius: 20px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">ยอดนิยม</div>
-                <div>
-                    <h3>PRIME AGENT</h3>
-                    <div class="gold-text" style="font-size: 1.8rem; font-weight: 800; margin: 15px 0;">
-                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem;">20%</span>
-                    </div>
-                    <ul class="features" style="list-style: none; padding: 0;">
-                        <li><span class="legal-highlight">เหมาะสำหรับนักการตลาดและเครือข่ายธุรกิจ</span></li>
-                        <li>สิทธิ์การใช้เครื่องมือสนับสนุนการตลาดพรีเมียม</li>
-                        <li>เบิกจ่ายรายได้รวดเร็วภายใต้กฎระเบียบสรรพากร</li>
-                    </ul>
-                </div>
+            <div class="b-card">
+                <h3>🛡️ Premium Dashboard</h3>
+                <p>เข้าถึงระบบจัดการหลังบ้านเฉพาะพาร์ทเนอร์ ตรวจสอบยอดผู้ใช้งาน ยอดเข้าชม และสรุปรายได้แบบ Real-time พร้อมดึงข้อมูลสรุปผลเชิงลึก</p>
             </div>
-
-            <div class="card">
-                <div>
-                    <h3>ENTERPRISE PARTNER</h3>
-                    <div style="font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #00e5ff;">
-                        คอมมิชชั่นสูงสุด <span style="font-size: 2.2rem; font-weight: 800;">25%</span>
-                    </div>
-                    <ul class="features" style="list-style: none; padding: 0;">
-                        <li><span class="feature-highlight">สำหรับองค์กรหรือเอเจนซี่มืออาชีพ</span></li>
-                        <li>โครงสร้างรายได้พิเศษและโบนัสรายไตรมาส</li>
-                        <li>ทีมบัญชีและกฎหมายดูแลซัพพอร์ตเอ็กซ์คลูซีฟ</li>
-                    </ul>
-                </div>
+            <div class="b-card">
+                <h3>💼 Agency Exclusive</h3>
+                <p>รองรับการจัดการสิทธิพิเศษสำหรับบริษัทโฆษณา (Agency) เพื่อให้บริการผลิตสื่อ 4K และการตลาดแก่ลูกค้าของคุณด้วยเรท Token ราคาต้นทุน</p>
             </div>
         </div>
-    </div>
 
-    <!-- Agent Application Form -->
-    <div id="agentFormSection" class="agent-container">
-        <div class="agent-form-box">
-            <h2 class="section-title" style="font-size: 1.8rem; margin-bottom: 10px;">ลงทะเบียนรับโค้ดพาร์ทเนอร์ (Agent Code)</h2>
-            <p style="color: #bbb; font-size: 0.95rem; margin-bottom: 25px;">กรอกข้อมูลเพื่อเปิดใช้งานระบบแดชบอร์ดติดตามรายได้และยอมรับข้อตกลงทางกฎหมาย</p>
+        <div class="commission-container">
+            <h2 style="color: #FFD700; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 10px; text-shadow: 0 0 15px rgba(255,215,0,0.4);">
+                💰 โครงสร้าง Commission Rate & รายได้แบบ Recurring
+            </h2>
+            <p style="color: #bbb; font-size: 0.95rem; margin-bottom: 40px;">
+                แผนรายได้เติบโตยั่งยืน สัญญาสาธารณะโปร่งใส จ่ายตรงเข้าบัญชีทุกเดือนตามผลงานจริง
+            </p>
+
+            <div id="vipPromoSection" class="vip-founder-card">
+                <div class="vip-tag">⭐ LIMITED: โบนัสพิเศษเฉพาะช่วงเปิดตัว 100 VIP แรก ⭐</div>
+                <h3 style="color: #fff; font-size: 1.5rem; margin-top: 10px;">Executive Founder Fast-Action</h3>
+                <div class="vip-rate">30% <span style="font-size: 1.2rem; color: #ccc;">One-Time Bonus</span></div>
+                <p style="color: #ddd; font-size: 1rem; max-width: 700px; margin: 0 auto 20px; line-height: 1.6;">
+                    รับค่าตอบแทนพิเศษ <strong>อัตราสูงสุด 30% ทันที</strong> (ไม่ต้องทำยอดล่วงหน้า) 
+                    เฉพาะบิลแรกของลูกค้าที่ชำระเงินแพ็กเกจ 100 VIP ผ่านรหัสอ้างอิงของคุณ 
+                    <br><em style="font-size: 0.85rem; color: #888;">(หลังจากหมดโควตา 100 VIP รายได้จะปรับเข้าสู่เรท Standard Recurring อัตโนมัติ)</em>
+                </p>
+                
+                <div class="live-counter-box">
+                    <div class="counter-item">
+                        <div class="counter-label">โควตาทั้งหมด</div>
+                        <div class="counter-number">100</div>
+                    </div>
+                    <div class="counter-item" style="border-left: 1px solid #333; padding-left: 20px;">
+                        <div class="counter-label" style="color: #FFD700;">ชำระเงินสำเร็จแล้ว</div>
+                        <div class="counter-number highlight" id="livePaidCount">0</div>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="liveProgressBar"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 10px;">*อัปเดตสถิติเรียลไทม์จากระบบ Stripe Payment Gateway</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <div style="height: 1px; background: rgba(0,229,255,0.3); flex: 1;"></div>
+                <span style="padding: 0 15px; color: #00e5ff; font-weight: 600;">STANDARD PARTNER TIERS (RECURRING)</span>
+                <div style="height: 1px; background: rgba(0,229,255,0.3); flex: 1;"></div>
+            </div>
+
+            <div class="tier-grid">
+                <div class="tier-card">
+                    <div class="tier-badge">Silver Partner</div>
+                    <div class="tier-rate">15% <span class="rate-unit">Recurring</span></div>
+                    <div class="tier-target">แนะนำ 1 - 10 องค์กร</div>
+                    <ul class="tier-list">
+                        <li>✓ สิทธิ์รับรายได้ต่อเนื่องทุกการต่ออายุ</li>
+                        <li>✓ ระบบติดตามแดชบอร์ด Real-time</li>
+                        <li>✓ สนับสนุนสื่อมาร์เก็ตติ้งสำเร็จรูป</li>
+                    </ul>
+                </div>
+
+                <div class="tier-card tier-gold">
+                    <div class="tier-badge" style="color: #FFD700;">Gold Partner</div>
+                    <div class="tier-rate" style="color: #FFD700;">20% <span class="rate-unit">Recurring</span></div>
+                    <div class="tier-target">แนะนำ 11 - 50 องค์กร</div>
+                    <ul class="tier-list">
+                        <li>✓ สิทธิ์รับรายได้ส่วนแบ่ง 20% ทุกยอดบิล</li>
+                        <li>✓ เรท Token ราคาต้นทุนสำหรับผลิตสื่อ 4K</li>
+                        <li>✓ ทีมงานซัพพอร์ตคิวพิเศษ B2B</li>
+                    </ul>
+                </div>
+
+                <div class="tier-card">
+                    <div class="tier-badge" style="color: #00e5ff;">Master Enterprise</div>
+                    <div class="tier-rate" style="color: #00e5ff;">25% <span class="rate-unit">Recurring</span></div>
+                    <div class="tier-target">แนะนำ 51+ องค์กร</div>
+                    <ul class="tier-list">
+                        <li>✓ คอมมิชชันสูงสุด 25% ตลอดชีพ</li>
+                        <li>✓ สิทธิ์ Whitelisting & Custom Branding</li>
+                        <li>✓ ผู้ช่วยส่วนตัวและวิศวกรดูแลระบบ dedicated</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p class="legal-note">
+                *หมายเหตุการคุ้มครองตามกฎหมาย: ส่วนแบ่ง 30% เป็นโบนัสการส่งเสริมการตลาด (Fast-Action Bonus) จ่ายเฉพาะบิลแรกของลูกค้าที่สมัครในแคมเปญ 100 VIP เท่านั้น หากสิทธิ์เต็ม หรือเป็นการชำระเงินค่าแพ็กเกจทั่วไป ระบบจะคำนวณจ่ายผลตอบแทนตามโครงสร้าง Standard Partner Tiers (15%-25%) โดยอัตโนมัติ
+            </p>
+        </div>
+
+        <button id="startAgentBtn" class="btn-submit" style="max-width: 400px; font-size: 1.2rem; padding: 20px; box-shadow: 0 10px 30px rgba(0,229,255,0.4);" onclick="openDisclaimer()">
+            🤝 เริ่มต้นลงทะเบียนรับรหัสพาร์ทเนอร์
+        </button>
+
+        <div id="agentFormSection" class="form-section" style="display: none; margin-top: 50px;">
+            <h2 style="color: #00e5ff; margin-top: 0; text-align: center;">Partner Registration</h2>
+            <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 30px;">กรุณากรอกข้อมูลองค์กรหรือข้อมูลบุคคลธรรมดาของท่าน</p>
             
-            <button type="button" class="btn-3d btn-gold" style="width: 100%; padding: 15px; font-size: 1.1rem;" onclick="openDisclaimer()">คลิกเพื่ออ่านข้อตกลงและกรอกใบสมัครพาร์ทเนอร์</button>
-
-            <form id="agentForm" onsubmit="handleAgentSubmit(event)" style="display: none; margin-top: 25px; text-align: left; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">ชื่อ - นามสกุล (ตรงตามบัตรประชาชน/บัญชีธนาคารเพื่อการหักภาษี)</div>
-                <input type="text" id="agentName" class="form-input" placeholder="ระบุชื่อจริง นามสกุลจริง" required>
-
-                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">เบอร์โทรศัพท์มือถือ (สำหรับยืนยันตัวตน OTP)</div>
-                <input type="tel" id="agentPhone" class="form-input" placeholder="08xxxxxxxx" required>
-
-                <div style="margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">ช่องทางโปรโมทหลัก (เช่น เพจ, เว็บไซต์, หรือช่องทางโซเชียล)</div>
-                <input type="text" id="agentChannel" class="form-input" placeholder="ระบุลิงก์หรือชื่อช่องทาง" required>
-
-                <button type="submit" class="btn-3d btn-gold" style="width: 100%; margin-top: 15px; padding: 15px; font-size: 1.1rem;">ยืนยันการสมัครและรับ Agent Code</button>
+            <form id="agentForm" onsubmit="handleAgentSubmit(event)">
+                <div class="form-group">
+                    <label>ชื่อ-นามสกุล / ชื่อบริษัท (Company Name)*</label>
+                    <input type="text" id="agentName" required placeholder="เช่น บจก. มาร์เก็ตติ้ง สปาร์ค หรือ ชื่อของคุณ">
+                </div>
+                <div class="form-group">
+                    <label>อีเมลติดต่อ (Business Email)*</label>
+                    <input type="email" required placeholder="contact@yourdomain.com">
+                </div>
+                <div class="form-group">
+                    <label>ช่องทางติดต่อ (LINE ID / เบอร์โทรศัพท์)*</label>
+                    <input type="text" required placeholder="ใส่เบอร์โทรศัพท์ หรือ LINE ID">
+                </div>
+                <div class="form-group">
+                    <label>ประเภทธุรกิจ (Business Type)</label>
+                    <select required>
+                        <option value="">-- โปรดเลือกประเภท --</option>
+                        <option value="agency">บริษัทโฆษณา / เอเจนซี่ (Agency)</option>
+                        <option value="corporate">ที่ปรึกษาองค์กร / ธุรกิจ B2B</option>
+                        <option value="influencer">ครีเอเตอร์ / อินฟลูเอนเซอร์</option>
+                        <option value="individual">บุคคลทั่วไป (Freelance Partner)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">✅ ยืนยันการสมัครและรับรหัสพาร์ทเนอร์</button>
             </form>
-            
-            <div style="margin-top: 15px; font-size: 0.8rem; color: #888; text-align: center;">
-                * การจ่ายค่าคอมมิชชั่นจะเกิดขึ้นเมื่อได้รับเงินจากผู้สมัครครบถ้วนแล้วเท่านั้น และต้องถูกหักภาษี ณ ที่จ่าย 3% ตามประมวลรัษฎากร
-            </div>
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="site-footer">
-        <div>
-            <a href="#" onclick="alert('ข้อกำหนดพาร์ทเนอร์: ปฏิบัติตามประมวลรัษฎากรและกฎหมายพาณิชย์อิเล็กทรอนิกส์')">ข้อกำหนดพาร์ทเนอร์</a> | 
-            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">นโยบายความเป็นส่วนตัว (PDPA)</a>
-        </div>
-        <div style="margin-top: 15px;">&copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved.</div>
+        &copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved. แพลตฟอร์มนี้ดำเนินการภายใต้มาตรฐานความปลอดภัยระดับสากล และไม่มีนโยบายเครือข่ายแชร์ลูกโซ่ใดๆ
     </footer>
 
-    <!-- 🛡️ Comprehensive Agent Legal Disclaimer Modal -->
-    <div id="disclaimerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 20px;">
-        <div style="background: rgba(14,14,18,0.98); border: 1px solid rgba(255,215,0,0.5); border-radius: 16px; max-width: 700px; width: 100%; padding: 30px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.95);">
+    <div id="disclaimerModal" class="modal-overlay">
+        <div class="modal-box" id="disclaimerBox">
+            <h3>🛡️ คำมั่นสัญญาและข้อตกลงระดับพันธมิตรทางธุรกิจ</h3>
+            <p style="font-size: 0.85rem; color: #888; text-align: center; margin-bottom: 20px;">กรุณาเปิดอ่านเงื่อนไขด้านล่างเพื่อปกป้องสิทธิ์ของท่านและบริษัท</p>
             
-            <h3 style="color: #FFD700; margin-top: 0; font-size: 1.3rem; text-align: center;">ข้อตกลง เงื่อนไขการรับเงิน และกฎหมายพาร์ทเนอร์</h3>
-            
-            <div style="font-size: 0.85rem; color: #ccc; line-height: 1.6; overflow-y: auto; padding-right: 10px; margin: 15px 0; flex-grow: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding-top: 12px; padding-bottom: 12px;">
-                <p><strong>1. สถานะทางกฎหมายของพาร์ทเนอร์:</strong> การสมัครเข้าร่วมโครงการพาร์ทเนอร์ (Agent) ไม่ถือเป็นการจ้างงาน การเป็นลูกจ้าง หรือตัวแทนจำหน่ายที่ผูกพันเป็นพนักงานของบริษัทฯ แต่มีสถานะเป็นผู้แนะนำอิสระ (Independent Affiliate/Agent) ภายใต้ขอบเขตสัญญาอิเล็กทรอนิกส์นี้</p>
-                <p><strong>2. เงื่อนไขการจ่ายค่าคอมมิชชั่น (Strict Payout Condition):</strong> บริษัทฯ จะดำเนินการคำนวณและจ่ายค่าคอมมิชชั่นให้แก่พาร์ทเนอร์ <strong>ต่อเมื่อระบบของบริษัทฯ ได้รับเงินชำระค่าบริการเต็มจำนวนจากผู้สมัคร (End-User) ผ่าน Agent Code ของพาร์ทเนอร์รายนั้นๆ สำเร็จสมบูรณ์แล้วเท่านั้น</strong> หากเกิดการยกเลิกคำสั่งซื้อ การปฏิเสธการชำระเงิน (Chargeback) หรือการขอคืนเงินในทุกกรณี บริษัทฯ ขอสงวนสิทธิ์ในการหักกลบลบหนี้หรือระงับการจ่ายค่าคอมมิชชั่นในยอดดังกล่าวทันที</p>
-                <p><strong>3. การปฏิบัติตามกฎหมายภาษีอากรและประมวลรัษฎากรไทย:</strong> รายได้จากค่าคอมมิชชั่นทั้งหมดถือเป็นเงินได้พึงประเมินตามประมวลรัษฎากรแห่งประเทศไทย <strong>บริษัทฯ มีหน้าที่ตามกฎหมายในการหักภาษี ณ ที่จ่าย 3%</strong> จากยอดจ่ายค่าคอมมิชชั่นก่อนโอนเข้าบัญชีของพาร์ทเนอร์ และพาร์ทเนอร์มีหน้าที่ต้องนำรายได้ดังกล่าวไปยื่นภาษีเงินได้ประจำปีด้วยตนเอง</p>
-                <p><strong>4. มาตรการป้องกันการทุจริตและจริยธรรมทางการค้า:</strong> ห้ามพาร์ทเนอร์กระทำการใดๆ ที่เข้าข่ายหลอกลวง โฆษณาเกินจริง แอบอ้างเป็นบริษัทฯ หรือกระการผิดกฎหมายคุ้มครองผู้บริโภค หากตรวจสอบพบการทุจริต บริษัทฯ มีสิทธิ์ยกเลิกสถานะพาร์ทเนอร์และระงับยอดค้างจ่ายทันทีโดยไม่ต้องแจ้งล่วงหน้า</p>
-                <p><strong>5. การคุ้มครองข้อมูลส่วนบุคคล (PDPA):</strong> พาร์ทเนอร์ยินยอมให้บริษัทฯ เก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคล (รวมถึงสำเนาบัตรประชาชนหรือข้อมูลบัญชีธนาคารเพื่อการโอนเงินและออกหนังสือรับรองหักภาษี ณ ที่จ่าย) ภายใต้พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</p>
+            <button class="accordion-btn">📄 1. นโยบายความโปร่งใสและโครงสร้างรายได้</button>
+            <div class="accordion-panel">
+                <p>การสมัครเป็นพันธมิตรของ SIRINTHANATTH PRIME <strong>ไม่ใช่ธุรกิจเครือข่ายหรือแชร์ลูกโซ่</strong> ระบบของเราทำงานบนโครงสร้าง Affiliate Marketing สากล ท่านจะได้รับส่วนแบ่งรายได้จาก "ผลงานจริง (Performance-Based)" เท่านั้น โบนัส 30% มีผลเฉพาะการปิดยอดลูกค้า 100 VIP บิลแรก หลังจากนั้นระบบจะคำนวณจ่ายแบบ Recurring ตามเรท Standard 15-25% ตามผลงานการันตียอดขายสะสมของท่าน</p>
             </div>
 
-            <div style="margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
-                <input type="checkbox" id="acceptCheck" onchange="toggleConsent()" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
-                <label for="acceptCheck" style="font-size: 0.83rem; color: #eee; cursor: pointer; line-height: 1.4;">
-                    ข้าพเจ้าได้อ่าน ทำความเข้าใจ และยอมรับเงื่อนไขการรับเงิน นโยบายการจ่ายคอมมิชชั่นหลังได้รับเงินครบถ้วน การหักภาษี 3% นโยบาย PDPA และข้อกำหนดทางกฎหมายทั้งหมด
-                </label>
+            <button class="accordion-btn">⚖️ 2. การปกป้องแบรนด์และข้อจำกัดการโฆษณา</button>
+            <div class="accordion-panel">
+                <p>ห้ามมิให้พันธมิตรนำชื่อระบบไปโฆษณาในเชิงหลอกลวง ชี้ชวนการลงทุนที่ผิดกฎหมาย หรือแอบอ้างว่า AI สามารถการันตีผลกำไรทางตลาดหลักทรัพย์ได้ 100% หากพบการกระทำผิด บริษัทฯ ขอสงวนสิทธิ์ยกเลิกสถานะพันธมิตรและระงับการจ่ายผลตอบแทนทันที</p>
             </div>
 
-            <div style="display: flex; gap: 15px; margin-top: 10px;">
-                <button id="confirmBtn" class="btn-3d" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); font-weight: 800; background: #222; color: #666; cursor: not-allowed;">ยอมรับและดำเนินการต่อ</button>
-                <button class="btn-3d" onclick="closeDisclaimer()" style="padding: 12px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #fff; cursor: pointer;">ยกเลิก</button>
+            <button class="accordion-btn">🔐 3. การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</button>
+            <div class="accordion-panel">
+                <p>ข้อมูลบัญชีธนาคารสำหรับรับส่วนแบ่งรายได้ จะถูกเก็บรักษาไว้ภายใต้มาตรฐานความปลอดภัยสูงสุด (Enterprise Cloud Security) เพื่อวัตถุประสงค์ในการทำบัญชีและจ่ายภาษีหัก ณ ที่จ่าย อย่างถูกต้องตามกฎหมายเท่านั้น</p>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="acceptCheck" onchange="toggleConsent()">
+                <label for="acceptCheck">ข้าพเจ้าได้อ่าน เข้าใจ และตกลงรับเงื่อนไขการเป็นพันธมิตรทางธุรกิจ โครงสร้างรายได้ และนโยบายความเป็นส่วนตัวทั้งหมด</label>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <button id="confirmBtn" class="btn-submit" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 14px; background: #333; box-shadow: none;">ยอมรับและเข้าสู่หน้าสมัคร</button>
+                <button class="btn-submit" onclick="closeDisclaimer()" style="flex: 0.5; padding: 14px; background: transparent; border: 1px solid #555; color: #fff; box-shadow: none;">ยกเลิก</button>
             </div>
         </div>
     </div>
 
     <script>
-        function openDisclaimer() {
-            document.getElementById('disclaimerModal').style.display = 'flex';
-            document.getElementById('acceptCheck').checked = false;
-            const btn = document.getElementById('confirmBtn');
-            btn.disabled = true; btn.style.background = '#222'; btn.style.color = '#666'; btn.style.cursor = 'not-allowed';
+        // ==========================================
+        // ⚙️ ระบบสมองกล (Smart Automation Engine)
+        // ==========================================
+
+        // ตัวแปรจำลอง ยอดผู้สมัคร 100 VIP ที่ชำระเงินสำเร็จจริง (ดึงจากฐานข้อมูลในอนาคต)
+        const currentVipPaid = 78; // สมมติว่าตอนนี้จ่ายแล้ว 78 คน
+        const MAX_VIP_QUOTA = 100;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. จัดการระบบ Accordion
+            const acc = document.getElementsByClassName("accordion-btn");
+            for (let i = 0; i < acc.length; i++) {
+                acc[i].addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const panel = this.nextElementSibling;
+                    if (panel.classList.contains("show")) {
+                        panel.classList.remove("show");
+                    } else {
+                        panel.classList.add("show");
+                    }
+                });
+            }
+
+            // 2. ระบบ Auto-Hide ตรวจสอบโควตา 100 VIP อัตโนมัติ
+            checkVipQuotaStatus();
+        });
+
+        // ฟังก์ชันตรวจสอบและแอนิเมชันตัวเลข
+        function checkVipQuotaStatus() {
+            const promoSection = document.getElementById('vipPromoSection');
+            
+            if (currentVipPaid >= MAX_VIP_QUOTA) {
+                // ถ้าคนจ่ายเงินครบ 100 คนแล้ว ซ่อนกล่องโปรโมชัน 30% ทิ้งทันที!
+                promoSection.style.display = 'none';
+                console.log("VIP Quota is full. Promotion hidden automatically.");
+            } else {
+                // ถ้ายังไม่ครบ ให้เล่นแอนิเมชันตัวเลขวิ่งเพื่อกระตุ้นความอยาก (FOMO)
+                animateValue("livePaidCount", 0, currentVipPaid, 2000);
+                
+                // คำนวณความยาวของหลอด Progress Bar
+                const percentage = (currentVipPaid / MAX_VIP_QUOTA) * 100;
+                setTimeout(() => {
+                    document.getElementById('liveProgressBar').style.width = percentage + '%';
+                }, 500);
+            }
         }
-        function closeDisclaimer() { document.getElementById('disclaimerModal').style.display = 'none'; }
+
+        // เอฟเฟกต์ตัวเลขวิ่ง (Counter Animation)
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // ==========================================
+        // 🛡️ ระบบควบคุม PDPA และการสมัคร
+        // ==========================================
+        function openDisclaimer() {
+            document.getElementById('disclaimerModal').style.display = 'block';
+            document.getElementById('disclaimerBox').style.display = 'block';
+            document.getElementById('acceptCheck').checked = false;
+            toggleConsent();
+        }
+
+        function closeDisclaimer() { 
+            document.getElementById('disclaimerModal').style.display = 'none'; 
+            document.getElementById('disclaimerBox').style.display = 'none'; 
+        }
+
         function toggleConsent() {
             const isChecked = document.getElementById('acceptCheck').checked;
             const btn = document.getElementById('confirmBtn');
             if (isChecked) {
-                btn.disabled = false; btn.style.background = 'linear-gradient(135deg, #FFE84D, #FFD700)'; btn.style.color = '#020202'; btn.style.cursor = 'pointer';
+                btn.disabled = false; 
+                btn.style.background = 'linear-gradient(135deg, #00e5ff 0%, #008299 100%)'; 
+                btn.style.color = '#000'; 
+                btn.style.cursor = 'pointer';
             } else {
-                btn.disabled = true; btn.style.background = '#222'; btn.style.color = '#666'; btn.style.cursor = 'not-allowed';
+                btn.disabled = true; 
+                btn.style.background = '#333'; 
+                btn.style.color = '#666'; 
+                btn.style.cursor = 'not-allowed';
             }
         }
+
         function proceedAfterConsent() {
             closeDisclaimer();
-            document.getElementById('agentForm').style.display = 'block';
-            event.target.style.display = 'none';
-            document.getElementById('agentFormSection').scrollIntoView({behavior: 'smooth'});
+            document.getElementById('startAgentBtn').style.display = 'none'; 
+            const formSection = document.getElementById('agentFormSection');
+            formSection.style.display = 'block'; 
+            formSection.scrollIntoView({behavior: 'smooth'}); 
         }
-        // เพิ่มฟังก์ชันสุ่มออกรหัส Agent ทันทีหลังกดสมัครเพื่อความมีประสิทธิภาพสมจริง
+
         function handleAgentSubmit(event) {
-            event.preventDefault();
+            event.preventDefault(); 
             const name = document.getElementById('agentName').value;
             const randomCode = 'SP-' + Math.floor(10000 + Math.random() * 90000);
             
-            alert(`✅ ลงทะเบียนสำเร็จ!\n\nยินดีต้อนรับคุณ ${name}\n\nคุณได้รับรหัสพาร์ทเนอร์ชั่วคราว: ${randomCode}\n(ข้อมูลของคุณถูกบันทึกภายใต้สัญญาอิเล็กทรอนิกส์เรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันสถานะอีกครั้ง)`);
+            alert(`✅ ส่งข้อมูลการสมัครสำเร็จ!\n\nยินดีต้อนรับ ${name} สู่เครือข่ายพันธมิตรของเรา\n\nรหัสอ้างอิง (Agent Code) ชั่วคราวของคุณคือ: ${randomCode}\n\n(ระบบจะส่งรายละเอียดการเข้าสู่แดชบอร์ดให้ทางอีเมลที่ลงทะเบียนไว้)`);
             
-            document.getElementById('agentForm').reset();
+            window.location.href = 'index.html';
         }
+    </script>
+    <script>
+        // ฟังก์ชันดักจับลิงก์เชิญ VVIP (God Mode Link)
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteCode = urlParams.get('code');
+        
+            if (inviteCode) {
+                console.log("🎟️ ตรวจพบรหัสเชิญ VVIP:", inviteCode);
+                // แสดงป๊อปอัปต้อนรับสุดหรู
+                alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \\nระบบกำลังยืนยันรหัสเชิญของคุณ...");
+            
+                // (ในอนาคต: จะใช้ LIFF ดึง LINE ID ของเพื่อนคนนี้ แล้วยิง API ไปบอก Supabase ว่าขอใช้สิทธิ์รหัสนี้)
+                // fetch('https://your-cloud-run-url.com/api/claim-invite', { ... })
+            }
+        });
     </script>
 </body>
 </html>

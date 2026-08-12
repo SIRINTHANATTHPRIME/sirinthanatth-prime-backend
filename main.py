@@ -7,12 +7,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
-from linebot import LineBotApi, WebhookParser
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
+
+# 🌐 นำเข้า Router (ด่านหน้า) จากโฟลเดอร์ api
+from api.routes_line import router as line_router
+
 
 # Import ตัวสลับท่อ Hybrid Switching
 try:
@@ -46,6 +47,8 @@ app = FastAPI(
     description="Enterprise-grade AI SaaS supporting financial, logistics, and heavy media workloads.",
     version="2.0.0"
 )
+
+app.include_router(line_router)
 
 # ==========================================
 # 1. CORS & Security
@@ -277,6 +280,10 @@ async def line_webhook_entry(request: Request, background_tasks: BackgroundTasks
     return {"status": "received", "message": "Processing in background"}
 
 if __name__ == "__main__":
-    # บังคับให้อ่าน Port จาก Google Cloud และเปิดรับทุก IP (0.0.0.0)
+    # ดึงค่าพอร์ตแบบ Dynamic จาก Google Cloud Run (ถ้าหาไม่เจอให้ใช้ 8080)
     port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    
+    print(f"🚀 Starting SIRINTHANATTH PRIME Backend API on port {port}...")
+    
+    # สตาร์ทเซิร์ฟเวอร์ด้วย uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=port)
