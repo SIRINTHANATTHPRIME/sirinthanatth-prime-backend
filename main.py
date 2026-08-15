@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
+from api.routes_line import router as line_router
 from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
