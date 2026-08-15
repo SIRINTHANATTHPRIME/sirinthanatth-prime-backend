@@ -3,6 +3,7 @@ uvicorn
 python-dotenv
 line-bot-sdk
 stripe
+google-genai
 google-generativeai
 supabase
 redis
@@ -13,3 +14,4 @@ gTTS
 Pillow
 requests
 elevenlabs
+beautifulsoup4

@@ -2,6 +2,8 @@ import os
 import time
 import asyncio
 import google.generativeai as genai
+import re
+from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge
 from datetime import datetime
 
 class CeoSecretaryWorker:
@@ -42,6 +44,29 @@ class CeoSecretaryWorker:
                 "type": "text", 
                 "text": f"📝 รับทราบครับสำหรับแผนรหัส [{plan_id}]\nท่านประธานต้องการให้ผมปรับปรุงหรือแก้ไขในจุดไหน พิมพ์สั่งการมาได้เลยครับ เดี๋ยวผมจัดการแก้ให้ใหม่ทันทีครับ"
             }
+
+        # 🌟 ฟีเจอร์ใหม่: ระบบเรียนรู้จากลิงก์อัตโนมัติ (URL Learning)
+        if message.startswith("เรียนรู้ลิงก์:") or message.startswith("LEARN:"):
+            url_match = re.search(r'(https?://[^\s]+)', message)
+            if url_match:
+                target_url = url_match.group(1)
+                success, msg = process_and_save_link_knowledge(target_url)
+                if success:
+                    return {"type": "text", "text": f"🧠 [Knowledge Update]: ระบบได้สแกนและดึงความรู้ทั้งหมดจากลิงก์\n{target_url}\n\nเข้าสู่สมองกลส่วนกลาง (Corporate RAG) เรียบร้อยแล้วครับ!"}
+                else:
+                    return {"type": "text", "text": f"⚠️ [Error]: {msg}"}
+            else:
+                 return {"type": "text", "text": "⚠️ ไม่พบ URL ในข้อความ กรุณาพิมพ์ในรูปแบบ 'เรียนรู้ลิงก์: [URL]'"}
+
+        # ระบบป้อนความรู้แบบข้อความธรรมดา (FEED)
+        if message.startswith("FEED:") or message.startswith("สอนAI:"):
+            content = message.replace("FEED:", "").replace("สอนAI:", "").strip()
+            title = f"CEO_Update_{int(time.time())}"
+            success = save_corporate_knowledge(title, content)
+            if success:
+                return {"type": "text", "text": "🧠 [System Upload]: นำข้อมูลใหม่เข้าสู่สมองกลส่วนกลางและฐานข้อมูลความรู้บริษัท (Corporate RAG) เรียบร้อยแล้ว ระบบจะนำข้อมูลนี้ไปใช้วิเคราะห์และคำนวณให้ถูกต้องที่สุดนับจากนี้ครับ!"}
+            else:
+                return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในการนำเข้าข้อมูลสู่ฐานข้อมูลครับ"}
 
         # 🌟 ระบบป้อนไฟล์/ความรู้เข้าสมองกล (Knowledge Ingestion)
         if message.startswith("FEED:") or message.startswith("สอนAI:"):

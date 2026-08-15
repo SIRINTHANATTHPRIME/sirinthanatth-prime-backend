@@ -1,6 +1,10 @@
 import os
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from fastapi import BackgroundTasks
+
+GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
+client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 # 🏢 นำเข้าทีมผู้บริหารทั้ง 10 ฝ่ายและ Worker 11 (รองรับ Fallback หากบางไฟล์ยังไม่ถูกสร้างในระบบ)
 try:
@@ -80,11 +84,13 @@ class CentralBossAgent:
     """
     
     def __init__(self):
-        api_key = os.getenv("AI_API_KEY")
-        if api_key:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-pro')
-        
+        self.model_name = 'gemini-3.7-flash'
+        self.system_instruction = """
+        คุณคือ Central Boss ของระบบ SIRINTHANATTH PRIME หน้าที่ของคุณคือ 
+        1. อ่านข้อความลูกค้า 
+        2. แยกแยะว่าต้องให้ Worker เบอร์อะไรทำงาน (1-11)
+        3. ตอบกลับลูกค้าอย่างมืออาชีพด้วยความรวดเร็ว
+        """        
         # Initialize Workers
         self.report_worker = DocumentEngineeringWorker()
         self.legal_worker = RiskAndLegalWorker()
@@ -104,7 +110,7 @@ class CentralBossAgent:
         # 🧠 หน่วยความจำชั่วคราวเก็บสคริปต์วิดีโอที่รออนุมัติ (Draft Memory)
         self.pending_approvals = {}
 
-    def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks) -> str:
+    def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message, file_path=None, file_type=None) -> str:
         message_lower = message.lower()
 
         # ==========================================
@@ -228,3 +234,18 @@ class CentralBossAgent:
             except Exception as e:
                 # สำรองไว้กรณี Gemini API มีปัญหา
                 return f"ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังปรับปรุง ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"
+            
+            if not client: return "ระบบบอสส่วนกลางออฟไลน์"
+            
+            try:
+                # ใช้งาน SDK ใหม่ล่าสุดพร้อมโครงสร้าง Config
+                response = client.models.generate_content(
+                    model=self.model_name,
+                    contents=incoming_message,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.system_instruction
+                    )
+                    )
+                return response.text
+            except Exception as e:
+                return f"ระบบจ่ายงานขัดข้อง กรุณาลองใหม่ภายหลัง: {e}"

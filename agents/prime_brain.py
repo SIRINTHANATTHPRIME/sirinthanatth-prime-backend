@@ -1,9 +1,11 @@
 import os
 import time
-import google.generativeai as genai
+from google import genai
 from agents.memory_engine import recall_memory, save_memory, recall_corporate_knowledge
 
-MODEL_NAME = "gemini-1.5-pro-latest"
+GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
+client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
+MODEL_NAME = "gemini-3.1-pro-preview"
 
 # 🧠 อัปเดต SYSTEM PROMPT ให้มีคำสั่ง Cross-Reference และการวิเคราะห์มัลติมีเดีย (หูตาอัจฉริยะ)
 SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด AI ผู้ช่วยผู้บริหารและที่ปรึกษาธุรกิจระดับโลก 
@@ -24,34 +26,27 @@ SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด A
 """
 
 # เปลี่ยนพารามิเตอร์ให้รับ file_path แทน file_uri เพื่อให้ตรงกับ routes_line.py
-def generate_intelligent_response(line_user_id: str, current_message: str, file_path: str = None, file_type: str = None) -> str:
-    uploaded_file = None
+def generate_intelligent_response(user_id, incoming_message, file_path=None, file_type=None):
+    """ฟังก์ชันสมองกลประมวลผลเชิงลึก (Deep Reasoning)"""
+    if not client:
+        return "⚠️ System Offline: ไม่พบการเชื่อมต่อ AI_API_KEY ในระบบ"
+
+    # 🧠 ใช้ Pro Model รุ่นเรือธง สำหรับงานที่ซับซ้อนที่สุด
+    model_name = 'gemini-3.1-pro-preview'
+    
+    contents = [
+        f"วิเคราะห์ข้อมูลและวางแผนกลยุทธ์เชิงลึกสำหรับลูกค้า ID [{user_id}]:",
+        incoming_message
+    ]
+    
     try:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("AI_API_KEY")
-        genai.configure(api_key=api_key)
-
-        # ==========================================
-        # 1. จัดการอัปโหลดไฟล์ไปให้สมองกล Gemini (ถ้าลูกค้าส่งมา)
-        # ==========================================
-        content_to_send = []
-        if file_path and os.path.exists(file_path):
-            print(f"⬆️ [Prime Brain]: กำลังอัปโหลดไฟล์ประเภท [{file_type}] ขึ้นเซิร์ฟเวอร์ AI...")
-            
-            # อัปโหลดไฟล์เข้าสู่สมอง Gemini (รองรับ ภาพ, เสียง, วิดีโอ, PDF)
-            uploaded_file = genai.upload_file(path=file_path)
-            
-            # ถ้าเป็นวิดีโอ ต้องรอให้ Gemini ประมวลผลเฟรมต่อเฟรมให้เสร็จก่อน (อาจใช้เวลา 2-10 วินาที)
-            if file_type == 'video':
-                print(f"⏳ [Prime Brain]: ระบบกำลังดูและประมวลผลวิดีโอ กรุณารอสักครู่...")
-                while uploaded_file.state.name == 'PROCESSING':
-                    time.sleep(2)
-                    uploaded_file = genai.get_file(uploaded_file.name)
-                if uploaded_file.state.name == 'FAILED':
-                    raise ValueError("วิดีโอไม่สามารถประมวลผลได้ รูปแบบไฟล์อาจไม่รองรับ")
-
-            # นำไฟล์ไปใส่เป็นข้อมูลก้อนแรก (ตาม Best Practice ของโมเดล Multimodal)
-            content_to_send.append(uploaded_file)
-            print(f"✅ [Prime Brain]: ส่งไฟล์ให้สมองกลรับรู้เรียบร้อยแล้ว")
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents
+        )
+        return response.text
+    except Exception as e:
+        return f"⚠️ [Prime Brain Error]: ไม่สามารถประมวลผลข้อมูลระดับสูงได้เนื่องจาก {e}"
 
         # ==========================================
         # 2. ดึงความจำลูกค้าและฐานข้อมูลบริษัท (RAG System)
