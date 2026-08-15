@@ -12,9 +12,7 @@ from typing import Optional, Dict, Any
 from supabase import create_client, Client
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
-    MessageEvent, TextMessage, AudioMessage, ImageMessage, 
-    VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage, FileSendMessage
+from linebot.models import ( MessageEvent, TextMessage, AudioMessage, ImageMessage, VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage
 )
 
 # =========================================================
