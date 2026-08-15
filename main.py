@@ -10,6 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
+from linebot import LineBotApi, WebhookParser
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import (
+    MessageEvent, TextMessage, AudioMessage, ImageMessage, 
+    VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage, FileSendMessage
+)
 
 app = FastAPI(
     title="SIRINTHANATTH PRIME Backend API",
