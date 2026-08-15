@@ -27,7 +27,7 @@ app = FastAPI(
 
 # 🌐 นำเข้า Router ด่านหน้า (รองรับทั้งไฟล์ภาพ, เสียง, วิดีโอ 4K)
 from api.routes_line import router as line_router
-app.include_router(line_router)
+app.include_router(line_router, prefix="/api/v1/line")
 
 # Import ระบบจัดการภาระงาน (Task Dispatcher)
 try:
