@@ -11,10 +11,15 @@ from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 from supabase import create_client, Client
 
+app = FastAPI(
+    title="SIRINTHANATTH PRIME Backend API",
+    description="Enterprise-grade AI SaaS supporting financial, logistics, and heavy media workloads.",
+    version="2.0.0"
+)
+
 # 🌐 นำเข้า Router (ด่านหน้า) จากโฟลเดอร์ api
 from api.routes_line import router as line_router
 app.include_router(line_router)
-
 
 # Import ตัวสลับท่อ Hybrid Switching
 try:
@@ -42,16 +47,6 @@ except ImportError:
     generate_intelligent_response = None
 
 load_dotenv()
-
-# ตั้งค่าระบบ Logging พื้นฐาน
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-app = FastAPI(
-    title="SIRINTHANATTH PRIME Backend API",
-    description="Enterprise-grade AI SaaS supporting financial, logistics, and heavy media workloads.",
-    version="2.0.0"
-)
 
 # ==========================================
 # 1. CORS & Security
