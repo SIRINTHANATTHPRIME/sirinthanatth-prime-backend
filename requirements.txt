@@ -12,3 +12,4 @@ moviepy
 gTTS
 Pillow
 requests
+elevenlabs

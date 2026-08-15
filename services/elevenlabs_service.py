@@ -1,79 +1,69 @@
 import os
 import requests
 import uuid
-import time
 
-# ใช้ไลบรารี moviepy ที่เรามีอยู่แล้วในการคำนวณความยาวไฟล์เสียง (LINE บังคับว่าต้องมี)
-try:
-    from moviepy.editor import AudioFileClip
-except ImportError:
-    AudioFileClip = None
+# 1. ดึง API Key จากไฟล์ .env (ถ้าไม่มีจะข้ามการทำเสียงอัตโนมัติ)
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 
-def generate_voice_from_text(text: str) -> tuple:
+# 2. ตั้งค่า Voice ID เริ่มต้น (สามารถเปลี่ยนเป็น ID ของธนัตถ์ หรือ สิรินทร์ ได้ในอนาคต)
+# ปัจจุบันใช้เสียงพื้นฐาน (Rachel) เป็นค่าเริ่มต้น
+DEFAULT_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM") 
+
+def generate_voice_from_text(text: str):
     """
-    ฟังก์ชันแปลงข้อความจาก AI เป็นไฟล์เสียง MP3 ด้วย ElevenLabs
-    คืนค่า (Return): (ชื่อไฟล์เสียง, ความยาวเสียงเป็นมิลลิวินาที)
+    ฟังก์ชันแปลงข้อความเป็นเสียงพูดภาษาไทย (Text-to-Speech)
+    คืนค่าเป็น: (ชื่อไฟล์เสียง, ความยาวเสียงเป็นมิลลิวินาที)
     """
-    
-    # 1. ดึงคีย์และรหัสเสียงจากที่ตั้งค่าไว้ใน Google Cloud (Environment Variables)
-    api_key = os.getenv("ELEVENLABS_API_KEY")
-    voice_id = os.getenv("voice_id", "bKOllpuXvCoK2MpTT9Yf") # ใช้ Voice ID ของคุณ
-    
-    if not api_key:
-        print("⚠️ [ElevenLabs Warning]: ไม่พบ ELEVENLABS_API_KEY ในระบบ")
+    if not ELEVENLABS_API_KEY:
+        print("⚠️ [System]: ไม่พบ ELEVENLABS_API_KEY สลับกลับไปใช้ข้อความตัวอักษรอย่างเดียว")
         return None, 0
-
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": api_key
-    }
-    
-    # 2. ตั้งค่าการสร้างเสียง (ใช้โมเดล v2 ที่รองรับภาษาไทยได้เนียนและมีอารมณ์ที่สุด)
-    data = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2", 
-        "voice_settings": {
-            "stability": 0.5,           # ความนิ่งของเสียง (0.5 คือกำลังดี ไม่แข็งเป็นหุ่นยนต์)
-            "similarity_boost": 0.75,   # ความคล้ายกับเสียงต้นฉบับ
-            "style": 0.0,
-            "use_speaker_boost": True
-        }
-    }
-    
+        
     try:
-        print("🎙️ [ElevenLabs]: กำลังสร้างไฟล์เสียงจากข้อความ...")
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{DEFAULT_VOICE_ID}"
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": ELEVENLABS_API_KEY
+        }
+        
+        # ใช้โมเดล eleven_multilingual_v2 เพื่อให้ออกเสียงภาษาไทยได้ชัดเจนและเป็นธรรมชาติ
+        data = {
+            "text": text,
+            "model_id": "eleven_multilingual_v2", 
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75
+            }
+        }
+        
+        print(f"🎙️ [ElevenLabs]: กำลังสังเคราะห์เสียงสำหรับข้อความความยาว {len(text)} ตัวอักษร...")
         response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status()
         
-        # 3. เตรียมโฟลเดอร์ static เพื่อให้ LINE วิ่งมาโหลดไฟล์เสียงไปเปิดให้ลูกค้าฟังได้
-        os.makedirs("static/audio", exist_ok=True)
-        
-        # 4. สร้างชื่อไฟล์แบบสุ่ม (UUID) เพื่อไม่ให้ไฟล์ทับกันเวลาคนทักมาพร้อมกันเยอะๆ
-        filename = f"reply_{uuid.uuid4().hex}.mp3"
-        file_path = os.path.join("static/audio", filename)
-        
-        # 5. บันทึกไฟล์เสียงลงเซิร์ฟเวอร์
-        with open(file_path, "wb") as f:
-            f.write(response.content)
+        if response.status_code == 200:
+            # สร้างชื่อไฟล์แบบสุ่มป้องกันการทับซ้อน (UUID)
+            filename = f"reply_{uuid.uuid4().hex}.mp3"
             
-        print(f"✅ [ElevenLabs]: บันทึกไฟล์เสียงสำเร็จ -> {filename}")
-        
-        # 6. คำนวณความยาวของเสียงเป็นมิลลิวินาที (บังคับใช้สำหรับ AudioSendMessage ของ LINE)
-        duration_ms = 10000 # ค่าเริ่มต้น 10 วินาทีเผื่อกันพลาด
-        if AudioFileClip:
-            try:
-                clip = AudioFileClip(file_path)
-                duration_ms = int(clip.duration * 1000)
-                clip.close()
-            except Exception as e:
-                print(f"⚠️ [ElevenLabs]: คำนวณความยาวเสียงไม่สำเร็จ ใช้ค่าเริ่มต้นแทน ({e})")
-        
-        # คืนค่า ชื่อไฟล์ และ ความยาวเสียง กลับไปให้ routes_line.py
-        return filename, duration_ms
-        
+            # ตรวจสอบและสร้างโฟลเดอร์ static/audio หากยังไม่มี
+            save_dir = os.path.join(os.getcwd(), "static", "audio")
+            os.makedirs(save_dir, exist_ok=True)
+            
+            save_path = os.path.join(save_dir, filename)
+            
+            # บันทึกไฟล์เสียงลงโฟลเดอร์
+            with open(save_path, "wb") as f:
+                f.write(response.content)
+            
+            # ประเมินความยาวเสียงคร่าวๆ สำหรับส่งให้ LINE (ภาษาไทย 1 ตัวอักษร ~ 80ms)
+            estimated_duration_ms = len(text) * 80 
+            if estimated_duration_ms < 1000:
+                estimated_duration_ms = 1000 # ขั้นต่ำ 1 วินาที
+                
+            print(f"✅ [ElevenLabs]: สร้างไฟล์เสียงสำเร็จ -> {filename}")
+            return filename, estimated_duration_ms
+        else:
+            print(f"❌ [ElevenLabs Error]: API ปฏิเสธการเชื่อมต่อ -> {response.text}")
+            return None, 0
+            
     except Exception as e:
-        print(f"❌ [ElevenLabs Error]: เชื่อมต่อและสร้างเสียงไม่สำเร็จ ({str(e)})")
+        print(f"❌ [Voice Gen Error]: เกิดข้อผิดพลาดระหว่างสร้างเสียง -> {e}")
         return None, 0
