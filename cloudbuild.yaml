@@ -1,0 +1,24 @@
+steps:
+  # 1. สร้าง Image จาก Dockerfile
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA', '.']
+  
+  # 2. ดัน Image ขึ้น Cloud Registry ของ Google
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA']
+  
+  # 3. อัปเดตเซิร์ฟเวอร์ Google Cloud Run อัตโนมัติ
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'prime-core-agent'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA'
+      - '--region'
+      - 'asia-southeast3'
+
+# 🚀 แก้ปัญหา Error สีแดงตรงนี้! บังคับเก็บ Log ลง Cloud
+options:
+  logging: CLOUD_LOGGING_ONLY
