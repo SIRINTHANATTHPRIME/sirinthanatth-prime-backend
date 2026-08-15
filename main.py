@@ -13,6 +13,7 @@ from supabase import create_client, Client
 
 # 🌐 นำเข้า Router (ด่านหน้า) จากโฟลเดอร์ api
 from api.routes_line import router as line_router
+app.include_router(line_router)
 
 
 # Import ตัวสลับท่อ Hybrid Switching
@@ -42,13 +43,15 @@ except ImportError:
 
 load_dotenv()
 
+# ตั้งค่าระบบ Logging พื้นฐาน
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="SIRINTHANATTH PRIME Backend API",
     description="Enterprise-grade AI SaaS supporting financial, logistics, and heavy media workloads.",
     version="2.0.0"
 )
-
-app.include_router(line_router)
 
 # ==========================================
 # 1. CORS & Security
@@ -98,6 +101,15 @@ if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 @app.get("/")
+def health_check():
+    """ตรวจสอบสถานะการทำงานของระบบเซิร์ฟเวอร์หลัก"""
+    return {
+        "status": "success",
+        "system": "SIRINTHANATTH PRIME Enterprise AI SaaS",
+        "version": "2.0.0",
+        "message": "Backend engine is running smoothly and ready for requests."
+    }
+
 def read_index():
     if os.path.exists("index.html"):
         return FileResponse("index.html")
@@ -279,11 +291,41 @@ async def line_webhook_entry(request: Request, background_tasks: BackgroundTasks
     # รีบตอบกลับ LINE ทันทีว่า "รับเรื่องแล้ว" เพื่อไม่ให้โดนตัดสาย
     return {"status": "received", "message": "Processing in background"}
 
+# ==========================================
+# 6. Frontend Integration (รับข้อมูลจากหน้าเว็บ)
+# ==========================================
+class UserProfile(BaseModel):
+    line_user_id: str
+    display_name: str
+    picture_url: str
+
+@app.post("/api/sync-user")
+async def sync_user_profile(profile: UserProfile):
+    """รับข้อมูล Profile จากหน้าเว็บ (LIFF) แล้วบันทึกลง Supabase"""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not available")
+        
+    try:
+        # บันทึกหรืออัปเดตข้อมูลลูกค้าลงในตาราง users 
+        # (เพื่อให้ระบบรู้ว่าใครคือใคร เวลาเรียกใช้ RAG Memory)
+        supabase.table("users").upsert({
+            "line_user_id": profile.line_user_id,
+            "display_name": profile.display_name,
+            "picture_url": profile.picture_url,
+            "status": "active"
+        }, on_conflict="line_user_id").execute()
+        
+        logger.info(f"🔄 [Sync User]: บันทึกข้อมูลคุณ {profile.display_name} ลงฐานข้อมูลสำเร็จ")
+        return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
+        
+    except Exception as e:
+        logger.error(f"❌ [Sync User Error]: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     # ดึงค่าพอร์ตแบบ Dynamic จาก Google Cloud Run (ถ้าหาไม่เจอให้ใช้ 8080)
     port = int(os.environ.get("PORT", 8080))
     
-    print(f"🚀 Starting SIRINTHANATTH PRIME Backend API on port {port}...")
+    logger.info(f"🚀 Starting SIRINTHANATTH PRIME Backend API on port {port}...")
     
-    # สตาร์ทเซิร์ฟเวอร์ด้วย uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

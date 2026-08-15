@@ -220,4 +220,11 @@ class CentralBossAgent:
             return "🏢 ระบบ [ENTERPRISE] เปิดใช้งานโพรโทคอลความปลอดภัยองค์กรครับ"
             
         else:
-            return f"SIRINTHANATTH PRIME ได้รับข้อความ: '{message}' หากต้องการผลิตสื่อโฆษณา 4K หรือเติมเงิน Smart Wallet พิมพ์แจ้งได้เลยครับ"
+            # ให้ Gemini ตอบกลับแบบเลขาผู้ชาญฉลาดแทน
+            try:
+                prompt = f"คุณคือ SIRINTHANATTH PRIME ผู้ช่วย AI ระดับองค์กร. ลูกค้าทักมาว่า: '{message}'. จงตอบกลับอย่างเป็นมิตร สุภาพ และชาญฉลาด (สั้นๆ กระชับ)"
+                response = self.model.generate_content(prompt)
+                return response.text
+            except Exception as e:
+                # สำรองไว้กรณี Gemini API มีปัญหา
+                return f"ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังปรับปรุง ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"

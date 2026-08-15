@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIRINTHANATTH PRIME | Executive AI Ecosystem</title>
+    <meta name="description" content="Marketing Spark Combine Co., Ltd. - SIRINTHANATTH PRIME is an Enterprise AI SaaS ecosystem providing AI multi-agent integration, data analysis, and media generation hosted on Google Cloud Run.">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -630,12 +631,23 @@
     </section>
 
     <footer class="site-footer">
-        <div>
-            <a href="#" onclick="alert('ข้อกำหนดการให้บริการ: อยู่ภายใต้กฎหมายพาณิชย์อิเล็กทรอนิกส์ไทย')">ข้อกำหนดการให้บริการ</a> | 
-            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">นโยบายความเป็นส่วนตัว (PDPA)</a> | 
-            <a href="#" onclick="alert('นโยบายการคืนเงิน: สงวนสิทธิ์การคืนเงินเนื่องจากเป็นบริการดิจิทัลที่เริ่มประมวลผลทันที')">นโยบายการคืนเงิน</a>
+        <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
+            <h4 style="color: #D4AF37; margin-bottom: 10px; font-weight: 800;">Marketing Spark Combine Co., Ltd.</h4>
+            <p style="color: #888; font-size: 0.85rem; margin-bottom: 5px;">
+                <!-- คุณสามารถเปลี่ยนที่อยู่นี้เป็นที่อยู่จริงของบริษัท หรือที่อยู่ที่จดทะเบียนได้เลยครับ -->
+                123/45 Business District, Bangkok, Thailand 10000<br>
+                Email: weerachai@sirinthanatthprime.com | Phone: +66 XX XXX XXXX
+            </p>
         </div>
-        <div style="margin-top: 15px;">&copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved. จัดทำขึ้นภายใต้มาตรฐานกฎหมายไทยและสากล</div>
+        <div style="margin-top: 20px;">
+            <a href="#" onclick="alert('ข้อกำหนดการให้บริการ: อยู่ภายใต้กฎหมายพาณิชย์อิเล็กทรอนิกส์ไทย')">Terms of Service</a> | 
+            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">Privacy Policy (PDPA)</a> | 
+            <a href="#" onclick="alert('นโยบายการคืนเงิน: สงวนสิทธิ์การคืนเงินเนื่องจากเป็นบริการดิจิทัลที่เริ่มประมวลผลทันที')">Refund Policy</a>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.8rem;">
+            &copy; 2026 SIRINTHANATTH PRIME by Marketing Spark Combine Co., Ltd. <br>
+            <span style="color: #555;">Proudly powered by Google Cloud Run.</span>
+        </div>
     </footer>
 
     <audio id="hoverBellAudio" src="assets/kave_msri-ding-sfx-330333.mp3" preload="auto"></audio> 
@@ -681,7 +693,7 @@
         async function sendDataToBackend(profile) {
             if(CLOUD_RUN_API_URL.includes("YOUR_CLOUD_RUN_URL")) return; 
             try {
-                const response = await fetch(CLOUD_RUN_API_URL, {
+                const response = await fetch(CLOUD_RUN_API_URL + "/api/sync-user", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -862,6 +874,38 @@
             const audio = document.getElementById('welcomeAudio');
             if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
         }
+    
+    # ==========================================
+    # 6. Frontend Integration (รับข้อมูลจากหน้าเว็บ)
+    # ==========================================
+    class UserProfile(BaseModel):
+        line_user_id: str
+        display_name: str
+        picture_url: str
+
+    @app.post("/api/sync-user")
+    async def sync_user_profile(profile: UserProfile):
+        """รับข้อมูล Profile จากหน้าเว็บ (LIFF) แล้วบันทึกลง Supabase"""
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection not available")
+        
+        try:
+            # บันทึกหรืออัปเดตข้อมูลลูกค้าลงในตาราง users 
+            # (เพื่อให้ระบบรู้ว่าใครคือใคร เวลาเรียกใช้ RAG Memory)
+            supabase.table("users").upsert({
+                "line_user_id": profile.line_user_id,
+                "display_name": profile.display_name,
+                "picture_url": profile.picture_url,
+                "status": "active"
+            }, on_conflict="line_user_id").execute()
+        
+            logger.info(f"🔄 [Sync User]: บันทึกข้อมูลคุณ {profile.display_name} ลงฐานข้อมูลสำเร็จ")
+            return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
+        
+        except Exception as e:
+            logger.error(f"❌ [Sync User Error]: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
     </script>
+    
 </body>
 </html>
