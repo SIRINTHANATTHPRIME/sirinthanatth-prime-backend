@@ -131,7 +131,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
 
 
 # 🌐 Endpoint รับสัญญาณจาก LINE (Webhook Gateway)
-@router.post("/webhook")
+@router.post("/api/v1/line/webhook")
 async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
     """รับสัญญาณทุกรูปแบบจากผู้ใช้งานและกระจายงานเข้า Background Task"""
     body = await request.body()
