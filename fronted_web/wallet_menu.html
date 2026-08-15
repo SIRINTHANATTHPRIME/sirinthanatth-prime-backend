@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIRINTHANATTH PRIME | Smart Wallet</title>
+    <title>SIRINTHANATTH PRIME | Executive Smart Wallet</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
         body {
             font-family: 'Prompt', sans-serif;
-            background: linear-gradient(135deg, #050a15 0%, #0a1128 100%); /* โทนสีกรมท่าเข้มพรีเมียม */
+            background: linear-gradient(135deg, #020611 0%, #0a1128 100%); /* โทนสีกรมท่าเข้มสุด พรีเมียม */
             margin: 0; 
             padding: 20px; 
             display: flex; 
@@ -22,20 +22,20 @@
 
         /* 💳 บัตร VIP Card */
         .wallet-card {
-            background: linear-gradient(145deg, #111a2f 0%, #0d1424 100%);
-            border: 1px solid rgba(212, 175, 55, 0.3); /* ขอบสีทอง */
-            border-radius: 20px; 
-            padding: 30px;
+            background: linear-gradient(145deg, #0b1325 0%, #070c18 100%);
+            border: 1px solid rgba(212, 175, 55, 0.4); /* ขอบสีทอง */
+            border-radius: 24px; 
+            padding: 35px 30px;
             width: 100%;
-            max-width: 450px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+            max-width: 480px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.08);
             position: relative;
             overflow: hidden;
         }
         /* แสงสะท้อนบนบัตร */
         .wallet-card::before {
             content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,215,0,0.05) 0%, transparent 60%);
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 60%);
             pointer-events: none;
         }
 
@@ -45,79 +45,98 @@
             align-items: center;
             margin-bottom: 25px;
             padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 215, 0, 0.15);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
         }
         .profile-img {
-            width: 65px; height: 65px; border-radius: 50%;
-            border: 2px solid #D4AF37; padding: 2px;
-            background-color: #000; margin-right: 15px;
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 2px solid #D4AF37; padding: 3px;
+            background-color: #000; margin-right: 18px;
             object-fit: cover;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
         }
-        .profile-info h3 { margin: 0; font-size: 1.2rem; font-weight: 600; color: #fff; }
-        .profile-info p { margin: 3px 0 0 0; font-size: 0.8rem; color: #D4AF37; font-weight: 400; letter-spacing: 1px; }
+        .profile-info h3 { margin: 0; font-size: 1.3rem; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+        .profile-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: #D4AF37; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; }
 
-        /* ส่วนแสดงจำนวน Token */
-        .balance-section { text-align: center; margin-bottom: 25px; }
-        .balance-title { font-size: 0.9rem; color: #8a99ad; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        /* ส่วนแสดงจำนวน Token (PRIME CREDITS) */
+        .balance-section { text-align: center; margin-bottom: 30px; }
+        .balance-title { font-size: 0.9rem; color: #8a99ad; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; font-weight: 300;}
         .balance-amount { 
-            font-size: 3rem; font-weight: 800; color: #D4AF37; 
-            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.4); margin: 0;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
+            font-size: 3.5rem; font-weight: 800; color: #D4AF37; 
+            text-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); margin: 0;
+            display: flex; justify-content: center; align-items: baseline; gap: 10px;
+            line-height: 1;
         }
-        .balance-unit { font-size: 1rem; color: #fff; font-weight: 400; }
+        .balance-unit { font-size: 1.2rem; color: #e0e0e0; font-weight: 400; letter-spacing: 1px;}
 
-        /* อัตราแลกเปลี่ยนและเงื่อนไข (อัปเกรดรายละเอียดให้พรีเมียมและครบถ้วน) */
+        /* อัตราแลกเปลี่ยนและเงื่อนไข (Service Transparency Matrix) */
         .tokenomics-box {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 30px;
             font-size: 0.85rem;
-            color: #b0c4de;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
-        .tokenomics-box h4 { color: #fff; margin: 0 0 15px 0; font-size: 0.95rem; display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,215,0,0.3); padding-bottom: 10px;}
+        .tokenomics-box h4 { 
+            color: #fff; margin: 0 0 15px 0; font-size: 0.95rem; 
+            display: flex; justify-content: space-between; 
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.4); 
+            padding-bottom: 12px; font-weight: 400;
+        }
         
         .tokenomics-list { list-style: none; padding: 0; margin: 0; }
         .tokenomics-list li {
-            padding: 12px 14px; margin-bottom: 10px; background: rgba(255, 215, 0, 0.03);
-            border-left: 3px solid #FFD700; border-radius: 8px; font-size: 0.9rem; color: #eee;
-            border: 1px solid rgba(255,215,0,0.1);
+            padding: 14px 16px; margin-bottom: 12px; 
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #D4AF37; 
+            border-radius: 10px; font-size: 0.9rem; color: #eee;
+            border-top: 1px solid rgba(255,255,255,0.03);
+            border-right: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: all 0.3s ease;
         }
-        .token-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-        .token-title { font-weight: 600; }
+        .tokenomics-list li:hover {
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateX(4px);
+        }
+        .token-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .token-title { font-weight: 600; letter-spacing: 0.3px;}
         .token-rate { font-weight: 800; white-space: nowrap; margin-left: 10px; }
-        .token-desc { display: block; font-size: 0.75rem; color: #8a99ad; line-height: 1.5; font-weight: 300; }
+        .token-desc { display: block; font-size: 0.75rem; color: #8a99ad; line-height: 1.6; font-weight: 300; }
 
         /* ปุ่มกด */
         .btn-topup {
-            background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #DAA520 100%);
-            color: #000; border: none; padding: 16px; width: 100%;
-            border-radius: 12px; font-size: 1.1rem; font-weight: 800;
+            background: linear-gradient(135deg, #FFE84D 0%, #D4AF37 50%, #B8860B 100%);
+            color: #050a15; border: none; padding: 18px; width: 100%;
+            border-radius: 14px; font-size: 1.1rem; font-weight: 800;
             cursor: pointer; transition: 0.3s;
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
             font-family: 'Prompt', sans-serif;
             margin-bottom: 15px;
+            letter-spacing: 0.5px;
         }
-        .btn-topup:active { transform: scale(0.98); }
+        .btn-topup:active { transform: scale(0.98); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2); }
 
         .btn-history {
             background: transparent; color: #8a99ad;
-            border: 1px solid rgba(138, 153, 173, 0.3);
-            padding: 12px; width: 100%; border-radius: 12px;
-            font-size: 0.95rem; font-weight: 600;
+            border: 1px solid rgba(138, 153, 173, 0.2);
+            padding: 14px; width: 100%; border-radius: 14px;
+            font-size: 0.95rem; font-weight: 400;
             cursor: pointer; transition: 0.3s;
             font-family: 'Prompt', sans-serif;
+            letter-spacing: 0.5px;
         }
-        .btn-history:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+        .btn-history:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: rgba(212, 175, 55, 0.5);}
 
-        .loading-text { text-align: center; color: #D4AF37; font-size: 0.9rem; margin-top: 20px; font-weight: 300; }
+        .loading-text { text-align: center; color: #D4AF37; font-size: 0.85rem; margin-top: 20px; font-weight: 300; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
     <div class="wallet-card">
         <div class="profile-section">
-            <img id="userPicture" src="assets/1000097983.png" alt="Profile" class="profile-img">
+            <img id="userPicture" src="https://profile.line-scdn.net/0hQK4kC1NwaFtsC0xLMB99aRdoZTQmIipJVi4jSxo-Nmh2MSRLUSogFhlhZDp-MHFHBCl_HkphY2wj" alt="Profile" class="profile-img">
             <div class="profile-info">
                 <h3 id="userName">กำลังตรวจสอบข้อมูล...</h3>
                 <p>EXECUTIVE MEMBER</p>
@@ -125,77 +144,87 @@
         </div>
 
         <div class="balance-section">
-            <div class="balance-title">ทรัพยากรคงเหลือ (Available Tokens)</div>
-            <div class="balance-amount" id="tokenBalance">0 <span class="balance-unit">Tokens</span></div>
+            <div class="balance-title">ทรัพยากรคงเหลือ (Available)</div>
+            <div class="balance-amount" id="tokenBalance">0 <span class="balance-unit">PRIME CREDITS</span></div>
         </div>
 
         <div class="tokenomics-box">
-            <h4>อัตราการเบิกจ่ายคลาวด์ <span style="color: #D4AF37;">1 ฿ = 10 Token</span></h4>
+            <h4>อัตราแลกเปลี่ยนคลาวด์ <span style="color: #D4AF37; font-weight: 600;">1 ฿ = 10 Credits</span></h4>
             <ul class="tokenomics-list">
-                <li style="border-left-color: #4CAF50;">
+                
+                <!-- แชท (Unlimited Fair Use) -->
+                <li style="border-left-color: #00E676;">
                     <div class="token-item-header">
-                        <span class="token-title">💬 แชทถาม-ตอบ & กลยุทธ์ทั่วไป</span>
-                        <span class="token-rate" style="color: #4CAF50;">5 Token</span>
+                        <span class="token-title">💬 Smart Chat & Strategy</span>
+                        <span class="token-rate" style="color: #00E676;">ใช้งานได้ไม่จำกัด*</span>
                     </div>
-                    <span class="token-desc">จดจำบริบทระดับลึก 2,000 คำ ร่างคอนเทนต์ลื่นไหล</span>
+                    <span class="token-desc">จดจำบริบทลึกระดับองค์กร ไม่จำกัดตัวอักษร ภายใต้ Fair Use Policy</span>
                 </li>
-                <li style="border-left-color: #FF9800;">
+
+                <!-- คุยสด Voice AI (ใหม่) -->
+                <li style="border-left-color: #9C27B0;">
                     <div class="token-item-header">
-                        <span class="token-title">📊 วิเคราะห์ภาพกราฟ & AI Vision</span>
-                        <span class="token-rate" style="color: #FF9800;">50 Token</span>
+                        <span class="token-title">📞 Live Voice Call (AI Advisor)</span>
+                        <span class="token-rate" style="color: #9C27B0;">150 Credits / นาที</span>
                     </div>
-                    <span class="token-desc">สแกนภาพความละเอียดสูง สรุปแนวโน้มใน 3 วินาที</span>
+                    <span class="token-desc">คุยสดแบบ Real-time กับคุณธนัตถ์ หรือ คุณสิรินทร์ (เศษนาทีปัดขึ้น)</span>
                 </li>
-                <li style="border-left-color: #F44336;">
+
+                <!-- วิเคราะห์ภาพ -->
+                <li style="border-left-color: #42A5F5;">
                     <div class="token-item-header">
-                        <span class="token-title">📄 เจาะลึกงบการเงิน PDF/Excel</span>
-                        <span class="token-rate" style="color: #F44336;">100 Token</span>
+                        <span class="token-title">📊 AI Vision & Graph Analysis</span>
+                        <span class="token-rate" style="color: #42A5F5;">50 Credits / ภาพ</span>
                     </div>
-                    <span class="token-desc">สรุป Insight จากเอกสารสูงสุด 20 หน้า ระดับผู้บริหาร</span>
+                    <span class="token-desc">สแกนความละเอียดสูงระดับ OCR (รองรับ JPG/PNG สูงสุด 20 MB/ภาพ)</span>
                 </li>
-                <li style="border-left-color: #F44336;">
+
+                <!-- วิเคราะห์เอกสาร -->
+                <li style="border-left-color: #FF7043;">
                     <div class="token-item-header">
-                        <span class="token-title">🚚 เรียกขนส่ง & ใบปะหน้า Flash</span>
-                        <span class="token-rate" style="color: #F44336;">120 Token</span>
+                        <span class="token-title">📄 Executive Document Audit</span>
+                        <span class="token-rate" style="color: #FF7043;">100 Credits / ไฟล์</span>
                     </div>
-                    <span class="token-desc">AI ดึงที่อยู่อัตโนมัติ 10 ออเดอร์/ครั้ง (*ไม่รวมค่าส่งจริง)</span>
+                    <span class="token-desc">วิเคราะห์เชิงลึก PDF/Excel (ความยาวสูงสุด 20 หน้า, ไม่เกิน 25 MB/ไฟล์)</span>
                 </li>
-                <li style="border-left-color: #00e5ff;">
+
+                <!-- เรียกขนส่ง -->
+                <li style="border-left-color: #FFA726;">
                     <div class="token-item-header">
-                        <span class="token-title">🎬 สร้างภาพ/วิดีโอ 4K (พื้นฐาน)</span>
-                        <span class="token-rate" style="color: #00e5ff;">490 Token</span>
+                        <span class="token-title">🚚 ระบบเรียกขนส่ง Flash Express</span>
+                        <span class="token-rate" style="color: #FFA726;">120 Credits / ครั้ง</span>
                     </div>
-                    <span class="token-desc">คลิปไฮไลท์ 3-5 วินาที หรือเสียงพากย์ 1 นาที คุณภาพสตูดิโอ</span>
+                    <span class="token-desc">AI ดึงที่อยู่จัดส่งอัตโนมัติสูงสุด 10 ออเดอร์/ครั้ง (*ไม่รวมค่าขนส่งจริง)</span>
                 </li>
-                <li style="border-left-color: #ff00ff; background: rgba(255, 0, 255, 0.08); border-color: rgba(255, 0, 255, 0.3);">
+
+                <!-- วิดีโอ 4K -->
+                <li style="border-left-color: #FFD700; background: linear-gradient(90deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.3) 100%);">
                     <div class="token-item-header">
-                        <strong class="token-title" style="color: #ffb3ff;">👑 วิดีโอ 4K (Agency 1 นาทีเต็ม)</strong>
-                        <span class="token-rate" style="color: #ff00ff;">5,900 Token</span>
+                        <strong class="token-title" style="color: #FFD700;">🎬 Cinematic 4K Video Production</strong>
+                        <span class="token-rate" style="color: #FFD700;">6,900 Credits / คลิป</span>
                     </div>
-                    <span class="token-desc" style="color: #e0e0e0;">วิดีโอ 4K 1 นาทีเต็ม พร้อมเสียงพากย์และตัดต่อ สำหรับงานโปรดักชั่นโฆษณา</span>
+                    <span class="token-desc" style="color: #e0e0e0;">ผลิตวิดีโอโฆษณา 4K ความยาว 1 นาทีเต็ม พร้อมเสียงพากย์และตัดต่ออัตโนมัติ (ขนาดไฟล์ส่งออกปรับแต่งสูงสุด 32 MB)</span>
                 </li>
             </ul>
         </div>
 
-        <button class="btn-topup" onclick="sendTopupMessage()">💳 สมัคร VIP / เติม Token เข้าระบบ</button>
-        <button class="btn-history" onclick="alert('ระบบกำลังดึงข้อมูลประวัติการเบิกจ่ายคลาวด์ย้อนหลัง...')">📊 ประวัติการใช้ทรัพยากร</button>
+        <button class="btn-topup" onclick="sendTopupMessage()">💳 อัปเกรดแพ็กเกจ / เติม PRIME CREDITS</button>
+        <button class="btn-history" onclick="alert('ระบบรักษาความปลอดภัย: กำลังเตรียมดึงข้อมูลประวัติการเบิกจ่ายคลาวด์ย้อนหลัง (Audit Trail)...')">📊 ประวัติการใช้งาน (Audit Trail)</button>
 
         <div id="loadingStatus" class="loading-text">Connecting to Secure Server...</div>
     </div>
 
     <script>
-        // ⚠️ รหัส LIFF ID ของคุณ
+        // ⚠️ รหัส LIFF ID ของคุณ (คงไว้ตามเดิม)
         const LIFF_ID = "2011067128-fnWmOak4"; 
 
         async function initializeLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
                 
-                // ถ้ายูสเซอร์เปิดใน LINE แอปและเชื่อมต่อแล้ว
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     
-                    // เปลี่ยนรูปภาพและชื่อบนบัตรให้เป็นของลูกค้า
                     document.getElementById("userName").innerText = profile.displayName;
                     if(profile.pictureUrl) {
                         document.getElementById("userPicture").src = profile.pictureUrl;
@@ -205,8 +234,6 @@
                     setTimeout(() => { document.getElementById("loadingStatus").style.display = 'none'; }, 2000);
 
                 } else {
-                    // ❌ ปลดล็อกการบังคับเด้งล็อกอิน (เอา liff.login() ออก) 
-                    // แสดงสถานะ Guest แทน เพื่อให้ลูกค้าดูหน้านี้ได้สบายๆ
                     document.getElementById("userName").innerText = "ผู้เยี่ยมชม (Guest)";
                     document.getElementById("loadingStatus").innerText = "กรุณาเปิดผ่านแอปพลิเคชัน LINE เพื่อซิงค์ข้อมูลบัญชี";
                 }
@@ -223,21 +250,19 @@
                 liff.sendMessages([
                     {
                         type: "text",
-                        text: "ขอลิงก์เติม Token / สมัคร VIP Founder ค่ะ"
+                        text: "ขอลิงก์อัปเกรดแพ็กเกจ / เติม PRIME CREDITS ครับ/ค่ะ"
                     }
                 ]).then(() => {
-                    // ส่งข้อความเสร็จ ปิดหน้า LIFF ทันทีให้ลูกค้าไปคุยต่อในแชท
                     liff.closeWindow();
                 }).catch((err) => {
                     console.error("Send message error", err);
-                    alert("เกิดข้อผิดพลาดในการส่งข้อความ");
+                    alert("เกิดข้อผิดพลาดในระบบเครือข่าย กรุณาลองใหม่อีกครั้ง");
                 });
             } else {
                 alert("เพื่อให้บัญชีปลอดภัยและเชื่อมต่อถูกต้อง กรุณากดปุ่มทำรายการผ่านแอปพลิเคชัน LINE ของท่านโดยตรงครับ");
             }
         }
 
-        // เริ่มต้นการทำงานเมื่อโหลดหน้าเสร็จ
         window.addEventListener('DOMContentLoaded', initializeLiff);
     </script>
 </body>

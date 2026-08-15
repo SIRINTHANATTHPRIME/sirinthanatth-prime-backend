@@ -634,9 +634,8 @@
         <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
             <h4 style="color: #D4AF37; margin-bottom: 10px; font-weight: 800;">Marketing Spark Combine Co., Ltd.</h4>
             <p style="color: #888; font-size: 0.85rem; margin-bottom: 5px;">
-                <!-- คุณสามารถเปลี่ยนที่อยู่นี้เป็นที่อยู่จริงของบริษัท หรือที่อยู่ที่จดทะเบียนได้เลยครับ -->
-                123/45 Business District, Bangkok, Thailand 10000<br>
-                Email: weerachai@sirinthanatthprime.com | Phone: +66 XX XXX XXXX
+                919/172 Indy Pracha Uthit 90 (3) Village, Moo 10, Soi Chatsan Ta Berm, Pracha Uthit 90 Road, Nai Khlong Bang Pla Kot Subdistrict, Phra Samut Chedi District, Samut Prakan Province. Thailand 10290<br>
+                Email: admin@sirinthanatthprime.com | Phone: +66 86 807 4224
             </p>
         </div>
         <div style="margin-top: 20px;">
@@ -874,38 +873,6 @@
             const audio = document.getElementById('welcomeAudio');
             if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
         }
-    
-    # ==========================================
-    # 6. Frontend Integration (รับข้อมูลจากหน้าเว็บ)
-    # ==========================================
-    class UserProfile(BaseModel):
-        line_user_id: str
-        display_name: str
-        picture_url: str
-
-    @app.post("/api/sync-user")
-    async def sync_user_profile(profile: UserProfile):
-        """รับข้อมูล Profile จากหน้าเว็บ (LIFF) แล้วบันทึกลง Supabase"""
-        if not supabase:
-            raise HTTPException(status_code=500, detail="Database connection not available")
-        
-        try:
-            # บันทึกหรืออัปเดตข้อมูลลูกค้าลงในตาราง users 
-            # (เพื่อให้ระบบรู้ว่าใครคือใคร เวลาเรียกใช้ RAG Memory)
-            supabase.table("users").upsert({
-                "line_user_id": profile.line_user_id,
-                "display_name": profile.display_name,
-                "picture_url": profile.picture_url,
-                "status": "active"
-            }, on_conflict="line_user_id").execute()
-        
-            logger.info(f"🔄 [Sync User]: บันทึกข้อมูลคุณ {profile.display_name} ลงฐานข้อมูลสำเร็จ")
-            return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
-        
-        except Exception as e:
-            logger.error(f"❌ [Sync User Error]: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
     </script>
-    
 </body>
 </html>
