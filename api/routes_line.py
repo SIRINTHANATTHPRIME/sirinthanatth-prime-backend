@@ -2,7 +2,6 @@ import os
 import asyncio
 import requests
 import google.generativeai as genai
-from api.routes_line import router as line_router
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError
