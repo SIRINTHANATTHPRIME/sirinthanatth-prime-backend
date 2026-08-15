@@ -22,7 +22,7 @@ try:
 except ImportError:
     generate_intelligent_response = None
 
-# 3. 👑 เลขาฯ ส่วนตัว (CEO God Mode - Executive Privilege)
+# 3. 👑 เลขาฯ ส่วนตัว (CEO God Mode - Executive Privilege & VVIP Management)
 try:
     from agents.worker_0_ceo_secretary import CeoSecretaryWorker
     ceo_secretary = CeoSecretaryWorker()
@@ -47,7 +47,7 @@ parser = WebhookParser(os.getenv("LINE_CHANNEL_SECRET", ""))
 boss_agent = CentralBossAgent()
 BASE_URL = os.getenv("BASE_URL", "https://www.sirinthanatthprime.com")
 
-# 🛠️ ฟังก์ชันพิเศษ: สำหรับส่ง Flex Message หรือ Custom JSON Payload
+# 🛠️ ฟังก์ชันพิเศษ: สำหรับส่ง Flex Message หรือ Custom JSON Payload จากเลขาฯ
 def send_line_custom_payload(reply_token: str, payload: dict):
     headers = {
         "Content-Type": "application/json",
@@ -69,23 +69,28 @@ def send_line_custom_payload(reply_token: str, payload: dict):
 async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: str, file_path: str = None, file_type: str = None):
     try:
         # ---------------------------------------------------------
-        # 👑 [GOD MODE]: ระบบตรวจสอบสิทธิ์ผู้บริหารสูงสุด
+        # 👑 [GOD MODE & VVIP CONTROL]: ตรวจสอบสิทธิ์ผู้บริหารและการจัดการพิเศษ
         # ---------------------------------------------------------
         if ceo_secretary and ceo_secretary.is_ceo(user_id):
             print(f"👑 [Security Auth]: CEO Access Granted for {user_id}. Routing to God Mode.")
             reply_payload = await ceo_secretary.process_ceo_command(incoming_message)
-            send_line_custom_payload(reply_token, reply_payload)
+            
+            # หากเลขาฯ ส่งกลับมาเป็น Dictionary (Flex/Custom Payload) ให้ส่งแบบพิเศษ
+            if isinstance(reply_payload, dict):
+                send_line_custom_payload(reply_token, reply_payload)
+            else:
+                line_bot_api.reply_message(reply_token, TextSendMessage(text=str(reply_payload)))
             return
 
         # ---------------------------------------------------------
-        # 👥 [USER MODE]: ประมวลผลสำหรับลูกค้า (Dynamic Workload)
+        # 👥 [USER & VVIP TOKEN MODE]: ประมวลผลสำหรับลูกค้าและสิทธิ์ VVIP
         # ---------------------------------------------------------
         reply_msg = ""
         
-        # 1. เข้าสู่ท่อประมวลผลหลัก (Prime Brain - RAG & Vision)
+        # 1. เข้าสู่ท่อประมวลผลหลัก (Prime Brain - RAG & Vision & Token Checking)
         if generate_intelligent_response:
             try:
-                # ส่งข้อมูลไปยังสมองกล 32GB RAM (หากเป็นไฟล์หนัก) หรือ 4GB RAM (แชทปกติ)
+                # ส่งข้อมูลไปยังสมองกลพร้อมระบบตรวจสอบโควตา Token / สิทธิ์ VVIP ตามที่คุณกำหนด
                 reply_msg = generate_intelligent_response(user_id, incoming_message, file_path=file_path, file_type=file_type)
                 print(f"🧠 [Prime Brain]: Analysis Complete for User: {user_id}")
             except Exception as e:
@@ -133,7 +138,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
 # 🌐 Endpoint รับสัญญาณจาก LINE (Webhook Gateway)
 @router.post("/api/v1/line/webhook")
 async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
-    """รับสัญญาณทุกรูปแบบจากผู้ใช้งานและกระจายงานเข้า Background Task"""
+    """รับสัญญาณทุกรูปแบบจากผู้ใช้งานและกระจายงานเข้า Background Task อย่างปลอดภัย"""
     body = await request.body()
     body_str = body.decode('utf-8')
     
@@ -165,7 +170,6 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 print(f"📩 [Incoming Traffic]: MEDIA [{message_type.upper()}] from {user_id} (ID: {message_id})")
                 
                 try:
-                    # ดาวน์โหลดไฟล์จาก LINE Server มาพักไว้ที่ RAM/Disk ของเราชั่วคราว
                     message_content = line_bot_api.get_message_content(message_id)
                     ext = ""
                     if message_type == 'audio': ext = ".m4a"
@@ -193,7 +197,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 print(f"⚠️ [Unsupported Format]: Received unhandled type -> {message_type}")
                 continue
             
-            # 🚀 กระจายงานเข้าสู่ CPU Background Worker (ป้องกัน LINE ตัดสายกรณีโหลดนาน)
+            # 🚀 กระจายงานเข้าสู่ CPU Background Worker (ประมวลผลแบบไม่บล็อกการทำงานของระบบ)
             background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
         
     return {"status": "OK"}
