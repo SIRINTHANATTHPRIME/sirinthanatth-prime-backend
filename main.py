@@ -260,6 +260,9 @@ async def sync_user_profile(profile: UserProfile):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    # บังคับให้รับค่าพอร์ตจาก Google Cloud Run อย่างสมบูรณ์แบบ
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME ENGINE ON PORT {port}...")
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    
+    # ลบคำสั่ง reload=False ออกเพื่อลดความซับซ้อนในสภาพแวดล้อม Production
+    uvicorn.run(app, host="0.0.0.0", port=port)

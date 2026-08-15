@@ -25,4 +25,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # คำสั่งสตาร์ทเครื่องยนต์ FastAPI แบบรองรับพอร์ต Dynamic ของ Cloud Run
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# ให้ Uvicorn ดึงค่าพอร์ตจาก Environment Variable ของ Cloud Run ($PORT) อัตโนมัติ
+CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
