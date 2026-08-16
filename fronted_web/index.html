@@ -249,72 +249,74 @@
         .showcase-area { margin-top: 30px; padding-top: 30px; border-top: 1px solid rgba(255,215,0,0.2); width: 100%; display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; text-align: center; }
         .showcase-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,215,0,0.1); border-radius: 15px; padding: 30px; max-width: 400px; width: 100%; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-        /* 🔥 สไตล์ตกแต่งกล่อง VIP Privileges & Tokenomics (Accordion) */
+        /* 🔥 สไตล์ตกแต่งกล่อง VIP Privileges */
         .accordion-btn {
-            background: rgba(255, 215, 0, 0.08);
-            color: #FFD700;
-            cursor: pointer;
-            padding: 16px 20px;
-            width: 100%;
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            text-align: left;
-            outline: none;
-            font-size: 1.05rem;
-            font-weight: 800;
-            transition: 0.4s;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+            background: rgba(255, 215, 0, 0.08); color: #FFD700; cursor: pointer; padding: 16px 20px;
+            width: 100%; border: 1px solid rgba(255, 215, 0, 0.4); text-align: left; outline: none;
+            font-size: 1.05rem; font-weight: 800; transition: 0.4s; border-radius: 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
         }
-        .accordion-btn:hover, .accordion-btn.active {
-            background: rgba(255, 215, 0, 0.2);
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.15);
-        }
-        .accordion-btn:after {
-            content: '\002B'; /* เครื่องหมายบวก */
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        .accordion-btn.active:after {
-            content: "\2212"; /* เครื่องหมายลบ */
-        }
+        .accordion-btn:hover, .accordion-btn.active { background: rgba(255, 215, 0, 0.2); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.15); }
+        .accordion-btn:after { content: '\002B'; font-size: 1.8rem; font-weight: bold; }
+        .accordion-btn.active:after { content: "\2212"; }
         .accordion-panel {
-            padding: 0 20px;
-            background: rgba(0, 0, 0, 0.4);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.4s ease;
-            border-left: 2px solid rgba(255, 215, 0, 0.3);
-            border-right: 2px solid rgba(255, 215, 0, 0.3);
-            border-bottom: none;
-            border-radius: 0 0 12px 12px;
-            margin-top: -15px;
-            margin-bottom: 15px;
+            padding: 0 20px; background: rgba(0, 0, 0, 0.4); max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease; border-left: 2px solid rgba(255, 215, 0, 0.3);
+            border-right: 2px solid rgba(255, 215, 0, 0.3); border-bottom: none; border-radius: 0 0 12px 12px;
+            margin-top: -15px; margin-bottom: 15px;
         }
-        .accordion-panel.show {
-            max-height: 900px; /* ขยายความสูงเมื่อแสดงผล */
-            padding: 20px;
-            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
-        }
-
+        .accordion-panel.show { max-height: 900px; padding: 20px; border-bottom: 2px solid rgba(255, 215, 0, 0.3); }
         .vip-privilege-list { list-style: none; padding: 0; margin: 0; }
         .vip-privilege-list li {
             padding: 10px 14px; margin-bottom: 8px; background: rgba(255, 215, 0, 0.05);
             border-left: 3px solid #FFD700; border-radius: 6px; font-size: 0.9rem; color: #eee;
             display: flex; align-items: center; justify-content: space-between;
         }
-        .token-display-box {
-            background: #000; border: 1px dashed #FFD700; border-radius: 10px;
-            padding: 15px; text-align: center; margin: 15px 0;
-            box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.2);
-        }
-        .token-code-text {
-            font-size: 1.6rem; font-weight: 800; color: #FFD700; letter-spacing: 3px; margin: 5px 0;
-        }
 
+        /* 👑 ส่วนดีไซน์ Tokenomics แบบใหม่ (ดึงจาก Smart Wallet) */
+        .vip-tokenomics-box {
+            background: rgba(255, 255, 255, 0.02); border-radius: 16px; padding: 20px; margin-top: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+        }
+        .vip-tokenomics-box h4 { 
+            color: #fff; margin: 0 0 15px 0; font-size: 1rem; 
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.4); padding-bottom: 12px; font-weight: 600;
+        }
+        .personal-token-id {
+            border: 1px dashed #D4AF37; background: rgba(212, 175, 55, 0.05);
+            padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;
+        }
+        .personal-token-id p { margin: 0 0 5px 0; color: #888; font-size: 0.8rem; letter-spacing: 2px; }
+        .personal-token-id h2 { margin: 0 0 10px 0; color: #FFD700; font-size: 2rem; font-weight: 800; letter-spacing: 3px; }
+        .personal-token-id span { color: #00E676; font-size: 0.85rem; }
+        
+        .tokenomics-list { list-style: none; padding: 0; margin: 0; }
+        .tokenomics-list li {
+            padding: 14px 16px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #D4AF37; border-radius: 10px; font-size: 0.9rem; color: #eee;
+            border-top: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: all 0.3s ease;
+        }
+        .tokenomics-list li:hover { background: rgba(212, 175, 55, 0.05); transform: translateX(4px); }
+        .token-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0; }
+        .token-title { font-weight: 600; letter-spacing: 0.3px;}
+        .token-rate { font-weight: 800; white-space: nowrap; margin-left: 10px; }
+        
+        .agent-input-group { margin: 20px 0; }
+        .agent-input-group input {
+            width: 100%; padding: 18px; background: #050505; border: 1px solid #444; border-radius: 12px;
+            color: #fff; font-size: 1.1rem; text-align: center; outline: none; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;
+        }
+        .agent-input-group input:focus { border-color: #D4AF37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+        
+        .checkout-btn {
+            background: linear-gradient(135deg, #FFE84D 0%, #D4AF37 50%, #B8860B 100%);
+            color: #050a15; border: none; padding: 18px; width: 100%;
+            border-radius: 14px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3); margin-top: 10px;
+        }
+        .checkout-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5); }
     </style>
 </head>
 <body>
@@ -343,6 +345,7 @@
         </div>
     </div>
 
+    <!-- Modal ข้อตกลงเงื่อนไข (Disclaimer) -->
     <div id="disclaimerModal" class="modal-overlay">
         <div class="modal-box" id="disclaimerBox">
             <h3 style="color: #FFD700; margin-top: 0; font-size: 1.3rem; text-align: center;">🛡️ คำมั่นสัญญาและข้อตกลงการรับบริการระดับสากล</h3>
@@ -366,8 +369,9 @@
         </div>
     </div>
 
+    <!-- Modal 100 VIP สมบูรณ์แบบใหม่ -->
     <div class="modal-overlay" id="vipModalOverlay">
-        <div class="modal-box" id="vipModalBox" style="max-width: 700px;">
+        <div class="modal-box" id="vipModalBox" style="max-width: 700px; padding: 25px;">
             <span class="close-btn" onclick="closeVipModal()">&times;</span>
             <h2 style="color: #FFD700; text-align: center; margin-top: 0; font-size: 1.6rem;">👑 สมัครสมาชิก 100 VIP Founder</h2>
             <p style="color: #ccc; text-align: center; font-size: 0.9rem; margin-bottom: 20px;">กรุณาตรวจสอบสิทธิพิเศษและทำรายการเพื่อรับสิทธิ์ (Founders Pass)</p>
@@ -376,7 +380,7 @@
             <div class="accordion-panel">
                 <p style="color: #aaa; font-size: 0.85rem; margin-top: 0;">เอกสิทธิ์เฉพาะผู้นำ 100 ท่านแรก พร้อมสิทธิ์การใช้ระบบ AI และสิทธิประโยชน์ครบวงจร:</p>
                 <ul class="vip-privilege-list">
-                    <li><span>🔒 ล็อกเรทราคาพิเศษ <strong>฿4,900/เดือน</strong> (ส่วนลดถาวรตลอดชีพ)</span> <strong style="color: #00e5ff;">VIP Only</strong></li>
+                    <li><span>🔒 ล็อกเรทราคาพิเศษ <strong>฿4,490/ปี</strong> (ส่วนลดถาวรตลอดชีพ)</span> <strong style="color: #00e5ff;">VIP Only</strong></li>
                     <li><span>🧠 สิทธิ์เข้าถึงระบบ AI Multi-Agent & RAG Memory จดจำธุรกิจถาวร</span> <strong style="color: #00e5ff;">24/7</strong></li>
                     <li><span>🛡️ เกราะช่วยระวังทางกฎหมาย 360° (สแกนคำเสี่ยง สคบ., อย., ก.ล.ต.)</span> <strong style="color: #00e5ff;">Included</strong></li>
                     <li><span>🚚 พันธมิตรขนส่งโลจิสติกส์ รับส่วนลดค่าส่งพัสดุเริ่มต้นเพียง 12 บาท</span> <strong style="color: #00e5ff;">Save 60%</strong></li>
@@ -384,45 +388,76 @@
                 </ul>
             </div>
 
-            <button class="accordion-btn">⚡ 2. รายละเอียดระบบ Smart Wallet & Token</button>
-            <div class="accordion-panel">
-                <div class="token-display-box">
-                    <span style="font-size: 0.8rem; color: #888;">YOUR PERSONAL VIP TOKEN ID</span>
-                    <div id="vipTokenCode" class="token-code-text">VIP-PRIME-LOADING</div>
-                    <span style="font-size: 0.75rem; color: #4CAF50;">✓ ระบบสร้างรหัส Token ประจำตัวให้คุณเรียบร้อยแล้ว</span>
+            <!-- เริ่มต้น: ดีไซน์ Tokenomics ใหม่ สไตล์ Smart Wallet -->
+            <div class="vip-tokenomics-box">
+                <!-- กล่องโชว์รหัส VIP ส่วนตัว -->
+                <div class="personal-token-id">
+                    <p>YOUR PERSONAL VIP TOKEN ID</p>
+                    <h2><span id="vipTokenCode">VIP-LOADING</span></h2>
+                    <span>✓ ระบบสร้างรหัส Token ประจำตัวให้คุณเรียบร้อยแล้ว</span>
                 </div>
 
-                <p style="color: #ddd; font-size: 0.85rem; margin-bottom: 5px;"><strong>ระบบกระเป๋าเงินอัจฉริยะ (Smart Tokenomics Allocation):</strong></p>
-                <ul style="color: #bbb; font-size: 0.8rem; line-height: 1.7; padding-left: 20px; margin: 0 0 10px 0;">
-                    <li><strong style="color: #FFD700;">1 บาท = 10 Token</strong> (ประเมินตามการเบิกใช้ทรัพยากรคลาวด์จริง คุ้มค่าที่สุด)</li>
-                    <li>💬 <strong>แชทถาม-ตอบ & กลยุทธ์ทั่วไป:</strong> <span style="color: #4CAF50; float: right;">5 Token</span></li>
-                    <li>📊 <strong>วิเคราะห์ภาพกราฟหุ้น & สแกน AI Vision:</strong> <span style="color: #FF9800; float: right;">50 Token</span></li>
-                    <li>📄 <strong>เจาะลึกงบการเงิน & วางโครงสร้าง PDF/Excel:</strong> <span style="color: #F44336; float: right;">100 Token</span></li>
-                    <li>🚚 <strong>เรียกขนส่ง & สร้างใบปะหน้า Flash Express:</strong> <span style="color: #F44336; float: right;">120 Token</span></li>
-                    <li>🎬 <strong>สร้างภาพ/วิดีโอ 4K & เสียงพากย์มัลติมีเดีย:</strong> <span style="color: #00e5ff; float: right;">490 Token</span></li>
-                    <li style="border-left: 3px solid #ff00ff; background: rgba(255, 0, 255, 0.05); margin-top: 10px;"><strong>👑 วิดีโอ 4K (Agency 1 นาทีเต็ม):</strong> <span style="color: #ff00ff; float: right;">5,900 Token</span></li>
+                <!-- ตารางอัตราแลกเปลี่ยน -->
+                <h4>⚡ ระบบกระเป๋าเงินอัจฉริยะ (Smart Tokenomics Allocation): <span style="color: #D4AF37; font-size: 0.95rem;">1 บาท = 10 Token</span></h4>
+                <ul class="tokenomics-list">
+                    <li style="border-left-color: #00E676;">
+                        <div class="token-item-header">
+                            <span class="token-title">💬 แชทถาม-ตอบ & กลยุทธ์ทั่วไป:</span>
+                            <span class="token-rate" style="color: #00E676;">5 Token</span>
+                        </div>
+                    </li>
+                    <li style="border-left-color: #42A5F5;">
+                        <div class="token-item-header">
+                            <span class="token-title">📊 วิเคราะห์ภาพกราฟหุ้น & สแกน AI Vision:</span>
+                            <span class="token-rate" style="color: #42A5F5;">50 Token</span>
+                        </div>
+                    </li>
+                    <li style="border-left-color: #FF7043;">
+                        <div class="token-item-header">
+                            <span class="token-title">📄 เจาะลึกงบการเงิน & วางโครงสร้าง PDF/Excel:</span>
+                            <span class="token-rate" style="color: #FF7043;">100 Token</span>
+                        </div>
+                    </li>
+                    <li style="border-left-color: #FFA726;">
+                        <div class="token-item-header">
+                            <span class="token-title">🚚 เรียกขนส่ง & สร้างใบปะหน้า Flash Express:</span>
+                            <span class="token-rate" style="color: #FFA726;">120 Token</span>
+                        </div>
+                    </li>
+                    <li style="border-left-color: #00E5FF;">
+                        <div class="token-item-header">
+                            <span class="token-title">🎙️ สร้างภาพ/วิดีโอ 4K & เสียงพากย์มัลติมีเดีย:</span>
+                            <span class="token-rate" style="color: #00E5FF;">490 Token</span>
+                        </div>
+                    </li>
+                    <li style="border-left-color: #9C27B0; background: linear-gradient(90deg, rgba(156,39,176,0.1) 0%, rgba(0,0,0,0.3) 100%);">
+                        <div class="token-item-header">
+                            <strong class="token-title" style="color: #E040FB;">🎬 วิดีโอ 4K (Agency 1 นาทีเต็ม):</strong>
+                            <span class="token-rate" style="color: #E040FB;">5,900 Token</span>
+                        </div>
+                    </li>
                 </ul>
-            </div>
 
-            <div style="margin: 20px 0;">
-                <label style="color: #ddd; font-size: 0.95rem; font-weight: 600;">🔑 รหัสผู้แนะนำ (Agent Code):</label>
-                <input type="text" id="agentCode" placeholder="กรุณากรอกรหัสผู้แนะนำ (บังคับ)" style="width: 100%; padding: 14px; margin-top: 8px; background: #0a0a0c; border: 1px solid #FFD700; color: #FFD700; font-size: 1.15rem; border-radius: 8px; text-transform: uppercase; text-align: center; font-weight: bold; letter-spacing: 2px;">
-            </div>
-            
-            <div style="margin: 15px 0 25px 0; display: flex; align-items: flex-start; gap: 10px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border-left: 3px solid #4CAF50;">
-                <input type="checkbox" id="ackVipCheck" onchange="toggleVipPayBtn()" style="margin-top: 2px; width: 22px; height: 22px; cursor: pointer;">
-                <label for="ackVipCheck" style="font-size: 0.9rem; color: #fff; cursor: pointer; line-height: 1.5; font-weight: 600;">
-                    ข้าพเจ้าได้เปิดอ่าน รับทราบสิทธิพิเศษกลุ่ม 100 VIP และเงื่อนไขการใช้ระบบ Token ทั้งหมดเรียบร้อยแล้ว
-                </label>
-            </div>
+                <!-- ช่องใส่รหัสผู้แนะนำ -->
+                <div class="agent-input-group">
+                    <p style="color: #D4AF37; margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600;">🔑 รหัสผู้แนะนำ (Agent Code):</p>
+                    <input type="text" id="agentCode" placeholder="กรุณากรอกรหัสผู้แนะนำ (ถ้ามี)">
+                </div>
 
-            <button id="vipPayBtn" onclick="processVipPayment()" disabled style="width: 100%; padding: 18px; background: #333; border: none; border-radius: 10px; color: #000; font-size: 1.2rem; font-weight: 800; cursor: not-allowed; transition: 0.3s; opacity: 0.7;">
-                💳 ชำระเงินเข้าสู่ระบบ 100 VIP (฿4,900) ผ่าน Stripe
-            </button>
-            <p style="font-size: 0.75rem; color: #888; text-align: center; margin-top: 12px;">*ระบบจะนำท่านเข้าสู่ Stripe Checkout ที่ปลอดภัยระดับสากล และเชื่อมต่อเข้าห้องแชต LINE OA ทันทีที่ชำระเสร็จ</p>
+                <!-- ยืนยันเงื่อนไขและปุ่มชำระเงิน -->
+                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border-left: 3px solid #00E5FF;">
+                    <input type="checkbox" id="ackVipCheck" onchange="toggleVipPayBtn()" style="margin-top: 2px; width: 22px; height: 22px; accent-color: #00E5FF; cursor: pointer;">
+                    <label for="ackVipCheck" style="font-size: 0.85rem; color: #eee; cursor: pointer; line-height: 1.5; font-weight: 600;">ข้าพเจ้าได้เปิดอ่าน รับทราบสิทธิพิเศษกลุ่ม 100 VIP และเงื่อนไขการใช้ระบบ Token ทั้งหมดเรียบร้อยแล้ว</label>
+                </div>
+
+                <button class="checkout-btn" id="vipPayBtn" onclick="processVipPayment()" disabled style="background: #333; color: #777; cursor: not-allowed; opacity: 0.7; box-shadow: none;">💳 ชำระเงินเข้าสู่ระบบ 100 VIP (฿4,490) ผ่าน Stripe</button>
+                <p style="font-size: 0.75rem; color: #777; text-align: center; margin-top: 15px;">*ระบบจะนำท่านเข้าสู่ Stripe Checkout ที่ปลอดภัยระดับสากล และเชื่อมต่อเข้าห้องแชท LINE OA ทันทีที่ชำระเสร็จ</p>
+            </div>
+            <!-- สิ้นสุด: ดีไซน์ Tokenomics -->
         </div>
     </div>
 
+    <!-- ส่วน Company Profile & Compliance -->
     <section id="company-profile" class="compliance-section">
         <div class="compliance-container">
             <div class="compliance-header">
@@ -480,6 +515,7 @@
         </div>
     </section>
 
+    <!-- ส่วนโปรโมทและแสดงความสามารถ AI -->
     <section id="promo-section" style="padding: 20px 20px 60px; text-align: center; position: relative; z-index: 2; width: 100%;">
         <h1 class="title-3d">The Future of AI</h1>
         <p class="subtitle-3d">ระบบผู้ช่วยอัจฉริยะระดับองค์กร ที่เข้าใจคุณ ดั่งเลขาคนสนิท 24 ชั่วโมง</p>
@@ -565,6 +601,7 @@
         </div>
     </section>
 
+    <!-- ส่วนเลือกแพ็กเกจ -->
     <section id="pricing" class="pricing-section">
         <h2 class="section-title">เลือกแพ็กเกจผู้ช่วยที่เหมาะกับธุรกิจของคุณ</h2>
         <p style="color: #aaa; margin-bottom: 25px; text-align: center;">โปร่งใส ไร้ข้อผูกมัด ภายใต้สัญญาบริการดิจิทัลที่ถูกต้องตามกฎหมายไทย</p>
@@ -630,6 +667,7 @@
         </div>
     </section>
 
+    <!-- Footer -->
     <footer class="site-footer">
         <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
             <h4 style="color: #D4AF37; margin-bottom: 10px; font-weight: 800;">Marketing Spark Combine Co., Ltd.</h4>
@@ -791,18 +829,21 @@
             document.getElementById('vipModalBox').style.display = 'none';
         }
 
+        // 🔄 ฟังก์ชันสวิตช์ปุ่มชำระเงินเมื่อลูกค้ายอมรับเงื่อนไข
         function toggleVipPayBtn() {
             const isChecked = document.getElementById('ackVipCheck').checked;
             const btn = document.getElementById('vipPayBtn');
             if(isChecked) {
                 btn.disabled = false;
-                btn.style.background = 'linear-gradient(135deg, #FFE84D, #FFD700, #DAA520)';
+                btn.style.background = 'linear-gradient(135deg, #FFE84D 0%, #D4AF37 50%, #B8860B 100%)';
+                btn.style.color = '#050a15';
                 btn.style.cursor = 'pointer';
                 btn.style.opacity = '1';
-                btn.style.boxShadow = '0 8px 25px rgba(255,215,0,0.4)';
+                btn.style.boxShadow = '0 8px 25px rgba(212, 175, 55, 0.4)';
             } else {
                 btn.disabled = true;
                 btn.style.background = '#333';
+                btn.style.color = '#777';
                 btn.style.cursor = 'not-allowed';
                 btn.style.opacity = '0.7';
                 btn.style.boxShadow = 'none';
@@ -811,8 +852,10 @@
 
         function processVipPayment() {
             const agentCodeInput = document.getElementById('agentCode').value.trim();
+            // ถ้าลูกค้าลืมกรอกรหัสแนะนำ ระบบจะไม่ให้ผ่าน
             if(!agentCodeInput) {
                 alert("กรุณากรอก Agent Code (รหัสผู้แนะนำ) ให้ครบถ้วนก่อนทำรายการครับ");
+                document.getElementById('agentCode').focus();
                 return;
             }
             
@@ -820,6 +863,7 @@
             if (targetUrl.includes("YOUR_VIP_STRIPE_LINK")) {
                 targetUrl = LINE_OA_REDIRECT_URL;
             } else {
+                // ผูกรหัส VIP ส่วนตัวและรหัส Agent ติดไปกับลิงก์ Stripe เพื่อให้ Database จำได้
                 targetUrl += "?client_reference_id=" + encodeURIComponent(currentVipToken + "_AGENT_" + agentCodeInput);
             }
             window.location.href = targetUrl;

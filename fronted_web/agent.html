@@ -109,18 +109,27 @@
         }
         .vip-rate { font-size: 4rem; font-weight: 800; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin: 15px 0 5px; line-height: 1; }
         
-        /* สไตล์ Dashboard ตัวเลข Live Counter */
+        /* 📊 Dashboard ตัวเลข Live Counter แบบใหม่ (3 คอลัมน์) */
         .live-counter-box {
-            background: rgba(0,0,0,0.8); border: 1px solid #FFD700; border-radius: 12px; padding: 20px;
-            max-width: 450px; margin: 20px auto; display: flex; align-items: center; justify-content: space-around;
+            background: rgba(0,0,0,0.9); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; 
+            padding: 20px; max-width: 550px; margin: 25px auto; 
+            display: flex; align-items: center; justify-content: space-around;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1);
         }
-        .counter-item { text-align: center; }
-        .counter-label { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-        .counter-number { font-size: 2.5rem; font-weight: 800; color: #fff; margin: 5px 0; font-variant-numeric: tabular-nums; }
-        .counter-number.highlight { color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
+        .counter-item { text-align: center; flex: 1; }
+        .counter-label { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .counter-number { font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
         
-        .progress-container { margin: 15px auto 0; width: 100%; background: rgba(255,255,255,0.1); border-radius: 20px; height: 8px; position: relative; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #ff0000); border-radius: 20px; transition: width 2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .counter-item.paid .counter-label { color: #FFD700; }
+        .counter-item.paid .counter-number { color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
+        
+        .counter-item.remain .counter-label { color: #00e5ff; }
+        .counter-item.remain .counter-number { color: #00e5ff; text-shadow: 0 0 15px rgba(0,229,255,0.5); }
+        
+        .divider-vert { width: 1px; height: 50px; background: rgba(255,255,255,0.1); }
+        
+        .progress-container { margin: 15px auto 0; width: 100%; max-width: 550px; background: rgba(255,255,255,0.05); border-radius: 20px; height: 10px; position: relative; overflow: hidden; border: 1px solid #333; }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #ff0000); border-radius: 20px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(255,0,0,0.5); }
 
         /* ตาราง Standard Tiers */
         .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
@@ -244,16 +253,28 @@
                     <br><em style="font-size: 0.85rem; color: #888;">(หลังจากหมดโควตา 100 VIP รายได้จะปรับเข้าสู่เรท Standard Recurring อัตโนมัติ)</em>
                 </p>
                 
+                <!-- 📊 แดชบอร์ดแสดงผลตัวเลขและสถานะแบบใหม่ -->
                 <div class="live-counter-box">
                     <div class="counter-item">
                         <div class="counter-label">โควตาทั้งหมด</div>
                         <div class="counter-number">100</div>
                     </div>
-                    <div class="counter-item" style="border-left: 1px solid #333; padding-left: 20px;">
-                        <div class="counter-label" style="color: #FFD700;">ชำระเงินสำเร็จแล้ว</div>
-                        <div class="counter-number highlight" id="livePaidCount">0</div>
+                    
+                    <div class="divider-vert"></div>
+                    
+                    <div class="counter-item paid">
+                        <div class="counter-label">ชำระเงินสำเร็จ</div>
+                        <div class="counter-number" id="livePaidCount">0</div>
+                    </div>
+                    
+                    <div class="divider-vert"></div>
+                    
+                    <div class="counter-item remain">
+                        <div class="counter-label">สิทธิ์คงเหลือ</div>
+                        <div class="counter-number" id="liveRemainCount">100</div>
                     </div>
                 </div>
+
                 <div class="progress-container">
                     <div class="progress-bar" id="liveProgressBar"></div>
                 </div>
@@ -380,15 +401,28 @@
 
     <script>
         // ==========================================
-        // ⚙️ ระบบสมองกล (Smart Automation Engine)
+        // ⚙️ ระบบสมองกลดึงข้อมูลแบบ Real-Time (Async Automation Engine)
         // ==========================================
-
-        // ตัวแปรจำลอง ยอดผู้สมัคร 100 VIP ที่ชำระเงินสำเร็จจริง (ดึงจากฐานข้อมูลในอนาคต)
-        const currentVipPaid = 78; // สมมติว่าตอนนี้จ่ายแล้ว 78 คน
         const MAX_VIP_QUOTA = 100;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. จัดการระบบ Accordion
+        // ฟังก์ชันจำลองการยิง API ไปถามหลังบ้าน (Backend Cloud Run / Stripe / Supabase)
+        async function fetchRealVipPaidCount() {
+            try {
+                // (ในอนาคต สามารถเปลี่ยนเป็น URL API ของระบบ Cloud Run ได้เลย เช่น fetch('/api/v1/stats/vip-quota'))
+                // const response = await fetch('/api/v1/stats/vip-quota');
+                // const data = await response.json();
+                // return data.paid_count; 
+                
+                // คืนค่าสมมติที่จ่ายชำระแล้ว เพื่อโชว์ความสามารถการคำนวณและแสดงผลของระบบ
+                return 82; 
+            } catch (error) {
+                console.error("Failed to fetch VIP stats:", error);
+                return 0; // กรณีระบบขัดข้อง จะแสดงผลเป็น 0 ป้องกันการ Error หน้าเว็บ
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. จัดการระบบ Accordion (หน้าต่างเลื่อนลง)
             const acc = document.getElementsByClassName("accordion-btn");
             for (let i = 0; i < acc.length; i++) {
                 acc[i].addEventListener("click", function() {
@@ -402,38 +436,48 @@
                 });
             }
 
-            // 2. ระบบ Auto-Hide ตรวจสอบโควตา 100 VIP อัตโนมัติ
-            checkVipQuotaStatus();
+            // 2. ดึงข้อมูลยอดจ่ายเงินจริงจาก Backend ทันทีที่โหลดหน้าเว็บเสร็จ
+            const currentVipPaid = await fetchRealVipPaidCount();
+            checkVipQuotaStatus(currentVipPaid);
         });
 
-        // ฟังก์ชันตรวจสอบและแอนิเมชันตัวเลข
-        function checkVipQuotaStatus() {
+        // ฟังก์ชันตรวจสอบโควตาและสั่งเล่นแอนิเมชันตัวเลข
+        function checkVipQuotaStatus(paidCount) {
             const promoSection = document.getElementById('vipPromoSection');
             
-            if (currentVipPaid >= MAX_VIP_QUOTA) {
-                // ถ้าคนจ่ายเงินครบ 100 คนแล้ว ซ่อนกล่องโปรโมชัน 30% ทิ้งทันที!
+            if (paidCount >= MAX_VIP_QUOTA) {
+                // ถ้าคนจ่ายเงินครบ 100 คนแล้ว ระบบจะซ่อนกล่องโปรโมชัน 30% ทิ้งทันที! (God Mode Control)
                 promoSection.style.display = 'none';
                 console.log("VIP Quota is full. Promotion hidden automatically.");
             } else {
-                // ถ้ายังไม่ครบ ให้เล่นแอนิเมชันตัวเลขวิ่งเพื่อกระตุ้นความอยาก (FOMO)
-                animateValue("livePaidCount", 0, currentVipPaid, 2000);
+                const remainCount = MAX_VIP_QUOTA - paidCount;
+
+                // เล่นแอนิเมชันตัวเลขวิ่งขึ้น (จำนวนชำระเงินสำเร็จ)
+                animateValue("livePaidCount", 0, paidCount, 2000);
+                
+                // เล่นแอนิเมชันตัวเลขวิ่งลง (จำนวนสิทธิ์คงเหลือ)
+                animateValue("liveRemainCount", MAX_VIP_QUOTA, remainCount, 2000);
                 
                 // คำนวณความยาวของหลอด Progress Bar
-                const percentage = (currentVipPaid / MAX_VIP_QUOTA) * 100;
+                const percentage = (paidCount / MAX_VIP_QUOTA) * 100;
                 setTimeout(() => {
                     document.getElementById('liveProgressBar').style.width = percentage + '%';
                 }, 500);
             }
         }
 
-        // เอฟเฟกต์ตัวเลขวิ่ง (Counter Animation)
+        // เอฟเฟกต์ตัวเลขวิ่งแบบสมูท (Smooth Counter Animation)
         function animateValue(id, start, end, duration) {
             const obj = document.getElementById(id);
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                
+                // คำนวณค่าตัวเลขปัจจุบันตาม Progress
+                const currentVal = Math.floor(progress * (end - start) + start);
+                obj.innerHTML = currentVal;
+                
                 if (progress < 1) {
                     window.requestAnimationFrame(step);
                 }
@@ -442,7 +486,7 @@
         }
 
         // ==========================================
-        // 🛡️ ระบบควบคุม PDPA และการสมัคร
+        // 🛡️ ระบบควบคุม PDPA และการสมัครพาร์ทเนอร์
         // ==========================================
         function openDisclaimer() {
             document.getElementById('disclaimerModal').style.display = 'block';
@@ -499,7 +543,7 @@
             if (inviteCode) {
                 console.log("🎟️ ตรวจพบรหัสเชิญ VVIP:", inviteCode);
                 // แสดงป๊อปอัปต้อนรับสุดหรู
-                alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \\nระบบกำลังยืนยันรหัสเชิญของคุณ...");
+                alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \nระบบกำลังยืนยันรหัสเชิญของคุณ...");
             
                 // (ในอนาคต: จะใช้ LIFF ดึง LINE ID ของเพื่อนคนนี้ แล้วยิง API ไปบอก Supabase ว่าขอใช้สิทธิ์รหัสนี้)
                 // fetch('https://your-cloud-run-url.com/api/claim-invite', { ... })

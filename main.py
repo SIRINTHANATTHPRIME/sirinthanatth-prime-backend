@@ -16,15 +16,34 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import ( MessageEvent, TextMessage, AudioMessage, ImageMessage, VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage
 )
 
+load_dotenv()
+
+# ==========================================
+# 1. Security Protocols & CORS (เกราะป้องกัน)
+# ==========================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # =========================================================
 # 👑 SIRINTHANATTH PRIME - Enterprise Main Server API
 # =========================================================
 
 app = FastAPI(
-    title="SIRINTHANATTH PRIME Backend API",
+    title="SIRINTHANATTH PRIME Core Engine",
     description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
     version="3.0.0" # อัปเกรดเวอร์ชันตามสถาปัตยกรรมใหม่
 )
+
+# สร้างโฟลเดอร์ static/audio อัตโนมัติหากยังไม่มี
+os.makedirs("static/audio", exist_ok=True)
+
+# เปิดท่อ Static Files ให้ LINE ดึงไฟล์เสียงไปเล่นได้
+app.mount("/static/audio", StaticFiles(directory="static/audio"), name="static_audio")
 
 # 🌐 นำเข้า Router ด่านหน้า (รองรับทั้งไฟล์ภาพ, เสียง, วิดีโอ 4K)
 from api.routes_line import router as line_router
@@ -54,19 +73,6 @@ try:
     from agents.prime_brain import generate_intelligent_response
 except ImportError:
     generate_intelligent_response = None
-
-load_dotenv()
-
-# ==========================================
-# 1. Security Protocols & CORS (เกราะป้องกัน)
-# ==========================================
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ==========================================
 # 2. Database & External APIs Initialization
@@ -100,6 +106,10 @@ if os.path.exists("assets"):
     app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 @app.get("/")
+
+def root():
+    return {"status": "Online", "system": "SIRINTHANATTH PRIME"}
+
 def health_check():
     """ตรวจสอบสถานะชีพจรของเซิร์ฟเวอร์หลัก"""
     return {
