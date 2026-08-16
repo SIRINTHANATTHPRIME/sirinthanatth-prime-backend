@@ -3,8 +3,8 @@ uvicorn
 python-dotenv
 line-bot-sdk
 stripe
-google-genai
 google-generativeai
+google-genai
 supabase
 redis
 pydantic
