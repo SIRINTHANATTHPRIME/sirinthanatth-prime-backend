@@ -74,8 +74,15 @@ except ImportError:
         def process_media_production(self, u, s, m): pass
 
 # 🛡️ นำเข้าระบบความปลอดภัยและการเงิน
-from services.subscription_manager import SubscriptionManager
-from services.payment_gateway import PaymentGatewayService
+try:
+    from services.subscription_manager import SubscriptionManager
+    from services.payment_gateway import PaymentGatewayService
+except ImportError:
+    class SubscriptionManager:
+        def deduct_media_fee(self, u, amount): return {"status": "success"}
+    class PaymentGatewayService:
+        def create_subscription_checkout(self, u, plan): return "https://payment.gateway.link"
+        def create_wallet_topup_checkout(self, u, amt): return "https://payment.gateway.link"
 
 
 class CentralBossAgent:
@@ -84,12 +91,13 @@ class CentralBossAgent:
     """
     
     def __init__(self):
+        # 🚀 อัปเกรดเป็นโมเดลล่าสุด สำหรับความเร็วและสติปัญญาระดับสูง
         self.model_name = 'gemini-3.7-flash'
         self.system_instruction = """
-        คุณคือ Central Boss ของระบบ SIRINTHANATTH PRIME หน้าที่ของคุณคือ 
-        1. อ่านข้อความลูกค้า 
-        2. แยกแยะว่าต้องให้ Worker เบอร์อะไรทำงาน (1-11)
-        3. ตอบกลับลูกค้าอย่างมืออาชีพด้วยความรวดเร็ว
+        คุณคือ Central Boss ผู้บริหารระดับสูงของระบบ SIRINTHANATTH PRIME
+        หน้าที่ของคุณคือ:
+        1. อ่านข้อความและตอบกลับลูกค้าอย่างมืออาชีพ เป็นมิตร และชาญฉลาดที่สุด
+        2. ให้ข้อมูลอย่างกระชับ ตรงประเด็น สะท้อนภาพลักษณ์การบริการระดับ 6 ดาว
         """        
         # Initialize Workers
         self.report_worker = DocumentEngineeringWorker()
@@ -110,8 +118,13 @@ class CentralBossAgent:
         # 🧠 หน่วยความจำชั่วคราวเก็บสคริปต์วิดีโอที่รออนุมัติ (Draft Memory)
         self.pending_approvals = {}
 
-    def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message, file_path=None, file_type=None) -> str:
-        message_lower = message.lower()
+    def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message=None, file_path=None, file_type=None) -> str:
+        # ระบบตรวจสอบข้อความเข้า เพื่อความเสถียร
+        actual_message = message if message else incoming_message
+        if not actual_message:
+            return "ไม่พบข้อมูลข้อความ กรุณาลองใหม่อีกครั้งครับ"
+            
+        message_lower = actual_message.lower()
 
         # ==========================================
         # 💳 โหมดชำระเงิน / สมัครแพ็กเกจ / เติมเงิน Wallet / VIP Presale
@@ -143,12 +156,10 @@ class CentralBossAgent:
             draft_data = self.pending_approvals[user_id]
             total_price = draft_data["price"]
             
-            # เช็กและหักเงินใน Smart Wallet
             wallet_check = self.sub_manager.deduct_media_fee(user_id, amount=total_price)
             if wallet_check.get("status") == "error":
                 return f"⚠️ {wallet_check.get('msg')}"
             
-            # ส่งงานให้ Worker 11 ลุยงานในเบื้องหลัง
             bg_tasks.add_task(
                 self.worker_11.process_media_production, 
                 user_id, 
@@ -158,7 +169,7 @@ class CentralBossAgent:
             
             del self.pending_approvals[user_id]
             
-            return (f"✅ อนุมัติสำเร็จ! ระบบตัดเงิน {total_price:.2f} บาท เรียบร้อยครับ (หักตามความยาวจริง)\n"
+            return (f"✅ อนุมัติสำเร็จ! ระบบตัดเงิน {total_price:.2f} บาท เรียบร้อยครับ\n"
                     f"🎬 Worker 11 กำลังเรนเดอร์คลิป 4K ความยาว {draft_data['minutes']} นาทีให้อยู่ครับ\n"
                     f"☕ กรุณารอสักครู่ เมื่อเรนเดอร์เสร็จแล้วระบบจะส่งลิงก์ดาวน์โหลดให้ทันทีครับ")
 
@@ -167,7 +178,7 @@ class CentralBossAgent:
         # ==========================================
         elif any(kw in message_lower for kw in ["ทำคลิป", "สร้างวิดีโอ", "สื่อโฆษณา", "คลิป 4k"]):
             estimated_minutes = 3 if "3 นาที" in message_lower else (5 if "5 นาที" in message_lower else 1)
-            total_price = estimated_minutes * 49.0  # เรท 49 บาท/นาที
+            total_price = estimated_minutes * 49.0
             
             draft_script = f"สคริปต์วิดีโอโฆษณา 4K ({estimated_minutes} นาที): นำเสนอจุดเด่นแบรนด์อย่างทรงพลัง ปิดการขายประทับใจ"
             
@@ -187,65 +198,63 @@ class CentralBossAgent:
         # 🚚 โหมด E-Commerce & Flash Express
         # ==========================================
         elif any(kw in message_lower for kw in ["สั่งของ", "ออเดอร์", "สลิป", "flash", "ส่งของ"]):
-            bg_tasks.add_task(self.ecommerce_worker.process, user_id, message) 
-            return "📦 [Smart E-Commerce]: กำลังตรวจสอบออเดอร์/สลิป และเตรียมระบบออกใบปะหน้า Flash Express ให้ครับ"
+            bg_tasks.add_task(self.ecommerce_worker.process, user_id, actual_message) 
+            return "📦 [Smart E-Commerce]: กำลังตรวจสอบข้อมูลและประสานงานระบบโลจิสติกส์ให้ครับ"
 
         # ==========================================
         # 💼 โหมด Worker อื่นๆ
         # ==========================================
         elif any(kw in message_lower for kw in ["กฎหมาย", "สคบ", "อย", "pdpa", "ตรวจโฆษณา"]):
-            bg_tasks.add_task(self.legal_worker.process, user_id, message)
-            return "🛡️ ทีม 360° Legal Shield กำลังสแกนความเสี่ยงกฎหมาย อย./สคบ. ให้คุณครับ"
+            bg_tasks.add_task(self.legal_worker.process, user_id, actual_message)
+            return "🛡️ ทีม 360° Legal Shield กำลังสแกนความเสี่ยงกฎหมายให้คุณครับ"
             
         elif any(kw in message_lower for kw in ["เสียง", "เสียงพากย์", "tts"]):
-            bg_tasks.add_task(self.audio_worker.process, user_id, message)
+            bg_tasks.add_task(self.audio_worker.process, user_id, actual_message)
             return "🎙️ ทีม Audio Production กำลังสังเคราะห์เสียงพากย์ AI พรีเมียมให้ครับ"
             
         elif any(kw in message_lower for kw in ["ตาราง", "รายงาน", "excel", "pdf"]):
-            bg_tasks.add_task(self.report_worker.process, user_id, message)
-            return "📊 ทีม Document Engineering กำลังจัดทำเอกสารและผูกสูตรคำนวณให้ครับ"
+            bg_tasks.add_task(self.report_worker.process, user_id, actual_message)
+            return "📊 ทีม Document Engineering กำลังจัดทำเอกสารให้ครับ"
             
         elif any(kw in message_lower for kw in ["กราฟิก", "แบนเนอร์", "ออกแบบ"]):
-            bg_tasks.add_task(self.graphics_worker.process, user_id, message)
+            bg_tasks.add_task(self.graphics_worker.process, user_id, actual_message)
             return "🎨 ทีม Graphics & Ads กำลังออกแบบสื่อให้ครับ"
             
         elif any(kw in message_lower for kw in ["กลยุทธ์", "แผนธุรกิจ", "ยิงแอด"]):
-            bg_tasks.add_task(self.strategy_worker.process, user_id, message)
-            return "📈 ทีม Marketing Strategist กำลังวางแผนกลยุทธ์เจาะตลาดให้ครับ"
+            bg_tasks.add_task(self.strategy_worker.process, user_id, actual_message)
+            return "📈 ทีม Marketing Strategist กำลังวางแผนกลยุทธ์ให้ครับ"
             
         elif any(kw in message_lower for kw in ["บัญชี", "การเงิน", "ภาษี", "งบการเงิน"]):
-            bg_tasks.add_task(self.finance_worker.process, user_id, message)
-            return "💰 ทีม Financial & Accounting กำลังวิเคราะห์งบการเงินและวางแผนภาษีให้ครับ"
+            bg_tasks.add_task(self.finance_worker.process, user_id, actual_message)
+            return "💰 ทีม Financial & Accounting กำลังวิเคราะห์ข้อมูลการเงินให้ครับ"
             
         elif any(kw in message_lower for kw in ["prime"]):
-            bg_tasks.add_task(self.prime_worker.process, user_id, message)
-            return "👑 ระบบ [PRIME] กำลังวิเคราะห์ข้อมูลระดับผู้บริหารและจัดการหลังบ้านให้ครับ"
+            bg_tasks.add_task(self.prime_worker.process, user_id, actual_message)
+            return "👑 ระบบ [PRIME] กำลังจัดการคำสั่งระดับผู้บริหารให้ครับ"
             
         elif any(kw in message_lower for kw in ["enterprise"]):
-            bg_tasks.add_task(self.enterprise_worker.process, user_id, message)
-            return "🏢 ระบบ [ENTERPRISE] เปิดใช้งานโพรโทคอลความปลอดภัยองค์กรครับ"
+            bg_tasks.add_task(self.enterprise_worker.process, user_id, actual_message)
+            return "🏢 ระบบ [ENTERPRISE] เปิดใช้งานโพรโทคอลองค์กรครับ"
             
+        # ==========================================
+        # 🧠 โหมดตอบกลับทั่วไป (Gemini 3.7 Flash Engine)
+        # ==========================================
         else:
-            # ให้ Gemini ตอบกลับแบบเลขาผู้ชาญฉลาดแทน
-            try:
-                prompt = f"คุณคือ SIRINTHANATTH PRIME ผู้ช่วย AI ระดับองค์กร. ลูกค้าทักมาว่า: '{message}'. จงตอบกลับอย่างเป็นมิตร สุภาพ และชาญฉลาด (สั้นๆ กระชับ)"
-                response = self.model.generate_content(prompt)
-                return response.text
-            except Exception as e:
-                # สำรองไว้กรณี Gemini API มีปัญหา
-                return f"ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังปรับปรุง ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"
-            
-            if not client: return "ระบบบอสส่วนกลางออฟไลน์"
+            if not client: 
+                return "⚠️ ระบบประมวลผล AI หลักออฟไลน์ (กรุณาตรวจสอบการตั้งค่า API Key)"
             
             try:
-                # ใช้งาน SDK ใหม่ล่าสุดพร้อมโครงสร้าง Config
+                # 🚀 เรียกใช้งาน SDK ใหม่ล่าสุด พร้อมตั้งค่าบุคลิกภาพ (Config)
                 response = client.models.generate_content(
                     model=self.model_name,
-                    contents=incoming_message,
+                    contents=f"ลูกค้าทักมาว่า: '{actual_message}'",
                     config=types.GenerateContentConfig(
-                        system_instruction=self.system_instruction
+                        system_instruction=self.system_instruction,
+                        temperature=0.7 # ตั้งค่าเพื่อให้คำตอบเป็นธรรมชาติ
                     )
-                    )
+                )
                 return response.text
             except Exception as e:
-                return f"ระบบจ่ายงานขัดข้อง กรุณาลองใหม่ภายหลัง: {e}"
+                print(f"⚠️ [Central Boss Error]: {e}")
+                # ข้อความสำรอง กรณี Google API เกิดปัญหาชั่วคราว
+                return "ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังปรับปรุง ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"

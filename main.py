@@ -2,25 +2,70 @@ import os
 import logging
 import stripe
 import uvicorn
+from typing import Optional, Dict, Any
+
 from pydantic import BaseModel
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Header
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes_line import router as line_router
-from dotenv import load_dotenv
-from typing import Optional, Dict, Any
 from supabase import create_client, Client
-from linebot import LineBotApi, WebhookParser
+
+# LINE Messaging API SDK (แก้ไขการนำเข้า WebhookHandler ให้ถูกต้อง)
+from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import ( MessageEvent, TextMessage, AudioMessage, ImageMessage, VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage
+from linebot.models import ( 
+    MessageEvent, TextMessage, AudioMessage, ImageMessage, 
+    VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, 
+    ImageSendMessage, VideoSendMessage
 )
 
+# =========================================================
+# 👑 SIRINTHANATTH PRIME - Enterprise Main Server API
+# =========================================================
+
+# 1. โหลดตัวแปรสภาพแวดล้อมและตั้งค่าระบบบันทึกการทำงาน (Environment & Logger)
 load_dotenv()
 
-# ==========================================
-# 1. Security Protocols & CORS (เกราะป้องกัน)
-# ==========================================
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("SIRINTHANATTH_PRIME_CORE")
+
+# 2. เริ่มต้นค่าคงที่และเชื่อมต่อบริการภายนอก (API Keys & Integrations)
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+MASTER_ADMIN_LINE_ID = os.getenv("MASTER_ADMIN_LINE_ID", "U1234567890abcdef...")
+
+stripe_key = os.getenv("STRIPE_SECRET_KEY")
+if stripe_key:
+    stripe.api_key = stripe_key
+
+# 3. เชื่อมต่อฐานข้อมูล (Supabase Vault)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+
+supabase: Optional[Client] = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        logger.info("✅ [System Database]: Supabase Vault initialized successfully.")
+    except Exception as e:
+        logger.error(f"❌ [System Error]: Failed to unlock Supabase Vault: {e}")
+
+# =========================================================
+# 🚀 FastAPI Initialization (Core Engine)
+# =========================================================
+app = FastAPI(
+    title="SIRINTHANATTH PRIME Core Engine",
+    description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
+    version="3.0.0"
+)
+
+# Security Protocols & CORS (เกราะป้องกัน)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -29,27 +74,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Auto-Provisioning & Static Files (สร้างโฟลเดอร์อัตโนมัติป้องกันเซิร์ฟเวอร์แครช)
+required_directories = ["static", "static/audio", "css", "assets", "templates"]
+for directory in required_directories:
+    os.makedirs(directory, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/css", StaticFiles(directory="css"), name="css")
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+
 # =========================================================
-# 👑 SIRINTHANATTH PRIME - Enterprise Main Server API
+# 🌐 Dynamic Imports (นำเข้า Modules & Routers ภายใน)
 # =========================================================
+# 1. นำเข้า Router ด่านหน้าสำหรับ LINE
+try:
+    from api.routes_line import router as line_router
+    app.include_router(line_router, prefix="/api/v1/line")
+    logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
+except ImportError as e:
+    logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
 
-app = FastAPI(
-    title="SIRINTHANATTH PRIME Core Engine",
-    description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
-    version="3.0.0" # อัปเกรดเวอร์ชันตามสถาปัตยกรรมใหม่
-)
-
-# สร้างโฟลเดอร์ static/audio อัตโนมัติหากยังไม่มี
-os.makedirs("static/audio", exist_ok=True)
-
-# เปิดท่อ Static Files ให้ LINE ดึงไฟล์เสียงไปเล่นได้
-app.mount("/static/audio", StaticFiles(directory="static/audio"), name="static_audio")
-
-# 🌐 นำเข้า Router ด่านหน้า (รองรับทั้งไฟล์ภาพ, เสียง, วิดีโอ 4K)
-from api.routes_line import router as line_router
-app.include_router(line_router, prefix="/api/v1/line")
-
-# Import ระบบจัดการภาระงาน (Task Dispatcher)
+# 2. นำเข้าระบบจัดการภาระงาน (Task Dispatcher)
 try:
     from services.task_dispatcher import task_dispatcher
 except ImportError:
@@ -58,10 +103,7 @@ except ImportError:
     except ImportError:
         task_dispatcher = None
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("SIRINTHANATTH_PRIME_CORE")
-
-# นำเข้าบริการสมองกลระดับลึก
+# 3. นำเข้าบริการสมองกลระดับลึก (AI & Agents)
 try:
     from agents.central_boss import CentralBossAgent
     from services.subscription_manager import SubscriptionManager
@@ -74,42 +116,14 @@ try:
 except ImportError:
     generate_intelligent_response = None
 
-# ==========================================
-# 2. Database & External APIs Initialization
-# ==========================================
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
-
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-        logger.info("✅ [System Database]: Supabase Vault initialized successfully.")
-    except Exception as e:
-        logger.error(f"❌ [System Error]: Failed to unlock Supabase Vault: {e}")
-
-# กำหนดสิทธิ์ผู้บริหารสูงสุด (Master Admin)
-MASTER_ADMIN_LINE_ID = os.environ.get("MASTER_ADMIN_LINE_ID", "U1234567890abcdef...")
-
-# ตั้งค่า Payment Gateway
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
-
-# ==========================================
-# 3. Static Files & Frontend Endpoints (ระบบจัดการหน้าเว็บ)
-# ==========================================
-# อนุญาตให้ระบบแจกจ่ายไฟล์ภาพ เสียง และวิดีโอ 4K ได้อย่างปลอดภัย
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-if os.path.exists("css"):
-    app.mount("/css", StaticFiles(directory="css"), name="css")
-if os.path.exists("assets"):
-    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
-
+# =========================================================
+# 🌍 Frontend & Health Check Endpoints
+# =========================================================
 @app.get("/")
-
 def root():
     return {"status": "Online", "system": "SIRINTHANATTH PRIME"}
 
+@app.get("/health")
 def health_check():
     """ตรวจสอบสถานะชีพจรของเซิร์ฟเวอร์หลัก"""
     return {
@@ -119,32 +133,25 @@ def health_check():
         "message": "Executive Backend engine is running smoothly and ready for workloads."
     }
 
-# Endpoint เปิดหน้าแผงควบคุมระบบ (Dashboard)
-def read_index():
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
-    return {"status": "online", "system": "SIRINTHANATTH PRIME API Engine"}
-
-# Endpoint สำหรับระบบกระเป๋าเงิน (Executive Smart Wallet)
 @app.get("/wallet_menu")
 def read_wallet():
+    """Endpoint สำหรับระบบกระเป๋าเงิน (Executive Smart Wallet)"""
     if os.path.exists("wallet_menu.html"):
         return FileResponse("wallet_menu.html")
     return {"status": "error", "message": "Smart Wallet layout is currently unavailable."}
 
-# 🎙️ Endpoint พิเศษ: สำหรับเปิดหน้า "ห้องโทรคุยสด (Executive Voice Room)"
 @app.get("/live-call", response_class=HTMLResponse)
 async def open_live_call_room():
-    """เปิดหน้าต่าง LIFF สำหรับคุยสดกับ AI (ธนัตถ์ / สิรินทร์ ไพรม์)"""
+    """🎙️ Endpoint พิเศษ: เปิดหน้า 'ห้องโทรคุยสด' (Executive Voice Room)"""
     file_path = "templates/call_ai.html"
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
     return "<h1>System Updating. Voice Room is temporarily unavailable.</h1>"
 
-# ==========================================
-# 4. VIP Invitation & Licensing System
-# ==========================================
+# =========================================================
+# 👑 VIP Invitation & Licensing System
+# =========================================================
 class InviteRequest(BaseModel):
     line_id: str
     invite_code: str
@@ -155,7 +162,7 @@ async def verify_invite(req: InviteRequest):
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not available")
 
-    # 👑 ปลดล็อกสิทธิ์ CEO ทันทีโดยไม่ต้องใช้โค้ด
+    # ปลดล็อกสิทธิ์ CEO ทันทีโดยไม่ต้องใช้โค้ด
     if req.line_id == MASTER_ADMIN_LINE_ID:
         return {
             "status": "success", 
@@ -178,6 +185,7 @@ async def verify_invite(req: InviteRequest):
                 detail="❌ รหัสคำเชิญนี้ถูกใช้งานโดยบุคคลอื่นไปแล้ว ไม่อนุญาตให้ใช้ซ้ำ"
             )
             
+    # อัปเดตสถานะการใช้โค้ดและสร้างบัญชีผู้ใช้
     supabase.table("invite_codes").update({
         "is_used": True,
         "used_by_line_id": req.line_id
@@ -195,9 +203,9 @@ async def verify_invite(req: InviteRequest):
         "message": "ยืนยันรหัสเชิญสำเร็จ! เปิดสิทธิ์การใช้งานระบบให้คุณเรียบร้อยแล้ว"
     }
 
-# ==========================================
-# 5. Core Execution Engine
-# ==========================================
+# =========================================================
+# ⚙️ Core Execution Engine
+# =========================================================
 class ExecutionRequest(BaseModel):
     user_id: str
     task_type: str
@@ -239,9 +247,9 @@ async def execute_task(request_data: ExecutionRequest):
         logger.error(f"❌ API Exception: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==========================================
-# 6. Profile Synchronization System
-# ==========================================
+# =========================================================
+# 🔄 Profile Synchronization System
+# =========================================================
 class UserProfile(BaseModel):
     line_user_id: str
     display_name: str
@@ -268,10 +276,11 @@ async def sync_user_profile(profile: UserProfile):
         logger.error(f"❌ [Sync System Error]: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# =========================================================
+# 🚀 Server Ignition (จุดสตาร์ทเครื่องยนต์สำหรับ Cloud Run)
+# =========================================================
 if __name__ == "__main__":
     # บังคับให้รับค่าพอร์ตจาก Google Cloud Run อย่างสมบูรณ์แบบ
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME ENGINE ON PORT {port}...")
-    
-    # ลบคำสั่ง reload=False ออกเพื่อลดความซับซ้อนในสภาพแวดล้อม Production
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
