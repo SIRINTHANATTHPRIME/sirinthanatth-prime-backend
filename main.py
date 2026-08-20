@@ -319,7 +319,9 @@ async def stripe_webhook(request: Request):
 # 🚀 Server Ignition (จุดสตาร์ทเครื่องยนต์สำหรับ Cloud Run)
 # =========================================================
 if __name__ == "__main__":
-    # บังคับให้รับค่าพอร์ตจาก Google Cloud Run อย่างสมบูรณ์แบบ
+    # ดึงค่าพอร์ตแบบ Dynamic จาก Google Cloud Run (บังคับใช้ 8080 เป็นค่าสำรอง)
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME ENGINE ON PORT {port}...")
+    
+    # รันเซิร์ฟเวอร์ด้วย uvicorn โดยระบุพอร์ตจากตัวแปร system
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

@@ -36,5 +36,5 @@ COPY . .
 RUN useradd -m primeuser && chown -R primeuser:primeuser /app
 USER primeuser
 
-# 9. สั่งรันระบบผ่าน Uvicorn แบบรีดประสิทธิภาพ (Async Worker)
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 1
+# (คัดลอกส่วนท้ายนี้ไปวางแทนที่บรรทัด CMD เดิมใน Dockerfile ของท่าน)
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
