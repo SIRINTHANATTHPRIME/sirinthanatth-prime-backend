@@ -12,15 +12,6 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 
-# LINE Messaging API SDK (แก้ไขการนำเข้า WebhookHandler ให้ถูกต้อง)
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import ( 
-    MessageEvent, TextMessage, AudioMessage, ImageMessage, 
-    VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, 
-    ImageSendMessage, VideoSendMessage
-)
-
 # =========================================================
 # 👑 SIRINTHANATTH PRIME - Enterprise Main Server API
 # =========================================================
@@ -34,15 +25,23 @@ logger = logging.getLogger("SIRINTHANATTH_PRIME_CORE")
 # 2. เริ่มต้นค่าคงที่และเชื่อมต่อบริการภายนอก (API Keys & Integrations)
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
-
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
-
-MASTER_ADMIN_LINE_ID = os.getenv("MASTER_ADMIN_LINE_ID", "U1234567890abcdef...")
+MASTER_ADMIN_LINE_ID = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
+CEO_LINE_ID = os.getenv("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
 stripe_key = os.getenv("STRIPE_SECRET_KEY")
 if stripe_key:
     stripe.api_key = stripe_key
+
+# LINE Messaging API SDK Initialization
+try:
+    from linebot import LineBotApi, WebhookHandler
+    line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN) if LINE_CHANNEL_ACCESS_TOKEN else None
+    handler = WebhookHandler(LINE_CHANNEL_SECRET) if LINE_CHANNEL_SECRET else None
+except Exception as line_err:
+    logger.warning(f"⚠️ [LINE SDK Alert]: {line_err}")
+    line_bot_api = None
+    handler = None
 
 # 3. เชื่อมต่อฐานข้อมูล (Supabase Vault)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -75,24 +74,36 @@ app.add_middleware(
 )
 
 # Auto-Provisioning & Static Files (สร้างโฟลเดอร์อัตโนมัติป้องกันเซิร์ฟเวอร์แครช)
-required_directories = ["static", "static/audio", "css", "assets", "templates"]
+required_directories = ["static", "static/audio", "static/images", "css", "assets", "templates"]
 for directory in required_directories:
     os.makedirs(directory, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/css", StaticFiles(directory="css"), name="css")
-app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+if os.path.exists("css"):
+    app.mount("/css", StaticFiles(directory="css"), name="css")
+if os.path.exists("assets"):
+    app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 # =========================================================
 # 🌐 Dynamic Imports (นำเข้า Modules & Routers ภายใน)
 # =========================================================
-# 1. นำเข้า Router ด่านหน้าสำหรับ LINE
+# 1. นำเข้า Router ด่านหน้าสำหรับ LINE (รองรับทั้งโครงสร้างแบบสลับโฟลเดอร์)
+line_router_mounted = False
 try:
-    from api.routes_line import router as line_router
+    from routes_line import router as line_router
+    app.include_router(line_router)
     app.include_router(line_router, prefix="/api/v1/line")
-    logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
-except ImportError as e:
-    logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
+    line_router_mounted = True
+    logger.info("✅ [System]: LINE Webhook Router (routes_line) mounted successfully.")
+except ImportError:
+    try:
+        from api.routes_line import router as line_router
+        app.include_router(line_router)
+        app.include_router(line_router, prefix="/api/v1/line")
+        line_router_mounted = True
+        logger.info("✅ [System]: LINE Webhook Router (api.routes_line) mounted successfully.")
+    except ImportError as e:
+        logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
 
 # 2. นำเข้าระบบจัดการภาระงาน (Task Dispatcher)
 try:
@@ -121,7 +132,7 @@ except ImportError:
 # =========================================================
 @app.get("/")
 def root():
-    return {"status": "Online", "system": "SIRINTHANATTH PRIME"}
+    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "3.0.0"}
 
 @app.get("/health")
 def health_check():
@@ -163,7 +174,7 @@ async def verify_invite(req: InviteRequest):
         raise HTTPException(status_code=500, detail="Database connection not available")
 
     # ปลดล็อกสิทธิ์ CEO ทันทีโดยไม่ต้องใช้โค้ด
-    if req.line_id == MASTER_ADMIN_LINE_ID:
+    if req.line_id == MASTER_ADMIN_LINE_ID or req.line_id == CEO_LINE_ID:
         return {
             "status": "success", 
             "role": "admin",
@@ -216,7 +227,7 @@ async def execute_task(request_data: ExecutionRequest):
     """ท่อประมวลผลหลัก รองรับงานหนักเอกสาร, ภาพ, เสียง และวิดีโอ"""
     try:
         # ระบบตัดเครดิต (Wallet Control System)
-        if supabase and request_data.user_id != MASTER_ADMIN_LINE_ID:
+        if supabase and request_data.user_id != MASTER_ADMIN_LINE_ID and request_data.user_id != CEO_LINE_ID:
             client_res = supabase.table("prime_clients").select("token_balance, role").eq("line_user_id", request_data.user_id).execute()
             if not client_res.data:
                 raise HTTPException(status_code=403, detail="กรุณาลงทะเบียนผ่านรหัสคำเชิญก่อนใช้งานระบบ")
@@ -277,10 +288,38 @@ async def sync_user_profile(profile: UserProfile):
         raise HTTPException(status_code=500, detail=str(e))
 
 # =========================================================
+# 💳 Stripe Webhook Endpoint (ระบบรับชำระเงินอัตโนมัติ)
+# =========================================================
+@app.post("/api/stripe-webhook")
+async def stripe_webhook(request: Request):
+    """ระบบรับการแจ้งเตือนการชำระเงินสำเร็จจาก Stripe"""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.warning("⚠️ STRIPE_WEBHOOK_SECRET ไม่ได้ถูกตั้งค่าใน .env")
+        return {"status": "error", "message": "Webhook secret missing"}
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except Exception as e:
+        logger.error(f"❌ Stripe Webhook Signature Error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        client_ref = session.get('client_reference_id', '')
+        logger.info(f"💳 [Stripe Payment Verified]: Ref = {client_ref}")
+
+    return {"status": "success"}
+
+# =========================================================
 # 🚀 Server Ignition (จุดสตาร์ทเครื่องยนต์สำหรับ Cloud Run)
 # =========================================================
 if __name__ == "__main__":
     # บังคับให้รับค่าพอร์ตจาก Google Cloud Run อย่างสมบูรณ์แบบ
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME ENGINE ON PORT {port}...")
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

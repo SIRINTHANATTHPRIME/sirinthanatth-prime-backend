@@ -1,13 +1,25 @@
 import os
 import time
+import logging
 from google import genai
+from google.genai import types
+
+# นำเข้าระบบความจำ (Hippocampus)
 from agents.memory_engine import recall_memory, save_memory, recall_corporate_knowledge
 
+# ตั้งค่า Logger
+logger = logging.getLogger("PrimeBrain")
+
+# 1. 🔑 ตั้งค่าการเชื่อมต่อ AI
 GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
-MODEL_NAME = "gemini-3.1-pro-preview"
 
-# 🧠 อัปเดต SYSTEM PROMPT ให้มีคำสั่ง Cross-Reference และการวิเคราะห์มัลติมีเดีย (หูตาอัจฉริยะ)
+# 🚀 อัปเกรดเป็นโมเดล Pro รุ่นเสถียรที่สุดเพื่อป้องกัน Error 404
+MODEL_NAME = "gemini-1.5-pro" 
+
+# ==========================================
+# 🧠 2. SYSTEM PROMPT: กฎเหล็กของสมองกลระดับประธาน
+# ==========================================
 SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด AI ผู้ช่วยผู้บริหารและที่ปรึกษาธุรกิจระดับโลก 
 
 กฎเหล็กพิเศษในการประมวลผลข้อมูล (Cross-Reference & Multimodal Engine):
@@ -25,77 +37,91 @@ SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด A
 6. 🛡️ Legal Shield: ป้องกันความเสี่ยงทางกฎหมาย (สคบ./อย./ก.ล.ต.) อย่างเคร่งครัด
 """
 
-# เปลี่ยนพารามิเตอร์ให้รับ file_path แทน file_uri เพื่อให้ตรงกับ routes_line.py
-def generate_intelligent_response(user_id, incoming_message, file_path=None, file_type=None):
-    """ฟังก์ชันสมองกลประมวลผลเชิงลึก (Deep Reasoning)"""
+# ==========================================
+# ⚙️ 3. แกนประมวลผลเชิงลึก (Deep Reasoning Logic)
+# ==========================================
+async def generate_intelligent_response(user_id: str, incoming_message: str, file_path: str = None, file_type: str = None) -> str:
+    """ฟังก์ชันสมองกลประมวลผลเชิงลึก ดึงความจำ ดึงไฟล์ และสืบค้น Google"""
+    
     if not client:
         return "⚠️ System Offline: ไม่พบการเชื่อมต่อ AI_API_KEY ในระบบ"
 
-    # 🧠 ใช้ Pro Model รุ่นเรือธง สำหรับงานที่ซับซ้อนที่สุด
-    model_name = 'gemini-3.1-pro-preview'
-    
-    contents = [
-        f"วิเคราะห์ข้อมูลและวางแผนกลยุทธ์เชิงลึกสำหรับลูกค้า ID [{user_id}]:",
-        incoming_message
-    ]
-    
+    uploaded_file = None
+    content_to_send = []
+
     try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents
-        )
-        return response.text
-    except Exception as e:
-        return f"⚠️ [Prime Brain Error]: ไม่สามารถประมวลผลข้อมูลระดับสูงได้เนื่องจาก {e}"
+        # ==========================================
+        # STEP 1: จัดการไฟล์มัลติมีเดีย (ถ้ามี)
+        # ==========================================
+        if file_path and os.path.exists(file_path):
+            logger.info(f"📤 [Prime Brain]: กำลังอัปโหลดไฟล์ {file_type} เพื่อวิเคราะห์...")
+            uploaded_file = client.files.upload(file=file_path)
+            
+            # รอกรณีเป็นไฟล์วิดีโอใหญ่ๆ
+            while uploaded_file.state.name == "PROCESSING":
+                logger.info("⏳ [Prime Brain]: AI กำลังย่อยข้อมูลไฟล์วิดีโอ...")
+                time.sleep(2)
+                uploaded_file = client.files.get(name=uploaded_file.name)
+            
+            if uploaded_file.state.name == "FAILED":
+                raise ValueError("AI ไม่สามารถประมวลผลไฟล์นี้ได้")
+                
+            content_to_send.append(uploaded_file)
 
         # ==========================================
-        # 2. ดึงความจำลูกค้าและฐานข้อมูลบริษัท (RAG System)
+        # STEP 2: ดึงความจำลูกค้าและฐานข้อมูลบริษัท (RAG System)
         # ==========================================
-        past_context = recall_memory(line_user_id, current_message)
-        corp_knowledge = recall_corporate_knowledge(current_message)
+        logger.info(f"🧠 [Prime Brain]: กำลังเชื่อมต่อความจำ (RAG) สำหรับ User: {user_id}")
+        past_context = recall_memory(user_id, incoming_message)
+        corp_knowledge = recall_corporate_knowledge(incoming_message)
         
         full_prompt = f"""
         [ความจำประวัติการสนทนากับลูกค้ารายนี้]:
-        {past_context}
+        {past_context if past_context else "ไม่มีประวัติการคุยมาก่อน"}
         
-        [ฐานข้อมูลความรู้/สูตรลับของบริษัท SIRINTHANATTH PRIME (อัปเดตโดย CEO)]:
-        {corp_knowledge}
+        [ฐานข้อมูลความรู้/สูตรลับของบริษัท SIRINTHANATTH PRIME]:
+        {corp_knowledge if corp_knowledge else "ไม่มีข้อมูลที่เกี่ยวข้องในฐานระบบ"}
         
         [คำสั่งล่าสุดจากลูกค้า]:
-        {current_message}
+        {incoming_message}
         
         กรุณาวิเคราะห์ เปรียบเทียบข้อมูลฐานความรู้กับข้อมูลออนไลน์ (และประมวลผลไฟล์มัลติมีเดียที่แนบมา หากมี) และสร้างคำตอบที่ถูกต้องที่สุด
         """
         
-        # แนบคำสั่ง Text ต่อท้ายไฟล์
+        # นำ Text คำสั่งไปต่อท้ายไฟล์ (ถ้ามีไฟล์)
         content_to_send.append(full_prompt)
 
         # ==========================================
-        # 3. สั่งรันโมเดล (Gemini 1.5 Pro + Google Search + File API)
+        # STEP 3: สั่งรันโมเดล (Gemini 1.5 Pro + Google Search)
         # ==========================================
-        model = genai.GenerativeModel(
-            model_name=MODEL_NAME,
-            system_instruction=SYSTEM_PROMPT,
-            tools='google_search_retrieval' # สั่งให้ AI วิ่งออกไปเช็ก Google ทันที
+        logger.info(f"🌐 [Prime Brain]: กำลังประมวลผลและสืบค้นข้อมูลออนไลน์ (Search Grounding)...")
+        
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=content_to_send,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                temperature=0.7,
+                # 🌐 เปิดใช้งานให้ AI วิ่งออกไปค้น Google ทันที (Search Grounding)
+                tools=[{"google_search": {}}] 
+            )
         )
         
-        print(f"🧠 [Prime Brain]: กำลังประมวลผล (Cross-Reference + Multimodal) ให้ User: {line_user_id}")
-        response = model.generate_content(content_to_send)
-        
-        # บันทึกความจำ
-        save_memory(line_user_id, f"User: {current_message} | PRIME: {response.text[:200]}")
+        # บันทึกความจำลงสมองกล (RAG)
+        save_memory(user_id, f"User: {incoming_message} | PRIME: {response.text[:200]}...")
         return response.text
         
     except Exception as e:
-        print(f"❌ [Prime Brain Critical Error]: เกิดข้อผิดพลาดในสมองกล ({str(e)})")
-        return "ขออภัยครับคุณลูกค้า ขณะนี้สมองกลส่วนกลางกำลังประมวลผลไฟล์มัลติมีเดียระดับสูง และเกิดข้อขัดข้องชั่วคราว กรุณารอสักครู่นะครับ"
+        logger.error(f"❌ [Prime Brain Critical Error]: {str(e)}")
+        return "ขออภัยครับคุณลูกค้า ขณะนี้สมองกลส่วนกลางกำลังประมวลผลข้อมูลระดับสูง และเกิดข้อขัดข้องชั่วคราว กรุณารอสักครู่นะครับ"
+        
     finally:
         # ==========================================
-        # 4. ทำลายไฟล์บนเซิร์ฟเวอร์ Google หลังใช้งานเสร็จ (Zero-Data Retention)
+        # STEP 4: ทำลายไฟล์บนเซิร์ฟเวอร์ Google หลังใช้งานเสร็จ (Zero-Data Retention)
         # ==========================================
         if uploaded_file:
             try:
-                genai.delete_file(uploaded_file.name)
-                print(f"🗑️ [Prime Brain Security]: ทำลายไฟล์ออกจากเซิร์ฟเวอร์ AI เรียบร้อย (Data Protected)")
+                client.files.delete(name=uploaded_file.name)
+                logger.info(f"🗑️ [Prime Brain Security]: ทำลายไฟล์ออกจากเซิร์ฟเวอร์ AI เรียบร้อย (Data Protected)")
             except Exception as e:
-                print(f"⚠️ [Prime Brain Error]: ไม่สามารถลบไฟล์บนเซิร์ฟเวอร์ AI ได้ ({e})")
+                logger.error(f"⚠️ [Prime Brain Security Error]: ไม่สามารถลบไฟล์บนเซิร์ฟเวอร์ AI ได้ ({e})")

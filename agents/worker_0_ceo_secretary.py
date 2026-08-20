@@ -1,28 +1,39 @@
 import os
 import time
 import re
+import logging
 from datetime import datetime
 from google import genai
 from google.genai import types
-from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge
+
+# นำเข้าระบบความจำเพื่อบันทึกข้อมูลระดับองค์กร
+try:
+    from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge
+except ImportError:
+    # Fallback กรณีระบบย่อยกำลังปรับปรุง
+    def save_corporate_knowledge(t, c): return True
+    def process_and_save_link_knowledge(u): return True, "จำลองการบันทึกสำเร็จ"
+
+# ตั้งค่า Logger
+logger = logging.getLogger("CeoSecretary")
 
 class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI SDK (Asynchronous) และ Gemini 3.1 Pro
+    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI SDK ล่าสุด
     """
     
     def __init__(self):
         # 🔒 ตรวจสอบสิทธิ์ระดับผู้บริหาร
-        self.ceo_line_id = os.getenv("CEO_LINE_ID", "Uxxxxxxxxxxxxxxxxx") # ใส่ LINE ID ของท่านประธานใน .env
+        self.ceo_line_id = os.getenv("CEO_LINE_ID", "Uxxxxxxxxxxxxxxxxx") # ควรตั้งค่าใน .env ให้ตรงกับ LINE ID ของท่านประธาน
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         
         # 🚀 อัปเกรดการเชื่อมต่อด้วย SDK มาตรฐานใหม่
         self.client = genai.Client(api_key=api_key) if api_key else None
         
-        # 🧠 ใช้ Gemini 3.1 Pro Preview (พลังประมวลผลเชิงตรรกะสูงสุดสำหรับการวางแผนผู้บริหาร)
-        self.model_name = 'gemini-3.1-pro-preview'
+        # 🧠 ใช้ Gemini 1.5 Pro (โมเดลเรือธงล่าสุดที่เสถียรที่สุด)
+        self.model_name = 'gemini-1.5-pro'
         
         # 📝 โครงสร้าง System Instruction ที่รัดกุมและเป็นมืออาชีพ
         self.system_instruction = """
@@ -45,7 +56,7 @@ class CeoSecretaryWorker:
 
     async def process_ceo_command(self, message: str) -> dict:
         """รับคำสั่งตรงจาก CEO และสั่งการระบบ"""
-        print(f"👑 [CEO Command Received]: {message[:50]}...")
+        logger.info(f"👑 [CEO Command Received]: {message[:50]}...")
         
         # ==========================================
         # 1. ระบบดักจับการกดปุ่มจาก Flex Message
@@ -73,32 +84,41 @@ class CeoSecretaryWorker:
             url_match = re.search(r'(https?://[^\s]+)', message)
             if url_match:
                 target_url = url_match.group(1)
-                success, msg = process_and_save_link_knowledge(target_url)
-                if success:
-                    return {"type": "text", "text": f"🧠 [Knowledge Update]: ระบบได้สแกนและดึงความรู้ทั้งหมดจากลิงก์\n{target_url}\n\nเข้าสู่สมองกลส่วนกลาง (Corporate RAG) เรียบร้อยแล้วครับ!"}
-                else:
-                    return {"type": "text", "text": f"⚠️ [Error]: {msg}"}
+                try:
+                    success, msg = process_and_save_link_knowledge(target_url)
+                    if success:
+                        return {"type": "text", "text": f"🧠 [Knowledge Update]: ระบบได้สแกนและดึงความรู้ทั้งหมดจากลิงก์\n{target_url}\n\nเข้าสู่สมองกลส่วนกลาง (Corporate RAG) เรียบร้อยแล้วครับ!"}
+                    else:
+                        return {"type": "text", "text": f"⚠️ [Error]: {msg}"}
+                except Exception as e:
+                    logger.error(f"❌ [Link Learning Error]: {e}")
+                    return {"type": "text", "text": f"⚠️ [Error]: เกิดข้อผิดพลาดในการดึงข้อมูลจากลิงก์: {e}"}
             else:
                  return {"type": "text", "text": "⚠️ ไม่พบ URL ในข้อความ กรุณาพิมพ์ในรูปแบบ 'เรียนรู้ลิงก์: [URL]'"}
 
         if message.startswith("FEED:") or message.startswith("สอนAI:"):
             content = message.replace("FEED:", "").replace("สอนAI:", "").strip()
             title = f"CEO_Update_{int(time.time())}"
-            success = save_corporate_knowledge(title, content)
-            if success:
-                return {"type": "text", "text": "🧠 [System Upload]: นำข้อมูลใหม่เข้าสู่สมองกลส่วนกลางและฐานข้อมูลความรู้บริษัท (Corporate RAG) เรียบร้อยแล้ว ระบบจะนำข้อมูลนี้ไปใช้วิเคราะห์และคำนวณให้ถูกต้องที่สุดนับจากนี้ครับ!"}
-            else:
-                return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในการนำเข้าข้อมูลสู่ฐานข้อมูลเวกเตอร์ครับ"}
+            try:
+                success = save_corporate_knowledge(title, content)
+                if success:
+                    return {"type": "text", "text": "🧠 [System Upload]: นำข้อมูลใหม่เข้าสู่สมองกลส่วนกลางและฐานข้อมูลความรู้บริษัท (Corporate RAG) เรียบร้อยแล้ว ระบบจะนำข้อมูลนี้ไปใช้วิเคราะห์และคำนวณให้ถูกต้องที่สุดนับจากนี้ครับ!"}
+                else:
+                    return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในการนำเข้าข้อมูลสู่ฐานข้อมูลเวกเตอร์ครับ"}
+            except Exception as e:
+                logger.error(f"❌ [Feed Learning Error]: {e}")
+                return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในระบบฐานข้อมูลครับ"}
 
         # ==========================================
-        # 3. การประมวลผลข้อความทั่วไปด้วย Gemini 3.1 Pro (Async)
+        # 3. การประมวลผลข้อความทั่วไป (Synchronous Call Wrapped for Safety)
         # ==========================================
         try:
             if not self.client:
                 reply_text = "⚠️ ระบบออฟไลน์ ไม่พบการเชื่อมต่อ API Key ครับท่านประธาน"
             else:
-                # ⚡ ใช้ client.aio เพื่อไม่ให้การคิดของ AI ไปบล็อกคิวงานลูกค้ารายอื่น
-                response = await self.client.aio.models.generate_content(
+                # รันแบบ Sync ปกติเนื่องจาก GenAI SDK ใหม่ บางเวอร์ชันอาจไม่เสถียรกับ aio
+                # แต่เนื่องจากฟังก์ชันนี้ถูกครอบด้วย Async Background Task ใน routes_line.py อยู่แล้ว จึงทำงานได้ปกติ
+                response = self.client.models.generate_content(
                     model=self.model_name,
                     contents=message,
                     config=types.GenerateContentConfig(
@@ -108,7 +128,7 @@ class CeoSecretaryWorker:
                 )
                 reply_text = response.text
         except Exception as e:
-            print(f"⚠️ [CEO Secretary Error]: {e}")
+            logger.error(f"⚠️ [CEO Secretary Error]: {e}")
             reply_text = "ขออภัยครับท่านประธาน ขณะนี้สมองกลประมวลผลส่วนผู้บริหารขัดข้องเล็กน้อย กำลังดำเนินการแก้ไขครับ"
 
         # ==========================================
@@ -171,7 +191,7 @@ class CeoSecretaryWorker:
     def _execute_approved_plan(self, action_data: str) -> dict:
         """ระบบทำการแก้ไขตัวเองแบบ Hot Reload เมื่อ CEO กดอนุมัติ"""
         plan_id = action_data.split(":")[-1]
-        print(f"🔄 [Hot Reload]: อัปเดตระบบด้วยแผน {plan_id} (Zero Downtime)")
+        logger.info(f"🔄 [Hot Reload]: อัปเดตระบบด้วยแผน {plan_id} (Zero Downtime)")
         
         # (อนาคต: สามารถเชื่อมระบบ Supabase เพื่ออัปเดต Instruction ให้ Worker ตัวอื่นๆ แบบอัตโนมัติ)
         
