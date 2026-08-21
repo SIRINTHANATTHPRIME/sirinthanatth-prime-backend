@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import asyncio
 import logging
 import requests
@@ -7,11 +8,12 @@ from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
-    AudioMessage, ImageMessage, VideoMessage, FileMessage, AudioSendMessage
+    AudioMessage, ImageMessage, VideoMessage, FileMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage,
 )
 from google import genai
 from google.genai import types
 
+load_dotenv()
 # ตั้งค่าระบบ Logging ระดับองค์กร
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Enterprise-Router")
