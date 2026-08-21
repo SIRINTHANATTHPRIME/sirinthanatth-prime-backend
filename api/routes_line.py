@@ -22,15 +22,12 @@ logger = logging.getLogger("Enterprise-Router")
 # 👑 SIRINTHANATTH PRIME - Enterprise API Router
 # =========================================================
 router = APIRouter()
-
-# โหลดตัวแปรและตั้งค่า API Keys
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
-LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
-BASE_URL = os.getenv("BASE_URL", "https://www.sirinthanatthprime.com")
-GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
-
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
-parser = WebhookParser(LINE_SECRET) if LINE_SECRET else None
+parser = WebhookParser(os.getenv("LINE_CHANNEL_SECRET", "")) if os.getenv("LINE_CHANNEL_SECRET") else None
+boss_agent = CentralBossAgent()
+BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
+GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 # 1. สมองกลส่วนกลาง (Central Routing)
@@ -101,7 +98,16 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         # ==========================================
         # 👥 โหมดปกติสำหรับลูกค้า / ผู้ใช้ทั่วไป (User Mode)
         # ==========================================
-        reply_msg = ""
+        reply_msg = boss_agent.route_task(
+            user_id=user_id, 
+            message=incoming_message, 
+            bg_tasks=bg_tasks, 
+            incoming_message=incoming_message,
+            file_path=file_path,
+            file_type=file_type
+        )
+
+        messages_to_send = [TextSendMessage(text=reply_msg)]
         
         # 1. พยายามเรียกใช้สมองอัจฉริยะ (Prime Brain - RAG & Vision)
         if generate_intelligent_response:
@@ -137,49 +143,39 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
 
         messages_to_send = [TextSendMessage(text=reply_msg)]
         
-        # 🎙️ ระบบเสียง Voice AI (ElevenLabs) ยังคงทำงานได้สมบูรณ์
+       # 🎙️ ระบบแปลงเสียงพูด (Voice AI - ElevenLabs)
         if file_type == 'audio' and generate_voice_from_text:
-            try:
-                filename, duration_ms = await asyncio.to_thread(generate_voice_from_text, reply_msg)
-                if filename:
-                    messages_to_send.append(AudioSendMessage(original_content_url=f"{BASE_URL}/static/audio/{filename}", duration=duration_ms))
-            except Exception as voice_err:
-                logger.error(f"❌ [Voice AI Error]: {voice_err}")
+            filename, duration_ms = generate_voice_from_text(reply_msg)
+            if filename: 
+                audio_url = f"{BASE_URL}/static/audio/{filename}"
+                messages_to_send.append(AudioSendMessage(original_content_url=audio_url, duration=duration_ms))
         
-        await asyncio.to_thread(line_bot_api.reply_message, reply_token, messages_to_send)
-        logger.info(f"📤 [LINE AI Reply]: ตอบกลับ {user_id} สำเร็จ")
+        line_bot_api.reply_message(reply_token, messages_to_send)
         
-    except Exception as e:
-        logger.error(f"❌ [Critical Reply Error]: ไม่สามารถส่งข้อความได้ ({e})")
+    except Exception as e: 
+        print(f"❌ Error in Processing: {e}")
         try:
-            line_bot_api.reply_message(reply_token, TextSendMessage(text="ขออภัยครับ ระบบขัดข้องชั่วคราว โปรดพิมพ์ 'เมนู' เพื่อดำเนินการต่อครับ"))
+            line_bot_api.reply_message(reply_token, TextSendMessage(text="ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังอัปเดตข้อมูล ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"))
         except:
             pass
     finally:
-        # 🧹 4. ระบบลบไฟล์ขยะอัตโนมัติ (Cleanup Temp Files) เพื่อไม่ให้เซิร์ฟเวอร์เต็ม
+        # 🧹 ทำความสะอาดลบไฟล์ชั่วคราว (Zero-Data Retention)
         if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-                logger.info(f"🗑️ [Cleanup]: ลบไฟล์ชั่วคราว {file_path} เรียบร้อยแล้ว")
-            except Exception as e:
-                logger.warning(f"⚠️ [Cleanup Error]: ลบไฟล์ไม่สำเร็จ ({e})")
+            try: os.remove(file_path)
+            except: pass
 
 
 # 🌐 Endpoint รับสัญญาณจาก LINE (Webhook Gateway)
 @router.post("/webhook")
 async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
-    """รับสัญญาณทุกรูปแบบจากผู้ใช้งานและกระจายงานเข้า Background Task"""
+    """Webhook Gateway ด่านหน้ารับข้อความจาก LINE OA"""
     if not parser:
         raise HTTPException(status_code=500, detail="Webhook Parser is not initialized.")
         
     body = await request.body()
-    body_str = body.decode('utf-8')
-    
-    # 🛡️ ตรวจสอบลายเซ็นความปลอดภัย (Signature Validation)
-    try:
-        events = parser.parse(body_str, x_line_signature)
-    except InvalidSignatureError:
-        logger.error("❌ [Security Alert]: Invalid LINE Signature detected. Access Denied.")
+    try: 
+        events = parser.parse(body.decode('utf-8'), x_line_signature)
+    except InvalidSignatureError: 
         raise HTTPException(status_code=400, detail="Invalid signature.")
         
     for event in events:
@@ -187,53 +183,42 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
             user_id = event.source.user_id
             reply_token = event.reply_token
             message_type = event.message.type
+            incoming_message, file_path, file_type = "", None, None
 
-            incoming_message = ""
-            file_path = None
-            file_type = None
+            # ตรวจสอบว่าเป็นข้อความตัวอักษร
+            if message_type == 'text': 
+                incoming_message = event.message.text.strip()
 
-            # [CASE 1]: ข้อความตัวอักษร
-            if message_type == 'text':
-                incoming_message = event.message.text
-                logger.info(f"📩 [Incoming Traffic]: TEXT from {user_id} -> {incoming_message[:30]}...")
-                
-            # [CASE 2]: มัลติมีเดียและเอกสาร (Visual & Audio Data)
+                # 👑 คำสั่งลับ ปลดล็อก CEO 
+                if incoming_message == "PRIME: UNLOCK CEO":
+                    reply_msg = (f"👑 [SYSTEM OVERRIDE SUCCESS]\n"
+                                 f"ท่านประธานครับ LINE ID ของท่านคือ:\n\n"
+                                 f"{user_id}\n\n"
+                                 f"กรุณาคัดลอกรหัสนี้ไปใส่ในไฟล์ .env ตัวแปร CEO_LINE_ID และ MASTER_ADMIN_LINE_ID ใน Cloud Run เพื่อปลดล็อกระบบเลขาฯ ส่วนตัวครับ")
+                    line_bot_api.reply_message(reply_token, TextSendMessage(text=reply_msg))
+                    continue
+
+            # ตรวจสอบว่าเป็นข้อความมัลติมีเดีย/ไฟล์
             elif message_type in ['audio', 'image', 'video', 'file']:
                 message_id = event.message.id
-                logger.info(f"📩 [Incoming Traffic]: MEDIA [{message_type.upper()}] from {user_id} (ID: {message_id})")
-                
                 try:
-                    message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
-                    ext = ""
-                    if message_type == 'audio': ext = ".m4a"
-                    elif message_type == 'image': ext = ".jpg"
-                    elif message_type == 'video': ext = ".mp4"
+                    message_content = line_bot_api.get_message_content(message_id)
+                    ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ""
+                    file_name = getattr(event.message, 'file_name', f"file_{message_id}") if message_type == 'file' else f"{message_id}{ext}"
                     
-                    if message_type == 'file':
-                        file_name = getattr(event.message, 'file_name', f"file_{message_id}")
-                        file_path = f"/tmp/{message_id}_{file_name}"
-                    else:
-                        file_path = f"/tmp/{message_id}{ext}"
-                        
-                    def save_media_file(path, content):
-                        with open(path, 'wb') as fd:
-                            for chunk in content.iter_content():
-                                fd.write(chunk)
-                                
-                    await asyncio.to_thread(save_media_file, file_path, message_content)
+                    os.makedirs("/tmp", exist_ok=True)
+                    file_path = f"/tmp/{file_name}"
                     
-                    incoming_message = f"[System Alert: User uploaded a {message_type} file for analysis]"
-                    file_type = message_type
-                    logger.info(f"💾 [Storage Allocation]: File cached temporarily at {file_path}")
-                    
-                except Exception as e:
-                    logger.error(f"❌ [Network Error]: Failed to retrieve media from LINE Server -> {e}")
+                    with open(file_path, 'wb') as fd:
+                        for chunk in message_content.iter_content(): fd.write(chunk)
+                    incoming_message, file_type = f"[System Alert: อัปโหลดไฟล์ {message_type} สำเร็จ]", message_type
+                except Exception as e: 
+                    print(f"❌ File processing error: {e}")
                     continue
-            else:
-                logger.warning(f"⚠️ [Unsupported Format]: Received unhandled type -> {message_type}")
+            else: 
                 continue
             
-            # 🚀 กระจายงานเข้าสู่ CPU Background Worker (ป้องกัน LINE ตัดสายกรณีโหลดนาน)
-            background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
-        
+            # ส่งต่องานให้ AI ประมวลผลแบบเบื้องหลัง (Background Task)
+            background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, background_tasks, file_path, file_type)
+            
     return {"status": "OK"}
