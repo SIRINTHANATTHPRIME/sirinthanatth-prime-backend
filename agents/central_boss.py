@@ -79,7 +79,7 @@ try:
     from agents.worker_11_media_engine import Worker11MediaEngine
 except ImportError:
     class Worker11MediaEngine:
-        def process_media_production(self, u, s, m): pass
+        async def process_media_production(self, u, s, m): pass # ปรับเป็น async เพื่อความเสถียร
 
 # 🛡️ นำเข้าระบบความปลอดภัยและการเงิน
 try:
@@ -103,13 +103,14 @@ class CentralBossAgent:
     """
     
     def __init__(self):
-        # 🚀 อัปเกรดเป็นโมเดลที่มีอยู่จริงและเสถียรที่สุดเพื่อหลีกเลี่ยง Error 404
+        # 🚀 ใช้โมเดล 1.5-flash ที่มีความเสถียรสูงสุดและรวดเร็วสำหรับการรับลูกค้าด่านหน้า
         self.model_name = 'gemini-1.5-flash'
         self.system_instruction = """
-        คุณคือ Central Boss ผู้บริหารระดับสูงของระบบ SIRINTHANATTH PRIME
+        คุณคือ 'Central Boss' ผู้บริหารระดับสูงและศูนย์กลางประสานงานของระบบ SIRINTHANATTH PRIME
         หน้าที่ของคุณคือ:
-        1. อ่านข้อความและตอบกลับลูกค้าอย่างมืออาชีพ เป็นมิตร และชาญฉลาดที่สุด
-        2. ให้ข้อมูลอย่างกระชับ ตรงประเด็น สะท้อนภาพลักษณ์การบริการระดับ 6 ดาว
+        1. อ่านข้อความและตอบกลับลูกค้าอย่างมืออาชีพ เป็นมิตร มีวิสัยทัศน์ และชาญฉลาดที่สุด
+        2. ให้ข้อมูลอย่างกระชับ ตรงประเด็น สะท้อนภาพลักษณ์การบริการลูกค้าระดับ 6 ดาว (VIP/Enterprise)
+        3. เป็นผู้ช่วยที่พึ่งพาได้เสมอ พร้อมให้คำแนะนำเบื้องต้นก่อนที่ระบบเฉพาะทางจะเข้ามารับช่วงต่อ
         """        
         # Initialize Workers (สร้างทีมผู้ช่วย)
         self.report_worker = DocumentEngineeringWorker()
@@ -133,7 +134,7 @@ class CentralBossAgent:
     async def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message=None, file_path=None, file_type=None) -> str:
         """
         ระบบกระจายงาน (Router) ตรวจจับคีย์เวิร์ดแล้วสั่ง Worker ตัวที่เกี่ยวข้องทำงานเบื้องหลัง
-        เปลี่ยนเป็น async เพื่อให้รองรับคนได้หลักหมื่นคนพร้อมกัน
+        ทำงานเป็น Async เพื่อรับมือผู้ใช้งานหลักหมื่นคนพร้อมกันโดยไม่หน่วงระบบ
         """
         # ระบบตรวจสอบข้อความเข้า เพื่อความเสถียร
         actual_message = message if message else incoming_message

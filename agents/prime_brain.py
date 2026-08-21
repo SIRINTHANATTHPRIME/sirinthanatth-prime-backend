@@ -1,5 +1,5 @@
 import os
-import time
+import asyncio
 import logging
 from google import genai
 from google.genai import types
@@ -14,7 +14,7 @@ logger = logging.getLogger("PrimeBrain")
 GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
-# 🚀 อัปเกรดเป็นโมเดล Pro รุ่นเสถียรที่สุดเพื่อป้องกัน Error 404
+# 🚀 อัปเกรดเป็นโมเดล Pro รุ่นเรือธงที่เสถียรและฉลาดที่สุด
 MODEL_NAME = "gemini-1.5-pro" 
 
 # ==========================================
@@ -41,7 +41,7 @@ SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด A
 # ⚙️ 3. แกนประมวลผลเชิงลึก (Deep Reasoning Logic)
 # ==========================================
 async def generate_intelligent_response(user_id: str, incoming_message: str, file_path: str = None, file_type: str = None) -> str:
-    """ฟังก์ชันสมองกลประมวลผลเชิงลึก ดึงความจำ ดึงไฟล์ และสืบค้น Google"""
+    """ฟังก์ชันสมองกลประมวลผลเชิงลึก ดึงความจำ ดึงไฟล์ และสืบค้น Google แบบ Asynchronous 100%"""
     
     if not client:
         return "⚠️ System Offline: ไม่พบการเชื่อมต่อ AI_API_KEY ในระบบ"
@@ -51,20 +51,22 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
 
     try:
         # ==========================================
-        # STEP 1: จัดการไฟล์มัลติมีเดีย (ถ้ามี)
+        # STEP 1: จัดการไฟล์มัลติมีเดีย (ถ้ามี) แบบ Non-Blocking
         # ==========================================
         if file_path and os.path.exists(file_path):
             logger.info(f"📤 [Prime Brain]: กำลังอัปโหลดไฟล์ {file_type} เพื่อวิเคราะห์...")
-            uploaded_file = client.files.upload(file=file_path)
             
-            # รอกรณีเป็นไฟล์วิดีโอใหญ่ๆ
+            # โยนการอัปโหลดไฟล์ไปที่ Thread หลังบ้าน
+            uploaded_file = await asyncio.to_thread(client.files.upload, file=file_path)
+            
+            # รอกรณีเป็นไฟล์วิดีโอใหญ่ๆ โดยใช้ asyncio.sleep ป้องกันเซิร์ฟเวอร์ค้าง
             while uploaded_file.state.name == "PROCESSING":
-                logger.info("⏳ [Prime Brain]: AI กำลังย่อยข้อมูลไฟล์วิดีโอ...")
-                time.sleep(2)
-                uploaded_file = client.files.get(name=uploaded_file.name)
+                logger.info("⏳ [Prime Brain]: AI กำลังย่อยข้อมูลไฟล์มัลติมีเดีย...")
+                await asyncio.sleep(2) 
+                uploaded_file = await asyncio.to_thread(client.files.get, name=uploaded_file.name)
             
             if uploaded_file.state.name == "FAILED":
-                raise ValueError("AI ไม่สามารถประมวลผลไฟล์นี้ได้")
+                raise ValueError("AI ไม่สามารถประมวลผลไฟล์นี้ได้ (File Processing Failed)")
                 
             content_to_send.append(uploaded_file)
 
@@ -72,8 +74,10 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
         # STEP 2: ดึงความจำลูกค้าและฐานข้อมูลบริษัท (RAG System)
         # ==========================================
         logger.info(f"🧠 [Prime Brain]: กำลังเชื่อมต่อความจำ (RAG) สำหรับ User: {user_id}")
-        past_context = recall_memory(user_id, incoming_message)
-        corp_knowledge = recall_corporate_knowledge(incoming_message)
+        
+        # ดึงความจำและกฎต่างๆ จากฐานข้อมูลด้วย Thread
+        past_context = await asyncio.to_thread(recall_memory, user_id, incoming_message)
+        corp_knowledge = await asyncio.to_thread(recall_corporate_knowledge, incoming_message)
         
         full_prompt = f"""
         [ความจำประวัติการสนทนากับลูกค้ารายนี้]:
@@ -88,7 +92,6 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
         กรุณาวิเคราะห์ เปรียบเทียบข้อมูลฐานความรู้กับข้อมูลออนไลน์ (และประมวลผลไฟล์มัลติมีเดียที่แนบมา หากมี) และสร้างคำตอบที่ถูกต้องที่สุด
         """
         
-        # นำ Text คำสั่งไปต่อท้ายไฟล์ (ถ้ามีไฟล์)
         content_to_send.append(full_prompt)
 
         # ==========================================
@@ -96,7 +99,8 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
         # ==========================================
         logger.info(f"🌐 [Prime Brain]: กำลังประมวลผลและสืบค้นข้อมูลออนไลน์ (Search Grounding)...")
         
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model=MODEL_NAME,
             contents=content_to_send,
             config=types.GenerateContentConfig(
@@ -107,9 +111,12 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
             )
         )
         
-        # บันทึกความจำลงสมองกล (RAG)
-        save_memory(user_id, f"User: {incoming_message} | PRIME: {response.text[:200]}...")
-        return response.text
+        reply_text = response.text if response.text else "ประมวลผลสำเร็จ"
+        
+        # บันทึกความจำลงสมองกล (RAG) เบื้องหลัง
+        await asyncio.to_thread(save_memory, user_id, f"User: {incoming_message} | PRIME: {reply_text[:200]}...")
+        
+        return reply_text
         
     except Exception as e:
         logger.error(f"❌ [Prime Brain Critical Error]: {str(e)}")
@@ -121,7 +128,7 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
         # ==========================================
         if uploaded_file:
             try:
-                client.files.delete(name=uploaded_file.name)
+                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
                 logger.info(f"🗑️ [Prime Brain Security]: ทำลายไฟล์ออกจากเซิร์ฟเวอร์ AI เรียบร้อย (Data Protected)")
             except Exception as e:
                 logger.error(f"⚠️ [Prime Brain Security Error]: ไม่สามารถลบไฟล์บนเซิร์ฟเวอร์ AI ได้ ({e})")

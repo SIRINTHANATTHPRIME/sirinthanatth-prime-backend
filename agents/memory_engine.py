@@ -26,8 +26,8 @@ def get_text_embedding(text: str) -> list:
     แปลงข้อความเป็นตัวเลข (Vector) ผ่านโมเดล Embedding ล่าสุดของ Google
     อัปเกรดใช้ text-embedding-004 เพื่อความแม่นยำสูงและเลี่ยง Error 404
     """
-    if not client:
-        logger.warning("⚠️ ไม่พบ API Key สำหรับสร้าง Embedding")
+    if not client or not text:
+        logger.warning("⚠️ ไม่พบ API Key หรือข้อความว่างเปล่า ข้ามการสร้าง Embedding")
         return []
         
     try:
@@ -53,29 +53,31 @@ def extract_text_from_url(url: str) -> str:
     """ดึงข้อมูลเนื้อหาจาก URL ที่ส่งมา พร้อมระบบป้องกัน Anti-Bot"""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml',
+            'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7'
         }
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.content, 'html.parser', from_encoding=response.encoding)
         
-        # ลบ Script และ Style ออกเพื่อเอาแต่เนื้อหาบริสุทธิ์
-        for script in soup(["script", "style", "noscript", "header", "footer"]):
-            script.extract()
+        # ลบส่วนที่ไม่ได้เป็นเนื้อหาหลักออก (Script, Style, เมนู, ฟุตเตอร์)
+        for element in soup(["script", "style", "noscript", "header", "footer", "nav", "aside"]):
+            element.extract()
             
         text = soup.get_text(separator=' ', strip=True)
         
-        # คัดกรองเว้นวรรคส่วนเกิน
+        # คัดกรองเว้นวรรคส่วนเกินและปรับให้เป็นเนื้อหาบริสุทธิ์
         text = ' '.join(text.split())
         
-        # สรุปย่อเนื้อหาหากยาวเกินไป ป้องกันเกินโควตา Token
+        # สรุปย่อเนื้อหาหากยาวเกินไป ป้องกันเกินโควตา Token ของระบบ
         return text[:8000] 
     except requests.exceptions.RequestException as re_err:
-        logger.error(f"❌ https://www.scraperapi.com/blog/web-scraping-errors/: {re_err}")
+        logger.error(f"❌ [URL Scrape Network Error]: {re_err}")
         return ""
     except Exception as e:
-        logger.error(f"❌ https://www.datahen.com/blog/web-scraping-errors/: {e}")
+        logger.error(f"❌ [URL Scrape General Error]: {e}")
         return ""
 
 def process_and_save_link_knowledge(url: str, added_by: str = "CEO"):

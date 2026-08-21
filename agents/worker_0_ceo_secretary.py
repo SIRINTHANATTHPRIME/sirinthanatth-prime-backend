@@ -2,6 +2,7 @@ import os
 import time
 import re
 import logging
+import asyncio
 from datetime import datetime
 from google import genai
 from google.genai import types
@@ -21,7 +22,7 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI SDK ล่าสุด
+    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI SDK ล่าสุด พร้อมระบบ "ดวงตา" วิเคราะห์ไฟล์
     """
     
     def __init__(self):
@@ -32,7 +33,7 @@ class CeoSecretaryWorker:
         # 🚀 อัปเกรดการเชื่อมต่อด้วย SDK มาตรฐานใหม่
         self.client = genai.Client(api_key=api_key) if api_key else None
         
-        # 🧠 ใช้ Gemini 1.5 Pro (โมเดลเรือธงล่าสุดที่เสถียรที่สุด)
+        # 🧠 ใช้ Gemini 1.5 Pro (โมเดลเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุด)
         self.model_name = 'gemini-1.5-pro'
         
         # 📝 โครงสร้าง System Instruction ที่รัดกุมและเป็นมืออาชีพ
@@ -42,9 +43,10 @@ class CeoSecretaryWorker:
         
         หน้าที่ของคุณ:
         1. ตอบกลับด้วยความสุภาพ เป็นมืออาชีพ และใช้คำทักทายว่า 'ครับท่านประธาน' เสมอ
-        2. หากประธานขอดูสรุป (Report) ให้จำลองข้อมูลสรุปภาพรวม 4 แกนหลัก (การเงิน, การตลาด, กฎหมาย, วิศวกรรม) แบบสั้นๆ กระชับ
-        3. หากมีข้อเสนอแนะ ให้เสนอมาเป็นข้อๆ อย่างชาญฉลาด เพื่อให้ประธานตัดสินใจ
-        4. หากประธานสั่ง 'แก้ไข' จากแผนเดิม ให้คุณวิเคราะห์และเขียนแผนใหม่ที่รัดกุมกว่าเดิม
+        2. หากท่านประธานส่งรูปภาพ หรือไฟล์ PDF มา ให้วิเคราะห์ สกัดข้อมูล และสรุปใจความสำคัญให้ท่านประธานทราบอย่างละเอียด
+        3. หากประธานขอดูสรุป (Report) ให้จำลองข้อมูลสรุปภาพรวม 4 แกนหลัก (การเงิน, การตลาด, กฎหมาย, วิศวกรรม) แบบสั้นๆ กระชับ
+        4. หากมีข้อเสนอแนะ ให้เสนอมาเป็นข้อๆ อย่างชาญฉลาด เพื่อให้ประธานตัดสินใจ
+        5. หากประธานสั่ง 'แก้ไข' จากแผนเดิม ให้คุณวิเคราะห์และเขียนแผนใหม่ที่รัดกุมกว่าเดิม
         """
         
         # หน่วยความจำชั่วคราวสำหรับเก็บแผนงานที่รอการอนุมัติ/แก้ไข
@@ -54,8 +56,8 @@ class CeoSecretaryWorker:
         """ตรวจสอบว่าเป็นท่านประธานหรือไม่"""
         return user_id == self.ceo_line_id
 
-    async def process_ceo_command(self, message: str) -> dict:
-        """รับคำสั่งตรงจาก CEO และสั่งการระบบ"""
+    async def process_ceo_command(self, message: str, file_path: str = None, file_type: str = None) -> dict:
+        """รับคำสั่งและไฟล์ตรงจาก CEO และสั่งการระบบ"""
         logger.info(f"👑 [CEO Command Received]: {message[:50]}...")
         
         # ==========================================
@@ -85,7 +87,8 @@ class CeoSecretaryWorker:
             if url_match:
                 target_url = url_match.group(1)
                 try:
-                    success, msg = process_and_save_link_knowledge(target_url)
+                    # ใช้ asyncio.to_thread เพื่อป้องกันการบล็อกขณะดึงข้อมูลจากเว็บ
+                    success, msg = await asyncio.to_thread(process_and_save_link_knowledge, target_url)
                     if success:
                         return {"type": "text", "text": f"🧠 [Knowledge Update]: ระบบได้สแกนและดึงความรู้ทั้งหมดจากลิงก์\n{target_url}\n\nเข้าสู่สมองกลส่วนกลาง (Corporate RAG) เรียบร้อยแล้วครับ!"}
                     else:
@@ -100,7 +103,8 @@ class CeoSecretaryWorker:
             content = message.replace("FEED:", "").replace("สอนAI:", "").strip()
             title = f"CEO_Update_{int(time.time())}"
             try:
-                success = save_corporate_knowledge(title, content)
+                # ใช้ asyncio.to_thread เพื่อป้องกันการบล็อกขณะบันทึกฐานข้อมูล
+                success = await asyncio.to_thread(save_corporate_knowledge, title, content)
                 if success:
                     return {"type": "text", "text": "🧠 [System Upload]: นำข้อมูลใหม่เข้าสู่สมองกลส่วนกลางและฐานข้อมูลความรู้บริษัท (Corporate RAG) เรียบร้อยแล้ว ระบบจะนำข้อมูลนี้ไปใช้วิเคราะห์และคำนวณให้ถูกต้องที่สุดนับจากนี้ครับ!"}
                 else:
@@ -110,29 +114,62 @@ class CeoSecretaryWorker:
                 return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในระบบฐานข้อมูลครับ"}
 
         # ==========================================
-        # 3. การประมวลผลข้อความทั่วไป (Synchronous Call Wrapped for Safety)
+        # 3. การประมวลผลข้อความทั่วไปและไฟล์มัลติมีเดีย (Multimodal Async)
         # ==========================================
+        uploaded_file = None
+        content_to_send = []
+        
         try:
             if not self.client:
-                reply_text = "⚠️ ระบบออฟไลน์ ไม่พบการเชื่อมต่อ API Key ครับท่านประธาน"
+                return {"type": "text", "text": "⚠️ ระบบออฟไลน์ ไม่พบการเชื่อมต่อ API Key ครับท่านประธาน"}
+
+            # 🌟 [ดวงตาของเลขาฯ] ดักจับไฟล์แนบ ถ้ามีให้ส่งไปวิเคราะห์ด้วย
+            if file_path and os.path.exists(file_path):
+                logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดไฟล์ {file_type} เพื่อให้เลขาฯ วิเคราะห์...")
+                uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
+                
+                # รอกระบวนการแปลงไฟล์ (ถ้าเป็นวิดีโอหรือ PDF ใหญ่)
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    
+                content_to_send.append(uploaded_file)
+                
+                # ถ้าประธานส่งรูปมาแต่ไม่พิมพ์อะไรให้เพิ่มข้อความมาตรฐานให้
+                if message == "" or message.startswith("[System Alert:"):
+                    content_to_send.append("โปรดวิเคราะห์รูปภาพหรือเอกสารที่แนบมานี้อย่างละเอียดครับท่านประธาน")
+                else:
+                    content_to_send.append(message)
             else:
-                # รันแบบ Sync ปกติเนื่องจาก GenAI SDK ใหม่ บางเวอร์ชันอาจไม่เสถียรกับ aio
-                # แต่เนื่องจากฟังก์ชันนี้ถูกครอบด้วย Async Background Task ใน routes_line.py อยู่แล้ว จึงทำงานได้ปกติ
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=message,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self.system_instruction,
-                        temperature=0.7 # ควบคุมให้คำตอบมีความเป็นมืออาชีพและสร้างสรรค์พอดี
-                    )
+                content_to_send.append(message)
+
+            # ⚡ สั่งรัน AI แบบ Asynchronous โดยใช้ asyncio.to_thread ล้อมคำสั่ง SDK ใหม่
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=content_to_send,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.7 # ควบคุมให้คำตอบมีความเป็นมืออาชีพและสร้างสรรค์พอดี
                 )
-                reply_text = response.text
+            )
+            reply_text = response.text
+            
         except Exception as e:
             logger.error(f"⚠️ [CEO Secretary Error]: {e}")
             reply_text = "ขออภัยครับท่านประธาน ขณะนี้สมองกลประมวลผลส่วนผู้บริหารขัดข้องเล็กน้อย กำลังดำเนินการแก้ไขครับ"
+            
+        finally:
+            # 🗑️ ลบไฟล์ออกจากเซิร์ฟเวอร์ Google ทันทีเพื่อความปลอดภัย (Zero-Data Retention)
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                    logger.info("🗑️ [CEO Secretary]: ทำลายไฟล์ชั่วคราวเสร็จสิ้น")
+                except Exception as e:
+                    logger.error(f"⚠️ Failed to delete file: {e}")
 
         # ==========================================
-        # 4. ตรวจจับคีย์เวิร์ดเพื่อส่ง Flex Message ขออนุมัติ
+        # 4. ตรวจจับคีย์เวิร์ดเพื่อส่ง Flex Message ขออนุมัติ (3 ปุ่ม)
         # ==========================================
         if any(keyword in reply_text for keyword in ["เสนอ", "พิจารณา", "แผนการ", "ปรับปรุงใหม่"]):
             plan_id = f"PLAN_{int(time.time())}" # สร้างรหัสแผนงานอัตโนมัติ
