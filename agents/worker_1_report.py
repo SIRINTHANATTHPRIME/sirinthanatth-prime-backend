@@ -1,53 +1,96 @@
-import asyncio
 import os
 import logging
+import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
 
 logger = logging.getLogger("Worker1-Report")
 
-class DocumentEngineeringWorker:
-    """📊 Worker 1: ระบบผลิตเอกสารทางการ ตารางคำนวณ (Excel) และรายงานวิเคราะห์เชิงลึก"""
-    
+class ReportWorker:
+    """
+    📊 Worker 1: Data & Report Analyst (นักวิเคราะห์ข้อมูลและจัดทำรายงาน)
+    อัปเกรด: [Gemini 2.5 Pro] เพื่อการวิเคราะห์เชิงลึก (Deep Analysis) 
+    และรองรับไฟล์ Data ทุกรูปแบบ (Crash-Proof)
+    """
     def __init__(self):
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-1.5-pro' # ใช้รุ่น Pro สำหรับงานที่ต้องการตรรกะซับซ้อน เช่น การเขียนสูตร Excel
-
-    async def process(self, user_id: str, message: str) -> str:
-        """ทำงานเบื้องหลัง (Background Task) สำหรับสร้างโครงร่างเอกสาร"""
-        logger.info(f"📊 [Document Engineering]: กำลังวิเคราะห์ข้อมูลและสร้างเอกสารให้ User {user_id}...")
+        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
+        # 🚀 ใช้รุ่น Pro เพื่อความแม่นยำทางสถิติและตัวเลข
+        self.model_name = 'gemini-2.5-pro'
+        
+        self.system_instruction = """
+        คุณคือ 'Worker 1' ผู้เชี่ยวชาญด้าน Data Analytics และการจัดทำรายงานระดับ Enterprise
+        
+        หน้าที่ของคุณ:
+        1. วิเคราะห์ข้อมูลจากข้อความหรือไฟล์เอกสารที่ได้รับอย่างละเอียด
+        2. สรุปผลข้อมูลเชิงลึก (Insights) และจัดทำเป็นรายงานที่อ่านง่าย มีโครงสร้างชัดเจน (Executive Summary)
+        3. ใช้ภาษาทางการ สุภาพ และเป็นมืออาชีพ
+        4. เน้นความถูกต้องของตัวเลขและสถิติเป็นอันดับหนึ่ง
+        """
+
+    async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         if not self.client:
-            return "⚠️ [System]: ไม่พบการเชื่อมต่อระบบ AI สำหรับการสร้างเอกสาร"
+            return "⚠️ [Worker 1]: ระบบวิเคราะห์ข้อมูลออฟไลน์ (ไม่พบ API Key)"
+
+        uploaded_file = None
+        content_to_send = []
 
         try:
-            # 🧠 System Prompt สำหรับการสร้าง Report / Excel
-            system_instruction = """
-            คุณคือ 'Document Engineering Expert' ของ SIRINTHANATTH PRIME
-            หน้าที่ของคุณคือการแปลงความต้องการของลูกค้า ให้กลายเป็น 'โครงร่างเอกสารทางการ' หรือ 'ตาราง Excel พร้อมสูตรคำนวณ' 
-            กรุณาตอบกลับในรูปแบบที่ลูกค้าสามารถ Copy นำไปวางใน Microsoft Excel หรือ Google Sheets ได้ทันที (เช่น ใช้เครื่องหมาย | เพื่อแบ่งคอลัมน์) 
-            และอธิบายสูตรที่ต้องใช้อย่างชัดเจน
-            """
-            
-            prompt = f"ลูกค้าต้องการให้สร้างเอกสารดังนี้: '{message}'"
-            
-            # ใช้ asyncio.to_thread เพื่อป้องกันการเกิดคอขวดในระบบแชทหลัก
+            # ==========================================
+            # ระบบจัดการไฟล์ข้อมูลแบบชาญฉลาด
+            # ==========================================
+            if file_path and os.path.exists(file_path):
+                logger.info(f"📊 [Worker 1]: กำลังอัปโหลดไฟล์ข้อมูลเพื่อวิเคราะห์...")
+                
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if file_path.lower().endswith('.xlsx'): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif file_path.lower().endswith('.xls'): mime_type = "application/vnd.ms-excel"
+                elif file_path.lower().endswith('.csv'): mime_type = "text/csv"
+                if not mime_type: mime_type = "application/octet-stream"
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Worker 1]: โครงสร้างไฟล์นี้ซับซ้อนเกินไปครับ รบกวนคุณลูกค้าหรือท่านประธานแปลงเป็น PDF หรือ CSV เพื่อให้ผมวิเคราะห์ได้อย่างแม่นยำครับ"
+
+                # ⏳ รอจนกว่า AI จะย่อยข้อมูลเสร็จ
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    
+                if uploaded_file.state.name == "FAILED":
+                    return "⚠️ [Worker 1]: เกิดข้อผิดพลาดในการถอดรหัสไฟล์ข้อมูลครับ"
+
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดวิเคราะห์ข้อมูลจากไฟล์นี้ และจัดทำรายงานสรุปตามคำสั่ง: {message}")
+            else:
+                content_to_send.append(f"จัดทำรายงานและวิเคราะห์ข้อมูลจากข้อความนี้: {message}")
+
+            # ==========================================
+            # ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro
+            # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
-                contents=prompt,
+                contents=content_to_send,
                 config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.4 # ลด Temperature ลงเพื่อให้ผลลัพธ์เป็นตารางและตัวเลขที่แม่นยำ ไม่เพ้อฝัน
+                    system_instruction=self.system_instruction,
+                    temperature=0.2 # ใช้อุณหภูมิต่ำ (0.2) เพื่อให้การวิเคราะห์ตัวเลขมีความแม่นยำ ไม่เพ้อเจ้อ
                 )
             )
-            
-            result_text = response.text if response.text else "จัดทำโครงร่างเอกสารทางการเสร็จสมบูรณ์"
-            
-        except Exception as e:
-            logger.error(f"⚠️ [Worker 1 AI Error]: {e}")
-            result_text = "📊 [Document Engineering]: จัดทำโครงร่างเอกสารทางการและตารางคำนวณเสร็จสมบูรณ์เรียบร้อยแล้ว (ระบบเกิดข้อผิดพลาดในการแสดงผล กรุณาลองใหม่อีกครั้ง)"
+            return response.text if response.text else "✅ วิเคราะห์ข้อมูลเสร็จสิ้น ไม่มีข้อผิดพลาดครับ"
 
-        logger.info(f"✅ [Document Engineering]: สร้างเอกสารเสร็จสิ้นให้ {user_id}")
-        return result_text
+        except Exception as e:
+            logger.error(f"❌ [Worker 1 Error]: {e}")
+            return f"⚠️ [Worker 1]: ระบบวิเคราะห์ข้อมูลขัดข้องชั่วคราวครับ (Debug: {str(e)[:100]})"
+
+        finally:
+            # 🧹 ทำลายไฟล์ทิ้งเพื่อความปลอดภัยของข้อมูล
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                except:
+                    pass
