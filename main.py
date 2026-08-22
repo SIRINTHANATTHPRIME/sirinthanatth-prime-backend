@@ -3,7 +3,6 @@ import logging
 import stripe
 import uvicorn
 from typing import Optional, Dict, Any
-
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Header
@@ -90,12 +89,13 @@ if os.path.exists("assets"):
 # 1. นำเข้า Router ด่านหน้าสำหรับ LINE (รองรับทั้งโครงสร้างแบบสลับโฟลเดอร์)
 line_router_mounted = False
 try:
-    from routes_line import router as line_router
+    from api.routes_line import router as line_router
     app.include_router(line_router)
     app.include_router(line_router, prefix="/api/v1/line")
     line_router_mounted = True
-    logger.info("✅ [System]: LINE Webhook Router (routes_line) mounted successfully.")
-except ImportError:
+    logger.info("✅ [System]: LINE Webhook Router (api.routes_line) mounted successfully.")
+except ImportError as e:
+    logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
     try:
         from api.routes_line import router as line_router
         app.include_router(line_router)

@@ -1,5 +1,6 @@
 import os
 import asyncio
+import inspect  # เพิ่มไลบรารี inspect สำหรับตรวจสอบฟังก์ชันตามมาตรฐาน Python ใหม่
 import logging
 import requests
 from dotenv import load_dotenv
@@ -33,7 +34,8 @@ client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 try:
     from agents.central_boss import CentralBossAgent
     boss_agent = CentralBossAgent()
-except ImportError:
+except ImportError as e:
+    logger.error(f"Import Error Boss: {e}")
     boss_agent = None
 
 # 2. สมองอัจฉริยะ (RAG, Vision, Data Analytics)
@@ -49,7 +51,7 @@ try:
 except ImportError:
     ceo_secretary = None
 
-# 4. 🎙️ กล่องเสียง (Voice Module - ElevenLabs Executive Voices)
+# 4. 🎙️ กล่องเสียง (Voice Module - ElevenLabs)
 try:
     from services.elevenlabs_service import generate_voice_from_text
 except ImportError:
@@ -84,8 +86,8 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         if ceo_secretary and ceo_secretary.is_ceo(user_id):
             logger.info("👑 [System]: CEO Identified. Activating God Mode & Bypassing Token Checks.")
             
-            # โยนงานให้เลขาฯ แบบ Asynchronous 100% (ส่ง PDF, รูป, คำสั่งเสียง ได้ทั้งหมด)
-            if asyncio.iscoroutinefunction(ceo_secretary.process_ceo_command):
+            # โยนงานให้เลขาฯ แบบ Asynchronous 100% (ใช้ inspect.iscoroutinefunction แทน)
+            if inspect.iscoroutinefunction(ceo_secretary.process_ceo_command):
                 reply_payload = await ceo_secretary.process_ceo_command(incoming_message, file_path=file_path, file_type=file_type)
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
@@ -95,17 +97,19 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 await asyncio.to_thread(send_line_custom_payload, reply_token, reply_payload)
             else:
                 await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text=str(reply_payload)))
-            return # จบการทำงานทันที ไม่ให้ไปรันระบบลูกค้าทั่วไป
+            
+            return # จบการทำงานทันที ไม่ต้องไปวิ่งผ่านระบบ Token ของลูกค้าทั่วไป
 
         # ==========================================
-        # 👥 โหมดปกติสำหรับลูกค้า / ผู้ใช้ทั่วไป (User Mode & Token Managed)
+        # 👥 โหมดปกติสำหรับลูกค้า / ผู้ใช้ทั่วไป (User Mode)
         # ==========================================
         reply_msg = ""
         
-        # 1. พยายามเรียกใช้สมองอัจฉริยะ (Prime Brain - RAG & Vision)
+        # 1. พยายามเรียกใช้สมองอัจฉริยะ (Prime Brain)
         if generate_intelligent_response:
             try:
-                if asyncio.iscoroutinefunction(generate_intelligent_response):
+                # ใช้ inspect.iscoroutinefunction แทน
+                if inspect.iscoroutinefunction(generate_intelligent_response):
                     reply_msg = await generate_intelligent_response(user_id, incoming_message, file_path=file_path, file_type=file_type)
                 else:
                     reply_msg = await asyncio.to_thread(generate_intelligent_response, user_id, incoming_message, file_path, file_type)
@@ -113,12 +117,18 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as e:
                 logger.warning(f"⚠️ [Prime Brain Error]: ขัดข้อง ({e}) สลับไปใช้ Central Boss")
                 if boss_agent:
-                    reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None)
+                    if inspect.iscoroutinefunction(boss_agent.route_task):
+                        reply_msg = await boss_agent.route_task(user_id, incoming_message, None, incoming_message, file_path, file_type)
+                    else:
+                        reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None, incoming_message, file_path, file_type)
                 else:
                     reply_msg = "ขออภัยครับ ขณะนี้ระบบประมวลผลกำลังปรับปรุงชั่วคราว"
         elif boss_agent:
-            # ใช้ Boss Agent เป็นคนจ่ายงาน
-            reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None)
+            # ใช้ inspect.iscoroutinefunction แทน
+            if inspect.iscoroutinefunction(boss_agent.route_task):
+                reply_msg = await boss_agent.route_task(user_id, incoming_message, None, incoming_message, file_path, file_type)
+            else:
+                reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None, incoming_message, file_path, file_type)
         else:
             # Fallback หากระบบ AI หลักขัดข้อง
             if client:
@@ -194,7 +204,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                     background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=reply_msg))
                     continue
 
-            # ตรวจสอบว่าเป็นข้อความมัลติมีเดีย/ไฟล์ (รูป, วิดีโอ, เสียง, PDF)
+            # ตรวจสอบว่าเป็นข้อความมัลติมีเดีย/ไฟล์ (รองรับ PDF)
             elif message_type in ['audio', 'image', 'video', 'file']:
                 message_id = event.message.id
                 try:
