@@ -1,69 +1,87 @@
-import asyncio
 import os
 import logging
+import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
 
-# ตั้งค่า Logger สำหรับติดตามการทำงานเบื้องหลัง
-logger = logging.getLogger("Worker6-MarketingStrategist")
+logger = logging.getLogger("Worker6-Strategy")
 
-class MarketingStrategyWorker:
+class StrategyWorker:
     """
-    📈 Worker 6: ฝ่ายนักวิเคราะห์กลยุทธ์การตลาด และเซลล์แมนอัจฉริยะ (Global CMO & Dynamic Upsell)
-    อัปเกรด: ผสานจิตวิทยาผู้บริโภค, Full-Funnel Strategy, และวางสคริปต์เสียงสำหรับ ElevenLabs
+    ♟️ Worker 6: Global Strategy Analyst (นักวิเคราะห์กลยุทธ์ระดับโลก)
+    อัปเกรด: [Gemini 2.5 Pro] เพื่อวิเคราะห์โมเดลธุรกิจ อสังหาริมทรัพย์ และยุทธศาสตร์องค์กร
     """
-    
     def __init__(self):
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=api_key) if api_key else None
-        # 🚀 ใช้รุ่น Pro สำหรับการวิเคราะห์ตรรกะการตลาดเชิงลึกและการเขียนสคริปต์ขั้นสูง
-        self.model_name = 'gemini-1.5-pro'
-
-    async def process(self, user_id: str, message: str) -> str:
-        """ทำงานเบื้องหลัง (Background Task) สำหรับวางแผนกลยุทธ์การตลาดและหาโอกาส Upsell"""
-        logger.info(f"📈 [Marketing Strategy]: กำลังวิเคราะห์กลยุทธ์ระดับโลกและหาจังหวะ Upsell ให้ User {user_id}...")
+        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
+        self.model_name = 'gemini-2.5-pro'
+        
+        self.system_instruction = """
+        คุณคือ 'Worker 6' สุดยอดที่ปรึกษาและนักวิเคราะห์กลยุทธ์ระดับโลก (Global Strategy Analyst)
+        
+        หน้าที่ของคุณ:
+        1. วิเคราะห์แผนธุรกิจ โครงการลงทุน โมเดลการตลาด และทิศทางเศรษฐกิจอย่างเจาะลึก
+        2. เชี่ยวชาญเป็นพิเศษในการประเมินยุทธศาสตร์อสังหาริมทรัพย์เชิงพาณิชย์ การรวบรวมแปลงที่ดินเพื่อการพัฒนา และการสร้างระบบนิเวศธุรกิจดิจิทัล
+        3. หาจุดแข็ง จุดอ่อน โอกาส และอุปสรรค (SWOT) จากข้อมูลที่ได้รับ
+        4. เสนอกลยุทธ์เชิงรุก (Offensive Strategy) ที่เหนือคู่แข่ง เป็นรูปธรรม และสามารถนำไปประยุกต์ใช้ได้จริง
+        5. ตอบกลับด้วยความเฉียบขาด เป็นทางการ และมีวิสัยทัศน์แบบผู้นำระดับสูง
+        """
+
+    async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         if not self.client:
-            return "⚠️ [System]: ระบบ Marketing Strategist ออฟไลน์ ไม่พบการเชื่อมต่อ API Key"
+            return "⚠️ [Worker 6]: ระบบวิเคราะห์กลยุทธ์ออฟไลน์ (ไม่พบ API Key)"
+
+        uploaded_file = None
+        content_to_send = []
 
         try:
-            # 🧠 System Prompt สั่งให้ AI คิดแบบสุดยอดนักการตลาด (Global CMO)
-            system_instruction = """
-            คุณคือ 'Chief Marketing Officer (CMO)' ระดับโลก ของแพลตฟอร์ม SIRINTHANATTH PRIME
-            หน้าที่ของคุณคือให้คำปรึกษา วางกลยุทธ์การตลาดเชิงลึก (Full-Funnel) และสร้างโอกาสในการขาย (Upsell) อย่างแนบเนียน
-            
-            โครงสร้างการนำเสนอ (Executive Strategy Pitch):
-            1. 📊 Market Analysis & Full-Funnel Strategy: วิเคราะห์ปัญหาของลูกค้าด้วยหลักจิตวิทยาพฤติกรรมผู้บริโภคยุคดิจิทัล และเสนอแผนการตลาดที่จับต้องได้จริง คุ้มค่า ROI
-            2. 🎬 4K Video Concept & 🎙️ Voiceover Script (ElevenLabs Ready): ร่างคอนเซ็ปต์วิดีโอโฆษณา 4K สั้นๆ พร้อมสคริปต์เสียงพากย์ที่สะกดอารมณ์ผู้ฟัง (เพื่อให้ระบบ ElevenLabs นำไปพากย์ต่อได้ทันที)
-            3. 💡 The Irresistible Offer (One-Click Upsell): ท้ายข้อความ ให้เสนอขายบริการของ SIRINTHANATTH PRIME ที่ตรงกับบริบทของลูกค้าให้เนียนที่สุด 
-               (เช่น ชวนผลิตสื่อโฆษณา 4K [พิมพ์ 'ทำคลิป'] หรือเชิญอัปเกรดเป็น 100 VIP Founders ล็อกราคา 4,490 บาท/ปี เพื่อสิทธิพิเศษโลจิสติกส์)
-            
-            ข้อบังคับ: ใช้ภาษาเชิงจิตวิทยาการขายที่กระตุ้นให้ลูกค้าอยากลงมือทำทันที พิมพ์ให้อ่านง่าย มีความเป็นผู้นำ ดูแพง และเป็นมืออาชีพสูงสุด
-            """
-            
-            prompt = f"ลูกค้าขอคำปรึกษาและต้องการให้วางกลยุทธ์สำหรับ: '{message}'"
-            
-            # ⚡ รันแบบ Asynchronous เพื่อไม่ให้บล็อกเซิร์ฟเวอร์หลัก (Non-Blocking I/O)
+            if file_path and os.path.exists(file_path):
+                logger.info(f"♟️ [Worker 6]: กำลังอัปโหลดเอกสารแผนงานเพื่อวิเคราะห์เชิงกลยุทธ์...")
+                
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if file_path.lower().endswith('.xlsx'): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif file_path.lower().endswith('.xls'): mime_type = "application/vnd.ms-excel"
+                elif file_path.lower().endswith('.csv'): mime_type = "text/csv"
+                if not mime_type: mime_type = "application/octet-stream"
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Worker 6]: เอกสารแผนงานมีความซับซ้อนเกินไป รบกวนแปลงเป็นรูปแบบ PDF ก่อนส่งเข้าสู่ระบบประเมินกลยุทธ์ครับ"
+
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    
+                if uploaded_file.state.name == "FAILED":
+                    return "⚠️ [Worker 6]: ตรวจพบข้อผิดพลาดในการวิเคราะห์เอกสารยุทธศาสตร์ครับ"
+
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดวิเคราะห์ยุทธศาสตร์และให้คำปรึกษาเชิงลึกจากข้อมูลในเอกสารนี้: {message}")
+            else:
+                content_to_send.append(f"โปรดวิเคราะห์และวางกลยุทธ์ระดับโลกสำหรับสถานการณ์นี้: {message}")
+
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
-                contents=prompt,
+                contents=content_to_send,
                 config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.8 # ใช้ความสร้างสรรค์ระดับสูงในการออกแบบแคมเปญและการโน้มน้าวใจ
+                    system_instruction=self.system_instruction,
+                    temperature=0.3 # ใช้อุณหภูมิต่ำเพื่อเน้นตรรกะ เหตุผล และความน่าเชื่อถือ
                 )
             )
-            
-            strategy_result = response.text if response.text else "📈 วางกลยุทธ์การตลาดและจัดเตรียมข้อเสนอพิเศษเรียบร้อยแล้ว"
-            
+            return response.text if response.text else "✅ วิเคราะห์แผนกลยุทธ์เสร็จสิ้นครับ"
+
         except Exception as e:
-            logger.error(f"⚠️ [Worker 6 AI Error]: {e}")
-            strategy_result = (
-                "📈 [Executive Marketing Strategy]\n"
-                "ระบบได้ประเมิน Business Model Canvas และโครงสร้าง ROI ให้แคมเปญของคุณเรียบร้อยครับ\n\n"
-                "🎬 แนะนำให้ดึงดูดกลุ่มเป้าหมายด้วยสื่อโฆษณา 4K พร้อมเสียงพากย์คุณภาพสูง (Human-like Voice)\n"
-                "💡 [ข้อเสนอพิเศษ] สนใจผลิตสื่อโฆษณา 4K เพื่อลุยแคมเปญนี้ไหมครับ? พิมพ์ 'ทำคลิป' ได้เลย!"
-            )
-        
-        logger.info(f"✅ [Marketing Strategy]: วางแผนกลยุทธ์และ Upsell เสร็จสิ้นสำหรับ {user_id}")
-        return strategy_result
+            logger.error(f"❌ [Worker 6 Error]: {e}")
+            return f"⚠️ [Worker 6]: ระบบวิเคราะห์กลยุทธ์ขัดข้องชั่วคราวครับ (Debug: {str(e)[:100]})"
+
+        finally:
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                except:
+                    pass
