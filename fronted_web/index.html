@@ -780,7 +780,7 @@
         async function sendDataToBackend(profile) {
             if(CLOUD_RUN_API_URL.includes("YOUR_CLOUD_RUN_URL")) return; 
             try {
-                const response = await fetch(CLOUD_RUN_API_URL + "/api/sync-user", {
+                const response = await fetch("https://prime-core-agent-601183279633.asia-southeast3.run.app/api/sync-user", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

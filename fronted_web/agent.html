@@ -408,8 +408,8 @@
         // ฟังก์ชันจำลองการยิง API ไปถามหลังบ้าน (Backend Cloud Run / Stripe / Supabase)
         async function fetchRealVipPaidCount() {
             try {
-                // (ในอนาคต สามารถเปลี่ยนเป็น URL API ของระบบ Cloud Run ได้เลย เช่น fetch('/api/v1/stats/vip-quota'))
-                // const response = await fetch('/api/v1/stats/vip-quota');
+                // (ในอนาคต สามารถเปลี่ยนเป็น URL API ของระบบ Cloud Run ได้เลย เช่น fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota'))
+                // const response = await fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota');
                 // const data = await response.json();
                 // return data.paid_count; 
                 
@@ -546,7 +546,7 @@
                 alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \nระบบกำลังยืนยันรหัสเชิญของคุณ...");
             
                 // (ในอนาคต: จะใช้ LIFF ดึง LINE ID ของเพื่อนคนนี้ แล้วยิง API ไปบอก Supabase ว่าขอใช้สิทธิ์รหัสนี้)
-                // fetch('https://your-cloud-run-url.com/api/claim-invite', { ... })
+                fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/claim-invite', { ... })
             }
         });
     </script>
