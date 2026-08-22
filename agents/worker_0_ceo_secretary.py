@@ -3,6 +3,7 @@ import time
 import re
 import logging
 import asyncio
+import mimetypes # 📌 นำเข้าไลบรารีใหม่ เพื่อให้ระบบฉลาดพอที่จะรู้จักไฟล์ทุกประเภทบนโลก
 from google import genai
 from google.genai import types
 
@@ -19,6 +20,7 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
     ทะลุ Token 100% / Human-in-the-Loop 3 ปุ่ม (Approve, Modify, Reject)
+    รองรับการป้องกัน Error จากไฟล์แปลกๆ เช่น Excel (.xlsx) อย่างชาญฉลาด
     """
     
     def __init__(self):
@@ -77,9 +79,32 @@ class CeoSecretaryWorker:
             if file_path and os.path.exists(file_path):
                 logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดไฟล์ {file_type} ขนาด {os.path.getsize(file_path)} bytes...")
                 
-                # รันการอัปโหลดผ่าน Thread เพื่อไม่ให้บล็อกการตอบของ LINE
-                uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
+                # 🛠️ [ไฮไลต์การอัปเกรด]: วิเคราะห์ Mime Type อัตโนมัติ ป้องกันระบบพังจากไฟล์ Excel
+                mime_type, _ = mimetypes.guess_type(file_path)
                 
+                # บังคับค่า Mime Type ให้สมบูรณ์แบบสำหรับเอกสารออฟฟิศ
+                if file_path.lower().endswith('.xlsx'):
+                    mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif file_path.lower().endswith('.xls'):
+                    mime_type = "application/vnd.ms-excel"
+                elif file_path.lower().endswith('.csv'):
+                    mime_type = "text/csv"
+                
+                if not mime_type:
+                    mime_type = "application/octet-stream"
+
+                try:
+                    # อัปโหลดไฟล์โดยตั้งค่าระบุประเภทไฟล์ (Mime Type) อย่างชัดเจน
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as upload_error:
+                    logger.error(f"Upload blocked by Gemini: {upload_error}")
+                    # หาก Google AI ปฏิเสธการอ่านไฟล์นามสกุลแปลกๆ ให้ตอบกลับอย่างสุภาพแทนการคาย Error ดิบๆ
+                    return {
+                        "type": "text", 
+                        "text": f"⚠️ ขออภัยครับท่านประธาน สมองกลของ Google AI ยังไม่รองรับการวิเคราะห์ไฟล์นามสกุลนี้โดยตรงครับ (เช่น Excel .xlsx)\n\n💡 คำแนะนำ: รบกวนท่านประธานกด 'บันทึกเป็น PDF (Save as PDF)' หรือ '.csv' แล้วส่งมาใหม่อีกครั้ง ผมจะสามารถวิเคราะห์ให้ได้ทันทีครับ!"
+                    }
+
                 # ⏳ รอจนกว่า AI จะย่อยวิดีโอ/เสียง/เอกสาร เสร็จสมบูรณ์
                 while uploaded_file.state.name == "PROCESSING":
                     logger.info("⏳ [CEO Secretary]: AI กำลังย่อยข้อมูลมัลติมีเดีย...")
@@ -87,7 +112,7 @@ class CeoSecretaryWorker:
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
                 if uploaded_file.state.name == "FAILED":
-                    return {"type": "text", "text": "⚠️ [Error]: AI ของ Google ไม่สามารถประมวลผลไฟล์ชนิดนี้ได้ครับ"}
+                    return {"type": "text", "text": "⚠️ [Error]: AI ของ Google ไม่สามารถย่อยไฟล์นี้ได้ครับ อาจจะมีความซับซ้อนเกินไป หรือรูปแบบไฟล์ขัดข้อง"}
                     
                 content_to_send.append(uploaded_file)
                 
@@ -112,7 +137,6 @@ class CeoSecretaryWorker:
             
         except Exception as e:
             logger.error(f"⚠️ [CEO Secretary Error Details]: {e}")
-            # 🛑 จุดสำคัญ: หากเกิด Error ระบบจะพิมพ์สาเหตุที่แท้จริงออกมาใน LINE 
             reply_text = f"⚠️ ขออภัยครับท่านประธาน ระบบเลขาฯ ติดขัดชั่วคราว\n\nสาเหตุ (Debug): {str(e)[:300]}"
             
         finally:
