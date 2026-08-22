@@ -1,85 +1,83 @@
-import asyncio
 import os
 import logging
+import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
-from services.subscription_manager import SubscriptionManager
 
-# ตั้งค่า Logger สำหรับติดตามการทำงานเบื้องหลัง
 logger = logging.getLogger("Worker8-Ecommerce")
 
-class EcommerceAndLogisticsWorker:
+class EcommerceWorker:
     """
-    📦 Worker 8: ระบบจัดการออเดอร์ ตรวจสลิป และ Smart Fulfillment (Flash Express)
-    อัปเกรด: ผสานสมองกล AI ระดับ CMO ช่วยวิเคราะห์ออเดอร์ และจัดการขนส่งอัตโนมัติ
+    🛒 Worker 8: E-Commerce & Legal Compliance Specialist (ผู้เชี่ยวชาญ E-Commerce และกฎหมายธุรกิจ)
+    อัปเกรด: [Gemini 2.5 Pro] เพื่อบริหารจัดการระบบการค้าออนไลน์และกฎระเบียบข้อบังคับ
     """
-    
     def __init__(self):
-        # โหลดระบบจัดการสิทธิ์และตัดเงิน Wallet
-        self.sub_manager = SubscriptionManager()
+        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
-        # ตั้งค่าระบบ AI
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=api_key) if api_key else None
-        # ใช้รุ่น Pro เพื่อตรรกะการวิเคราะห์ยอดขายและตรวจสลิปที่แม่นยำ
-        self.model_name = 'gemini-1.5-pro'
+        self.model_name = 'gemini-2.5-pro'
+        
+        self.system_instruction = """
+        คุณคือ 'Worker 8' ผู้เชี่ยวชาญด้าน E-Commerce, ระบบแพลตฟอร์มดิจิทัล และกฎระเบียบข้อบังคับทางธุรกิจ (Legal Compliance)
+        
+        หน้าที่ของคุณ:
+        1. ให้คำปรึกษา ออกแบบระบบ และวางโครงสร้างการทำธุรกิจออนไลน์ (E-Commerce & Affiliate Systems)
+        2. ตรวจสอบข้อกฎหมาย สัญญาซื้อขาย ข้อกำหนดการให้บริการ (Terms of Service) และนโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+        3. ให้คำแนะนำเกี่ยวกับระเบียบข้อบังคับทางราชการ หรือกฎหมายที่เกี่ยวข้องกับประกันภัยและอสังหาริมทรัพย์
+        4. ใช้ภาษาที่ชัดเจน เป็นทางการ และมีความแม่นยำทางกฎหมาย
+        """
 
-    async def process(self, user_id: str, message: str) -> str:
-        """ทำงานเบื้องหลัง (Background Task) สำหรับจัดการร้านค้าและโลจิสติกส์"""
-        logger.info(f"📦 [Smart E-Commerce]: กำลังวิเคราะห์ออเดอร์และสลิปให้ User {user_id}...")
-        
-        ai_analysis = ""
-        
-        # ==========================================
-        # STEP 1: ให้ AI วิเคราะห์ข้อมูลออเดอร์/สลิป (Data Extraction & Strategy)
-        # ==========================================
-        if self.client:
-            try:
-                system_instruction = """
-                คุณคือ 'Chief E-commerce & Logistics Officer (CELO)' ของ SIRINTHANATTH PRIME
-                หน้าที่ของคุณคือ:
-                1. ตรวจสอบข้อมูลออเดอร์ สลิปโอนเงิน หรือคำสั่งซื้อที่ลูกค้าส่งมา และสรุปยอดให้ชัดเจน
-                2. ให้คำแนะนำสั้นๆ เกี่ยวกับการบริหารสต๊อกสินค้า หรือเทคนิคเพิ่มยอดขาย (Upsell/Cross-sell) จากออเดอร์นี้
-                3. ตอบกลับอย่างมืออาชีพ กระชับ เพื่อให้เจ้าของร้านทำงานต่อได้รวดเร็วที่สุด
-                """
+    async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
+        if not self.client:
+            return "⚠️ [Worker 8]: ระบบ E-Commerce และกฎหมายออฟไลน์ (ไม่พบ API Key)"
+
+        uploaded_file = None
+        content_to_send = []
+
+        try:
+            if file_path and os.path.exists(file_path):
+                logger.info(f"🛒 [Worker 8]: กำลังอัปโหลดเอกสารสัญญาหรือข้อตกลงเพื่อตรวจสอบ...")
                 
-                prompt = f"ลูกค้า/ร้านค้า แจ้งข้อมูลออเดอร์เข้ามาดังนี้: '{message}'"
-                
-                # ⚡ รันแบบ Asynchronous ไม่ให้บล็อกเซิร์ฟเวอร์
-                response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3 # ควบคุมอุณหภูมิต่ำเพื่อเน้นความถูกต้องของข้อมูลตัวเลขและออเดอร์
-                    )
-                )
-                
-                if response.text:
-                    ai_analysis = response.text.strip() + "\n\n"
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if not mime_type: mime_type = "application/pdf"
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Worker 8]: ระบบไม่สามารถอ่านไฟล์เอกสารนี้ได้ รบกวนส่งเป็นไฟล์ PDF ครับ"
+
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
-            except Exception as e:
-                logger.error(f"⚠️ [Worker 8 AI Error]: {e}")
-                ai_analysis = "📦 [ระบบได้บันทึกข้อมูลออเดอร์ของท่านเข้าสู่ฐานข้อมูลเรียบร้อยแล้ว]\n\n"
-        
-        # ==========================================
-        # STEP 2: เมนูจัดส่ง Flash Express อัตโนมัติ (Backward Compatibility)
-        # ==========================================
-        # ใช้โครงสร้างเดิมของคุณวีระชัย 100% เพื่อให้ระบบตัดเงินและ Flash Express ดำเนินการต่อได้ไม่สะดุด
-        interactive_menu = (
-            "✅ [สถานะระบบ]: ตรวจสอบข้อมูลและออเดอร์เข้าสู่ระบบเรียบร้อย\n"
-            "🚚 ท่านผู้บริหารโปรดเลือกรายการสั่งการจัดส่ง Flash Express:\n"
-            "-------------------------\n"
-            "👉 [พิมพ์ 1] จัดส่งทันที (ออกใบปะหน้า Flash 12฿/ชิ้น หักผ่าน Smart Token)\n"
-            "👉 [พิมพ์ 2] นัดเวลารถเข้ารับพัสดุ (ขั้นต่ำ 5 ชิ้น/วัน เข้ารับฟรี)\n"
-            "👉 [พิมพ์ 3] พักออเดอร์ไว้ก่อนเพื่อรวมบิล\n"
-            "-------------------------\n"
-            "*หมายเหตุ: ค่าจัดส่งเรท VIP 12฿ ครอบคลุมพัสดุไม่เกิน 1 กก. และขนาดตามกำหนด"
-        )
-        
-        # ประกอบร่างข้อความ (AI วิเคราะห์ + เมนูจัดส่ง)
-        final_result = ai_analysis + interactive_menu
-        
-        logger.info(f"📦 [Smart E-Commerce]: จัดการข้อมูลออเดอร์เสร็จสิ้นสำหรับ {user_id}")
-        return final_result
+                if uploaded_file.state.name == "FAILED":
+                    return "⚠️ [Worker 8]: ตรวจพบความผิดพลาดในการประมวลผลเอกสารทางกฎหมายครับ"
+
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดตรวจสอบสัญญาหรือข้อตกลงในเอกสารนี้ พร้อมให้ความเห็นทางกฎหมาย: {message}")
+            else:
+                content_to_send.append(f"โปรดให้คำปรึกษาด้าน E-Commerce หรือข้อกฎหมายตามโจทย์นี้: {message}")
+
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=content_to_send,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.3
+                )
+            )
+            return response.text if response.text else "✅ ตรวจสอบข้อกฎหมายและระบบเสร็จสิ้นครับ"
+
+        except Exception as e:
+            logger.error(f"❌ [Worker 8 Error]: {e}")
+            return f"⚠️ [Worker 8]: ระบบ E-Commerce ขัดข้องชั่วคราวครับ (Debug: {str(e)[:100]})"
+
+        finally:
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                except:
+                    pass
