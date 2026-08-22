@@ -1,70 +1,76 @@
-import asyncio
 import os
 import logging
+import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
 
-# ตั้งค่า Logger สำหรับติดตามการทำงานเบื้องหลัง
-logger = logging.getLogger("Worker5-CreativeDirector")
+logger = logging.getLogger("Worker5-GraphicsAds")
 
-class GraphicAndAdsWorker:
+class GraphicsAdsWorker:
     """
-    🎨 Worker 5: ระบบผู้อำนวยการฝ่ายศิลป์และโฆษณา (Executive Creative Director)
-    อัปเกรด: ผสานแนวคิดการออกแบบระดับ 4K, สิ่งพิมพ์สากล และจัดเตรียมสคริปต์เสียงให้ ElevenLabs
+    🎨 Worker 5: Graphics, Packaging & Ads Specialist (ผู้เชี่ยวชาญด้านกราฟิกและโฆษณา)
+    อัปเกรด: [Gemini 2.5 Pro] เพื่อวิเคราะห์ภาพลักษณ์แบรนด์ โครงสร้างการออกแบบ และจิตวิทยาโฆษณา
     """
-    
     def __init__(self):
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=api_key) if api_key else None
         # 🚀 ใช้รุ่น Pro สำหรับงาน Creative & Strategy ที่ต้องคิดวิเคราะห์และใช้ความคิดสร้างสรรค์ขั้นสุด
-        self.model_name = 'gemini-3.1-pro-preview'
+        self.model_name = 'gemini-1.5-pro'
 
     async def process(self, user_id: str, message: str) -> str:
         """ทำงานเบื้องหลัง (Background Task) สำหรับออกแบบแคมเปญและสื่อ 4K"""
         logger.info(f"🎨 [Graphics & Ads]: กำลังออกแบบแคมเปญโฆษณาระดับโลกให้ User {user_id}...")
         
         if not self.client:
-            return "⚠️ [System]: ระบบ Creative Director ออฟไลน์ ไม่พบการเชื่อมต่อ API Key"
+            return "⚠️ [Worker 5]: ระบบกราฟิกและโฆษณาออฟไลน์ (ไม่พบ API Key)"
+
+        uploaded_file = None
+        content_to_send = []
 
         try:
-            # 🧠 System Prompt สั่งการให้ AI สวมวิญญาณระดับ Global Agency
-            system_instruction = """
-            คุณคือ 'Executive Creative Director' ระดับ Global Agency ของแพลตฟอร์ม SIRINTHANATTH PRIME
-            หน้าที่ของคุณคือ การคิดคอนเซ็ปต์แคมเปญโฆษณา งานออกแบบกราฟิกความละเอียดสูง (4K) สิ่งพิมพ์ระดับโปรดักชัน และการวางแผน Media Buying (ยิงแอด)
-            
-            โครงสร้างการนำเสนอ (Agency Pitch Deck):
-            1. 🎨 Art Direction & Visual Concept: อธิบายภาพกราฟิก Mood & Tone, โทนสี (Color Palette), การจัดแสง, และ Typography สำหรับงาน 4K
-            2. 🤖 AI Image Prompt: ร่าง Prompt ภาษาอังกฤษระดับมืออาชีพ สำหรับนำไปเจเนอเรตรูปภาพ (Midjourney/Imagen)
-            3. 🎙️ ElevenLabs Voiceover Script: ร่างสคริปต์เสียงพากย์โฆษณาที่ทรงพลัง (พร้อมระบุน้ำเสียงอารมณ์ที่ต้องการให้ AI ของ ElevenLabs พากย์ออกมา)
-            4. 🎯 Media Buying Strategy: แผนการยิงโฆษณาเชิงลึก (Targeting, Budget Allocation, แพลตฟอร์มเช่น TikTok/FB/IG)
-            
-            ข้อบังคับ: ใช้ภาษาที่ดูเป็นมืออาชีพ ล้ำสมัย สร้างแรงบันดาลใจ จัดหน้าให้อ่านง่าย (Scannable) ตอบกลับอย่างกระชับแต่ทรงพลัง
-            """
-            
-            prompt = f"โจทย์จากลูกค้าสำหรับการออกแบบและทำโฆษณา: '{message}'"
-            
-            # ⚡ รันแบบ Asynchronous เพื่อไม่ให้บล็อกเซิร์ฟเวอร์หลัก (Non-Blocking I/O)
+            if file_path and os.path.exists(file_path):
+                logger.info(f"🎨 [Worker 5]: กำลังอัปโหลดภาพเพื่อวิเคราะห์องค์ประกอบงานออกแบบ...")
+                
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if not mime_type: mime_type = "image/jpeg"
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Worker 5]: ระบบไม่สามารถประมวลผลไฟล์รูปภาพนี้ได้ครับ รบกวนส่งเป็นไฟล์ .jpg หรือ .png แทนครับ"
+
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    
+                if uploaded_file.state.name == "FAILED":
+                    return "⚠️ [Worker 5]: เกิดข้อผิดพลาดในการวิเคราะห์พิกเซลของภาพครับ"
+
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดวิเคราะห์องค์ประกอบภาพ/งานออกแบบนี้ และให้ข้อเสนอแนะตามคำสั่ง: {message}")
+            else:
+                content_to_send.append(f"โปรดร่างไอเดียงานกราฟิก แพ็กเกจจิ้ง หรือสคริปต์โฆษณาตามความต้องการนี้: {message}")
+
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
-                contents=prompt,
+                contents=content_to_send,
                 config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.85 # เปิดความสร้างสรรค์สูงสำหรับการออกแบบคอนเซ็ปต์
+                    system_instruction=self.system_instruction,
+                    temperature=0.7 # ใช้อุณหภูมิปานกลางเพื่อให้เกิดความคิดสร้างสรรค์
                 )
             )
-            
-            graphics_result = response.text if response.text else "🎨 จัดทำคอนเซ็ปต์งานออกแบบและแผนโฆษณาเรียบร้อยแล้ว"
-            
-        except Exception as e:
-            logger.error(f"⚠️ [Worker 5 AI Error]: {e}")
-            graphics_result = (
-                "🎨 [Creative Concept & Media Strategy]\n"
-                "1. 🌟 Visual: ออกแบบกราฟิก Mood & Tone พรีเมียมระดับ 4K\n"
-                "2. 🎙️ Voiceover: เตรียมสคริปต์เสียงสำหรับ ElevenLabs เรียบร้อย\n"
-                "3. 🎯 Ads: กำหนดกลุ่มเป้าหมาย (Targeting) พร้อมลุยแคมเปญ\n\n"
-                "📝 (ระบบแสดงโครงสร้างสำรองเนื่องจากข้อขัดข้องทางการเชื่อมต่อชั่วคราว)"
-            )
+            return response.text if response.text else "✅ วิเคราะห์งานออกแบบเสร็จสิ้นครับ"
 
-        logger.info(f"✅ [Graphics & Ads]: ออกแบบแคมเปญเสร็จสิ้นสำหรับ {user_id}")
-        return graphics_result
+        except Exception as e:
+            logger.error(f"❌ [Worker 5 Error]: {e}")
+            return f"⚠️ [Worker 5]: ระบบงานกราฟิกขัดข้องชั่วคราวครับ (Debug: {str(e)[:100]})"
+
+        finally:
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                except:
+                    pass
