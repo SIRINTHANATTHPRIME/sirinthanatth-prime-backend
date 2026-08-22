@@ -229,8 +229,20 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                     continue
             else: 
                 continue
-            
+        
             # 🚀 ส่งต่องานให้ AI ประมวลผลแบบเบื้องหลัง (Background Task)
             background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
+
+            # เพิ่มส่วนนี้เข้าไปในจุดจัดการข้อความที่มาจากปุ่มกด (Event Handler)
+            if text_message.startswith("ACTION:PROMO_ACCEPT:"):
+                promo_id = text_message.split(":")[-1]
+                reply_text = f"✅ ยืนยันความสำเร็จ! แคมเปญรหัส [{promo_id}] ถูกส่งไปยังระบบเผยแพร่และยิงแอดอัตโนมัติเรียบร้อยแล้วครับ!"
+            # ส่งข้อความตอบกลับไปยัง LINE OA ของผู้ใช้
+                await line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+    
+            elif text_message.startswith("ACTION:PROMO_MODIFY:"):
+                promo_id = text_message.split(":")[-1]
+                reply_text = f"📝 รับทราบครับ! สำหรับแคมเปญรหัส [{promo_id}] ท่านประธานหรือคุณลูกค้าต้องการปรับปรุงส่วนไหนเพิ่มเติม (เช่น เปลี่ยนโทนสี, เพิ่มส่วนลด) พิมพ์บอกผมได้เลยครับ เดี๋ยวผมร่างใหม่ให้ทันที!"
+                await line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
             
     return {"status": "OK"}

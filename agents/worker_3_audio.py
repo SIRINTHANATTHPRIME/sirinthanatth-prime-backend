@@ -23,7 +23,7 @@ class AudioWorker:
         self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
-        self.model_name = 'gemini-2.5-pro'
+        self.model_name = 'gemini-3.1-pro-preview'
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
         self.system_instruction = """
