@@ -27,7 +27,7 @@ class SelfLearningEngine:
         self.client = genai.Client(api_key=api_key) if api_key else None
         
         # ใช้รุ่น Pro ที่ฉลาดที่สุดในการวิเคราะห์ความผิดพลาดและสะท้อนความคิด (Self-Reflection)
-        self.model_name = 'gemini-1.5-pro' 
+        self.model_name = 'gemini-3.1-pro-preview' 
         
         # 💾 เชื่อมต่อฐานข้อมูล Supabase (ความจำระยะยาว)
         supa_url = os.environ.get("SUPABASE_URL")

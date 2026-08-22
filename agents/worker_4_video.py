@@ -17,7 +17,7 @@ class VideoProductionWorker:
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=api_key) if api_key else None
         # ใช้รุ่น Pro สำหรับงานความคิดสร้างสรรค์ การเขียนบท และออกแบบฉากที่ซับซ้อน
-        self.model_name = 'gemini-1.5-pro'
+        self.model_name = 'gemini-3.1-pro-preview'
 
     async def process(self, user_id: str, message: str) -> str:
         """ทำงานเบื้องหลัง (Background Task) สำหรับออกแบบ Storyboard"""

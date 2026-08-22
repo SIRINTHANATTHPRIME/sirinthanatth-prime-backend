@@ -15,7 +15,7 @@ GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 # 🚀 อัปเกรดเป็นโมเดล Pro รุ่นเรือธงที่เสถียรและฉลาดที่สุด
-MODEL_NAME = "gemini-1.5-pro" 
+MODEL_NAME = "gemini-3.1-pro-preview" 
 
 # ==========================================
 # 🧠 2. SYSTEM PROMPT: กฎเหล็กของสมองกลระดับประธาน

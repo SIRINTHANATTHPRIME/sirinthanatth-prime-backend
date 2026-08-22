@@ -33,7 +33,7 @@ class Worker11MediaEngine:
         # 🚀 อัปเกรดการเชื่อมต่อด้วย SDK มาตรฐานใหม่ล่าสุด เผื่อใช้งาน AI เกลาสคริปต์
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-1.5-pro'
+        self.model_name = 'gemini-3.1-pro-preview'
 
         logger.info("⚙️ [Worker 11 Engine]: สตูดิโอคลาวด์ GPU พร้อมปฏิบัติการแล้ว!")
 

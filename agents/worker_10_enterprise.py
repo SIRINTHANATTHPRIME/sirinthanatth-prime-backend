@@ -28,7 +28,7 @@ class CeoSecretaryWorker:
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         
         self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-1.5-pro'
+        self.model_name = 'gemini-3.1-pro-preview'
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์

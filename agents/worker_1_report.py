@@ -12,7 +12,7 @@ class DocumentEngineeringWorker:
     def __init__(self):
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-1.5-pro' # ใช้รุ่น Pro สำหรับงานที่ต้องการตรรกะซับซ้อน เช่น การเขียนสูตร Excel
+        self.model_name = 'gemini-3.1-pro-preview' # ใช้รุ่น Pro สำหรับงานที่ต้องการตรรกะซับซ้อน เช่น การเขียนสูตร Excel
 
     async def process(self, user_id: str, message: str) -> str:
         """ทำงานเบื้องหลัง (Background Task) สำหรับสร้างโครงร่างเอกสาร"""
