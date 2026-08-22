@@ -1,112 +1,111 @@
-import asyncio
 import os
-import requests
-import uuid
 import logging
-from gtts import gTTS
+import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
 
-# ตั้งค่า Logger
-logger = logging.getLogger("Worker3-AudioStudio")
+# 🎙️ นำเข้าระบบเสียงระดับโลก ElevenLabs 
+try:
+    from services.elevenlabs_service import generate_voice_from_text
+except ImportError:
+    generate_voice_from_text = None
 
-class AudioProductionWorker:
+logger = logging.getLogger("Worker3-Audio")
+
+class AudioWorker:
     """
-    🎙️ Worker 3: ระบบผลิตเสียงพากย์คุณภาพสูง (High-Fidelity Audio Engine)
-    อัปเกรด: ElevenLabs Human-like Voice + Gemini Script Polishing + Zero-Downtime Fallback
+    🎙️ Worker 3: Audio Analyst & Voice Synthesizer (ผู้เชี่ยวชาญด้านเสียง)
+    อัปเกรด: [Gemini 2.5 Pro] + [ElevenLabs API]
+    ถอดรหัสเสียง, วิเคราะห์อารมณ์, และสร้างเสียงพากย์ตอบกลับได้
     """
-    
     def __init__(self):
-        # 1. โหลดคีย์ AI สำหรับช่วยเกลาบทพูด (ถ้าจำเป็น)
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-1.5-flash'
+        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
-        # 2. โหลดคีย์ ElevenLabs สำหรับเสียงพากย์ระดับมนุษย์
-        self.elevenlabs_key = os.getenv("ELEVENLABS_API_KEY", "")
-        self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM") # ค่าเริ่มต้นเสียงพรีเมียม
+        self.model_name = 'gemini-2.5-pro'
+        self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
-        # 3. เตรียมโฟลเดอร์จัดเก็บ
-        self.output_dir = os.path.join(os.getcwd(), "static", "audio")
-        os.makedirs(self.output_dir, exist_ok=True)
-
-    async def process(self, user_id: str, message: str) -> str:
-        """ทำงานเบื้องหลัง (Background Task) สำหรับสร้างเสียงพากย์"""
-        logger.info(f"🎙️ [Audio Production]: กำลังสังเคราะห์เสียงพากย์พรีเมียมให้ User {user_id}...")
+        self.system_instruction = """
+        คุณคือ 'Worker 3' ผู้เชี่ยวชาญด้าน Audio Intelligence ประจำ SIRINTHANATTH PRIME
         
-        # ==========================================
-        # STEP 1: ให้ Gemini เกลาบทพูดให้ดูเป็นธรรมชาติ (AI Script Polisher)
-        # ==========================================
-        script_text = message
-        if self.client:
-            try:
-                prompt = f"โปรดปรับแก้ข้อความนี้ให้เหมาะกับการเป็นบทพากย์เสียงโฆษณาหรือเสียงประกาศภาษาไทยที่ฟังดูเป็นธรรมชาติ ไหลลื่น และเป็นมืออาชีพ (ไม่ต้องใส่เครื่องหมายกำกับอารมณ์หรืออิโมจิ เอาแค่ข้อความที่จะพูดเท่านั้น): '{message}'"
-                response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(temperature=0.4)
-                )
-                if response.text:
-                    script_text = response.text.strip()
-                    logger.info("✨ [Audio Production]: เกลาบทพากย์เสียงสำเร็จ")
-            except Exception as e:
-                logger.warning(f"⚠️ [Script Polish Error]: ข้ามการเกลาบทพูด ({e})")
+        หน้าที่ของคุณ:
+        1. ถอดรหัสไฟล์เสียง (Transcription) ที่ได้รับอย่างแม่นยำ
+        2. วิเคราะห์น้ำเสียงและอารมณ์ (Sentiment Analysis) ของผู้พูด
+        3. สรุปใจความสำคัญและเรียบเรียงเนื้อหาให้กระชับ
+        4. ใช้ภาษาที่เป็นธรรมชาติ น่าฟัง และเป็นมืออาชีพ เพื่อเตรียมพร้อมให้ระบบแปลงเป็นเสียงพากย์
+        """
 
-        # สร้างชื่อไฟล์สุ่ม (UUID) ป้องกันลูกค้าสั่งทำคลิปพร้อมกันแล้วไฟล์ทับกัน
-        filename = f"audio_premium_{user_id}_{uuid.uuid4().hex[:8]}.mp3"
-        filepath = os.path.join(self.output_dir, filename)
+    async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
+        if not self.client:
+            return "⚠️ [Worker 3]: ระบบประมวลผลเสียงออฟไลน์ (ไม่พบ API Key)"
 
-        # ==========================================
-        # STEP 2: ระบบสังเคราะห์เสียงมนุษย์ระดับโลก (ElevenLabs)
-        # ==========================================
-        if self.elevenlabs_key:
-            try:
-                logger.info("🎙️ [ElevenLabs Engine]: กำลังเจเนอเรตเสียง...")
-                url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
-                headers = {
-                    "Accept": "audio/mpeg",
-                    "Content-Type": "application/json",
-                    "xi-api-key": self.elevenlabs_key
-                }
-                data = {
-                    "text": script_text,
-                    "model_id": "eleven_multilingual_v2",
-                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
-                }
-                
-                # โยนงานเน็ตเวิร์กไปรันหลังบ้าน ไม่ให้เซิร์ฟเวอร์หลักกระตุก
-                response = await asyncio.to_thread(requests.post, url, json=data, headers=headers, timeout=30)
-                response.raise_for_status()
-                
-                def save_elevenlabs_audio(path, content):
-                    with open(path, "wb") as f:
-                        f.write(content)
-                
-                await asyncio.to_thread(save_elevenlabs_audio, filepath, response.content)
-                logger.info(f"✅ [Audio Production]: สังเคราะห์เสียง ElevenLabs สำเร็จ ({filename})")
-                
-                return f"🎙️ [Audio Production]: สังเคราะห์เสียงพากย์ระดับพรีเมียมเสร็จสมบูรณ์แล้วครับ (บันทึกในชื่อ {filename})"
-            
-            except Exception as e:
-                logger.error(f"❌ [ElevenLabs Error]: {e} -> ระบบกำลังสลับไปใช้เสียงสำรองอัตโนมัติ")
+        uploaded_file = None
+        content_to_send = []
 
-        # ==========================================
-        # STEP 3: ระบบสำรองฉุกเฉิน (Graceful Fallback - gTTS)
-        # ==========================================
-        # กรณีคีย์ ElevenLabs หมด หรือเน็ตเวิร์กฝั่งนั้นพัง ระบบของคุณก็ยังทำเสียงได้ ไม่ล่ม 100%
         try:
-            logger.info("🎙️ [gTTS Fallback]: กำลังใช้งานเครื่องยนต์เสียงสำรอง...")
-            
-            def generate_gtts(text, path):
-                tts = gTTS(text=text, lang='th', slow=False)
-                tts.save(path)
+            # ==========================================
+            # 1. จัดการไฟล์เสียงและการอัปโหลด
+            # ==========================================
+            if file_path and os.path.exists(file_path):
+                logger.info(f"🎙️ [Worker 3]: กำลังอัปโหลดไฟล์เสียงเพื่อวิเคราะห์ขั้นสูง...")
                 
-            await asyncio.to_thread(generate_gtts, script_text, filepath)
-            logger.info(f"✅ [Audio Production]: สังเคราะห์เสียงสำรองสำเร็จ ({filename})")
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if not mime_type:
+                    mime_type = "audio/mp4" # ค่าเริ่มต้นสำหรับไฟล์เสียง LINE (.m4a)
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Worker 3]: ระบบไม่รองรับไฟล์เสียงประเภทนี้ครับ กรุณาส่งเป็นไฟล์ .mp3 หรือ .m4a แทนครับ"
+
+                while uploaded_file.state.name == "PROCESSING":
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    
+                if uploaded_file.state.name == "FAILED":
+                    return "⚠️ [Worker 3]: เกิดข้อผิดพลาดในการถอดรหัสคลื่นเสียงครับ"
+
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดถอดรหัสและวิเคราะห์ไฟล์เสียงนี้ ตามคำสั่ง: {message}")
+            else:
+                content_to_send.append(f"โปรดวิเคราะห์ข้อความนี้สำหรับเตรียมพากย์เสียง: {message}")
+
+            # ==========================================
+            # 2. ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro
+            # ==========================================
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=content_to_send,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.6 # ให้อารมณ์ภาษาเป็นธรรมชาติ
+                )
+            )
             
-            return f"🎙️ [Audio Production]: สังเคราะห์เสียงพากย์มาตรฐานเสร็จสมบูรณ์แล้วครับ (บันทึกในชื่อ {filename})"
+            reply_text = response.text if response.text else "วิเคราะห์เสียงเสร็จสิ้นครับ"
             
+            # ==========================================
+            # 3. 🎙️ ผสมผสานขุมพลัง ElevenLabs API (สร้างเสียงทันที)
+            # ==========================================
+            if generate_voice_from_text and ("พากย์" in message or "สร้างเสียง" in message):
+                logger.info("🎙️ [ElevenLabs]: ได้รับคำสั่งให้สร้างเสียงพากย์ กำลังเชื่อมต่อ API...")
+                filename, duration_ms = await asyncio.to_thread(generate_voice_from_text, reply_text)
+                if filename:
+                    audio_link = f"{self.base_url}/static/audio/{filename}"
+                    reply_text += f"\n\n🎧 ระบบได้สร้างเสียงพากย์ด้วย ElevenLabs เรียบร้อยแล้ว:\n{audio_link}"
+            
+            return reply_text
+
         except Exception as e:
-            logger.error(f"❌ [Worker 3 TTS Critical Error]: {e}")
-            return "⚠️ [Audio Production Error]: ขออภัยครับ ระบบสังเคราะห์เสียงขัดข้องชั่วคราว ไม่สามารถผลิตเสียงพากย์ได้ในขณะนี้"
+            logger.error(f"❌ [Worker 3 Error]: {e}")
+            return f"⚠️ [Worker 3]: ระบบเสียงขัดข้องชั่วคราวครับ (Debug: {str(e)[:100]})"
+
+        finally:
+            if uploaded_file:
+                try:
+                    await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                except:
+                    pass
