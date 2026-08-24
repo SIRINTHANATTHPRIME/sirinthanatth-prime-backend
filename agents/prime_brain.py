@@ -13,7 +13,7 @@ GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 # 🚀 อัปเกรดเป็นโมเดล Pro รุ่นเรือธงที่เสถียรและฉลาดที่สุด
-MODEL_NAME = "gemini-1.5-pro" 
+MODEL_NAME = "gemini-2.5-pro" 
 
 # ==========================================
 # 🧠 2. SYSTEM PROMPT: กฎเหล็กของสมองกลระดับประธาน
@@ -78,22 +78,22 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
                 
             content_to_send.append(uploaded_file)
             
-            if not message or message.startswith("[System Alert:"):
+            if not incoming_message or incoming_message.startswith("[System Alert:"):
                 content_to_send.append("ช่วยวิเคราะห์ อธิบาย และสรุปรายละเอียดจากไฟล์นี้ให้ลูกค้าเข้าใจอย่างสุภาพครับ")
             else:
-                content_to_send.append(message)
+                content_to_send.append(incoming_message)
         else:
-            content_to_send.append(message)
+            content_to_send.append(incoming_message)
 
         # ==========================================
         # 2. สั่งรันโมเดล (Gemini 3.7 Flash)
         # ==========================================
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model=model_name,
+            model=MODEL_NAME,
             contents=content_to_send,
             config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
+                system_instruction=SYSTEM_PROMPT,
                 temperature=0.7
             )
         )
