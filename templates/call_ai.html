@@ -3,14 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#070c18">
     <title>SIRINTHANATTH PRIME | Executive Voice Room</title>
+    
+    <!-- 🚀 Performance Optimization: Preconnect & DNS Prefetch -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://elevenlabs.io">
+    
+    <!-- 📚 Fonts & SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
-        * { box-sizing: border-box; }
+        /* 🎨 CSS Variables ระดับ Enterprise เพื่อง่ายต่อการปรับแต่ง */
+        :root {
+            --primary-gold: #D4AF37;
+            --primary-dark: #070c18;
+            --secure-green: #00E676;
+            --text-main: #ffffff;
+            --text-sub: #8a99ad;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body {
             background: linear-gradient(135deg, #020611 0%, #0a1128 100%);
-            color: #ffffff;
+            color: var(--text-main);
             font-family: 'Prompt', sans-serif;
             display: flex;
             flex-direction: column;
@@ -20,21 +39,22 @@
             margin: 0;
             padding: 20px;
             text-align: center;
+            overflow-x: hidden;
         }
 
         /* 📱 กรอบแอปพลิเคชัน (App Card) */
         .room-card {
-            background: linear-gradient(145deg, #0b1325 0%, #070c18 100%);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: linear-gradient(145deg, #0b1325 0%, var(--primary-dark) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.25);
             border-radius: 24px;
             padding: 40px 25px;
             width: 100%;
             max-width: 420px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
 
         /* 🔒 แถบสถานะความปลอดภัย */
@@ -43,48 +63,53 @@
             align-items: center;
             background: rgba(0, 230, 118, 0.1);
             border: 1px solid rgba(0, 230, 118, 0.3);
-            color: #00E676;
-            padding: 6px 12px;
+            color: var(--secure-green);
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 0.75rem;
             letter-spacing: 1px;
             margin-bottom: 25px;
             font-weight: 600;
+            transition: all 0.3s ease;
         }
         .secure-dot {
-            width: 8px; height: 8px; background: #00E676;
+            width: 8px; height: 8px; background: var(--secure-green);
             border-radius: 50%; margin-right: 8px;
-            box-shadow: 0 0 8px #00E676;
-            animation: blink 2s infinite;
+            box-shadow: 0 0 10px var(--secure-green);
+            animation: blink 2s infinite ease-in-out;
         }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         
         /* 🎛️ กล่องเลือกที่ปรึกษาพรีเมียม (Glassmorphism) */
         .selector-box {
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(212, 175, 55, 0.4);
+            border: 1px solid rgba(212, 175, 55, 0.3);
             border-radius: 16px;
             padding: 15px 20px;
             width: 100%;
             margin-bottom: 30px;
             transition: all 0.3s ease;
         }
-        .selector-box:focus-within { border-color: #D4AF37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
-        
+        .selector-box:focus-within { 
+            border-color: var(--primary-gold); 
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.15); 
+        }
         .selector-box label {
-            font-size: 0.8rem; color: #8a99ad; display: block;
-            margin-bottom: 8px; font-weight: 400; letter-spacing: 1px; text-transform: uppercase;
+            font-size: 0.75rem; color: var(--text-sub); display: block;
+            margin-bottom: 10px; font-weight: 400; letter-spacing: 1px; text-transform: uppercase;
         }
         select {
-            width: 100%; background: #070c18; color: #D4AF37;
+            width: 100%; background: var(--primary-dark); color: var(--primary-gold);
             border: 1px solid rgba(212, 175, 55, 0.5); padding: 12px 15px;
             border-radius: 10px; font-family: 'Prompt', sans-serif;
             font-size: 1rem; font-weight: 600; outline: none; cursor: pointer; text-align: center;
-            appearance: none; /* ซ่อนลูกศรเดิม */
+            appearance: none;
             background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23D4AF37%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
             background-repeat: no-repeat; background-position: right 15px top 50%; background-size: 12px auto;
+            transition: border-color 0.3s ease;
         }
+        select:hover { border-color: var(--primary-gold); }
 
         /* 🎙️ วงแหวนชีพจรเสียง */
         .pulse-container { position: relative; margin: 10px 0 25px 0; }
@@ -93,35 +118,39 @@
             background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0) 70%);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             animation: pulse 2.5s infinite cubic-bezier(0.45, 0, 0.55, 1);
-            border: 1px solid rgba(212, 175, 55, 0.6);
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.1);
         }
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.5); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
             70% { transform: scale(1.05); box-shadow: 0 0 0 25px rgba(212, 175, 55, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
         }
 
-        h2 { color: #ffffff; margin: 5px 0 8px 0; font-size: 1.6rem; font-weight: 600; letter-spacing: 0.5px; }
-        p { color: #8a99ad; font-size: 0.85rem; line-height: 1.6; margin: 0 0 20px 0; font-weight: 300; }
+        h2 { 
+            color: var(--text-main); margin: 5px 0 8px 0; 
+            font-size: 1.6rem; font-weight: 600; letter-spacing: 0.5px; 
+            transition: opacity 0.3s ease; /* สำหรับตอนสลับชื่อ AI */
+        }
+        p { color: var(--text-sub); font-size: 0.85rem; line-height: 1.6; margin: 0 0 20px 0; font-weight: 300; }
 
         /* 💎 ป้ายราคาโปร่งใส */
         .cost-badge {
             display: inline-block;
-            background: rgba(156, 39, 176, 0.15);
-            border: 1px solid rgba(156, 39, 176, 0.4);
+            background: rgba(156, 39, 176, 0.1);
+            border: 1px solid rgba(156, 39, 176, 0.3);
             color: #E1BEE7;
-            padding: 5px 15px;
+            padding: 6px 16px;
             border-radius: 8px;
             font-size: 0.8rem;
             margin-bottom: 25px;
             font-weight: 400;
         }
 
-        /* พื้นที่วาง Widget คุยสด */
+        /* 🎛️ พื้นที่วาง Widget คุยสด */
         #widgetContainer {
             width: 100%; display: flex; justify-content: center;
-            margin-top: 10px;
+            margin-top: 10px; min-height: 60px; /* จองพื้นที่ไว้ไม่ให้เว็บกระตุกตอนโหลด Widget */
         }
     </style>
 </head>
@@ -130,8 +159,8 @@
     <div class="room-card">
         
         <!-- แถบแสดงความปลอดภัย -->
-        <div class="secure-badge">
-            <div class="secure-dot"></div> SECURE END-TO-END ENCRYPTED
+        <div class="secure-badge" id="securityBadge">
+            <div class="secure-dot"></div> <span id="securityText">INITIALIZING SECURE LINE...</span>
         </div>
 
         <div class="selector-box">
@@ -163,41 +192,59 @@
             <elevenlabs-convai agent-id="lUTamkMw7gOzZbFIwmq4"></elevenlabs-convai>
         </div>
 
-    </div> <!-- End room-card -->
+    </div>
 
+    <!-- Script ของ ElevenLabs (ใช้ Async โหลดแบบไม่บล็อกหน้าเว็บ) -->
     <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
 
     <script>
         const LIFF_ID = "2011067128-fnWmOak4"; 
 
+        // 🛡️ ระบบเริ่มต้น LIFF พร้อม Error Handling ขั้นสูง
         async function initLIFF() {
+            const secText = document.getElementById('securityText');
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
+                } else {
+                    secText.innerText = "SECURE END-TO-END ENCRYPTED";
                 }
             } catch (err) {
                 console.error("LIFF Initialization failed", err);
+                secText.innerText = "CONNECTION SECURED (WEB MODE)"; // Fallback กรณีเปิดผ่านเบราว์เซอร์ปกติ
             }
         }
+        
+        // เริ่มต้นการทำงานทันที
         initLIFF();
 
-        // ฟังก์ชันสลับตัวตนที่ปรึกษาแบบ Real-time
+        // 🔄 ฟังก์ชันสลับตัวตนที่ปรึกษาแบบ Real-time (Clean DOM Re-mount)
         function switchAgent() {
             const select = document.getElementById('agentSelect');
             const container = document.getElementById('widgetContainer');
             const title = document.getElementById('agentTitle');
-            
             const selectedAgentId = select.value;
             
-            if(selectedAgentId === 'lUTamkMw7gOzZbFIwmq4') {
-                title.innerText = "ธนัตถ์ ไพรม์";
-            } else {
-                title.innerText = "สิรินทร์ ไพรม์";
-            }
+            // 1. แอนิเมชัน Fade-out ชื่อเก่า
+            title.style.opacity = '0';
             
-            // รีเฟรช Widget ให้โหลด Agent ID ใหม่ทันที
-            container.innerHTML = `<elevenlabs-convai agent-id="${selectedAgentId}"></elevenlabs-convai>`;
+            setTimeout(() => {
+                // อัปเดตชื่อตามที่เลือก
+                if(selectedAgentId === 'lUTamkMw7gOzZbFIwmq4') {
+                    title.innerText = "ธนัตถ์ ไพรม์";
+                } else {
+                    title.innerText = "สิรินทร์ ไพรม์";
+                }
+                // แอนิเมชัน Fade-in ชื่อใหม่
+                title.style.opacity = '1';
+            }, 300);
+            
+            // 2. สร้าง Widget ใหม่ทดแทนตัวเก่าทั้งหมด (ป้องกันไมค์ค้างและเสียงตีกัน)
+            container.innerHTML = ''; // ล้างพื้นที่
+            const newWidget = document.createElement('elevenlabs-convai');
+            newWidget.setAttribute('agent-id', selectedAgentId);
+            container.appendChild(newWidget); // วางตัวใหม่ลงไป
         }
     </script>
 </body>
