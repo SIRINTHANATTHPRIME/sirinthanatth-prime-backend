@@ -8,9 +8,7 @@ from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-    AudioMessage, ImageMessage, VideoMessage, FileMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage
-)
+    MessageEvent, TextMessage, AudioMessage, ImageMessage, VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage, FileSendMessage)
 from google import genai
 from google.genai import types
 
@@ -30,32 +28,18 @@ BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-sou
 GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
-# 1. สมองกลส่วนกลาง (Central Routing)
-try:
-    from agents.central_boss import CentralBossAgent
-    boss_agent = CentralBossAgent()
-except ImportError as e:
-    logger.error(f"Import Error Boss: {e}")
-    boss_agent = None
+# โหลด Agents และ Services (พร้อมระบบป้องกัน Error กรณีไฟล์ไม่พร้อม)
+try: from agents.central_boss import CentralBossAgent; boss_agent = CentralBossAgent()
+except ImportError: boss_agent = None
 
-# 2. สมองอัจฉริยะ (RAG, Vision, Data Analytics)
-try:
-    from agents.prime_brain import generate_intelligent_response
-except ImportError:
-    generate_intelligent_response = None
+try: from agents.prime_brain import generate_intelligent_response
+except ImportError: generate_intelligent_response = None
 
-# 3. 👑 เลขาฯ ส่วนตัว (CEO God Mode - Executive Privilege)
-try:
-    from agents.worker_0_ceo_secretary import CeoSecretaryWorker
-    ceo_secretary = CeoSecretaryWorker()
-except ImportError:
-    ceo_secretary = None
+try: from agents.worker_0_ceo_secretary import CeoSecretaryWorker; ceo_secretary = CeoSecretaryWorker()
+except ImportError: ceo_secretary = None
 
-# 4. 🎙️ กล่องเสียง (Voice Module - ElevenLabs)
-try:
-    from services.elevenlabs_service import generate_voice_from_text
-except ImportError:
-    generate_voice_from_text = None
+try: from services.elevenlabs_service import generate_voice_from_text
+except ImportError: generate_voice_from_text = None
 
 
 # 🛠️ ฟังก์ชันพิเศษ: สำหรับส่ง Flex Message หรือ Custom JSON Payload ให้ CEO
@@ -78,74 +62,53 @@ def send_line_custom_payload(reply_token: str, payload: dict):
 
 
 # 🌟 ฟังก์ชันหลัก: ประมวลผล AI และตอบกลับแบบไม่ให้ LINE ตัดสาย (Background Task)
+def send_line_custom_payload(reply_token: str, payload: dict):
+    if not LINE_TOKEN: return
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LINE_TOKEN}"}
+    data = {"replyToken": reply_token, "messages": [payload]}
+    try:
+        response = requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=data)
+        response.raise_for_status()
+    except Exception as e:
+        logger.error(f"❌ [System Error]: Custom Payload Transmission Failed -> {e}")
+
 async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: str, file_path: str = None, file_type: str = None):
     try:
-        # ==========================================
-        # 👑 [GOD MODE]: สิทธิ์ขาดประธานบริษัท (Bypass Token & All Limits)
-        # ==========================================
+        # 👑 [GOD MODE]: สิทธิ์ขาดประธานบริษัท
         if ceo_secretary and ceo_secretary.is_ceo(user_id):
-            logger.info("👑 [System]: CEO Identified. Activating God Mode & Bypassing Token Checks.")
-            
+            logger.info("👑 [System]: CEO Identified. Activating God Mode.")
             if inspect.iscoroutinefunction(ceo_secretary.process_ceo_command):
                 reply_payload = await ceo_secretary.process_ceo_command(incoming_message, file_path=file_path, file_type=file_type)
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
-            if isinstance(reply_payload, dict):
-                await asyncio.to_thread(send_line_custom_payload, reply_token, reply_payload)
-            else:
-                await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text=str(reply_payload)))
-            
+            if isinstance(reply_payload, dict): await asyncio.to_thread(send_line_custom_payload, reply_token, reply_payload)
+            else: await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text=str(reply_payload)))
             return
 
-        # ==========================================
-        # 👥 โหมดปกติสำหรับลูกค้า / ผู้ใช้ทั่วไป (User Mode)
-        # ==========================================
+        # 👥 [USER MODE]: ลูกค้าทั่วไป
         reply_msg = ""
-        
-        # 1. พยายามเรียกใช้สมองอัจฉริยะ (Prime Brain)
         if generate_intelligent_response:
             try:
                 if inspect.iscoroutinefunction(generate_intelligent_response):
                     reply_msg = await generate_intelligent_response(user_id, incoming_message, file_path=file_path, file_type=file_type)
                 else:
                     reply_msg = await asyncio.to_thread(generate_intelligent_response, user_id, incoming_message, file_path, file_type)
-                logger.info(f"🧠 [Prime Brain]: ประมวลผลสำเร็จสำหรับผู้ใช้ {user_id}")
             except Exception as e:
-                logger.warning(f"⚠️ [Prime Brain Error]: ขัดข้อง ({e}) สลับไปใช้ Central Boss")
-                if boss_agent:
-                    if inspect.iscoroutinefunction(boss_agent.route_task):
-                        reply_msg = await boss_agent.route_task(user_id, incoming_message, None, incoming_message, file_path, file_type)
-                    else:
-                        reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None, incoming_message, file_path, file_type)
-                else:
-                    reply_msg = "ขออภัยครับ ขณะนี้ระบบประมวลผลกำลังปรับปรุงชั่วคราว"
-        elif boss_agent:
-            if inspect.iscoroutinefunction(boss_agent.route_task):
-                reply_msg = await boss_agent.route_task(user_id, incoming_message, None, incoming_message, file_path, file_type)
-            else:
-                reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, incoming_message, None, incoming_message, file_path, file_type)
+                logger.warning(f"⚠️ [Prime Brain Error]: {e}")
+                reply_msg = "ขออภัยครับ ขณะนี้ระบบประมวลผลกำลังอัปเดตชั่วคราว"
         else:
-            # Fallback หากระบบ AI หลักขัดข้อง (อัปเกรดเป็น Gemini 2.5 Pro ฉุกเฉิน)
-            if client:
-                try:
-                    response = await asyncio.to_thread(
-                        client.models.generate_content,
-                        model='gemini-2.5-pro',
-                        contents=f"คุณคือ AI ผู้ช่วยระดับบริหาร 'SIRINTHANATTH PRIME'\nลูกค้าส่งข้อความมาว่า: {incoming_message}"
-                    )
-                    reply_msg = response.text if response.text else "รับทราบข้อมูลครับ"
-                except Exception as ex:
-                    logger.error(f"⚠️ [Gemini Engine Error]: {ex}")
-                    reply_msg = f"ได้รับข้อความแล้ว (ระบบกำลังปรับปรุงคีย์การเชื่อมต่อชั่วคราว)"
-            else:
-                reply_msg = f"ได้รับข้อความแล้ว (ระบบออฟไลน์)"
+            reply_msg = "ได้รับข้อความแล้ว (ระบบออฟไลน์)"
 
         messages_to_send = [TextSendMessage(text=reply_msg)]
         
-        # 🎙️ ระบบแปลงเสียงพูด (Voice AI - ElevenLabs)
+        # 🎙️ ระบบแปลงเสียงพูด (ElevenLabs) - รองรับ Native Async
         if file_type == 'audio' and generate_voice_from_text:
-            filename, duration_ms = await asyncio.to_thread(generate_voice_from_text, reply_msg)
+            if inspect.iscoroutinefunction(generate_voice_from_text):
+                filename, duration_ms = await generate_voice_from_text(reply_msg)
+            else:
+                filename, duration_ms = await asyncio.to_thread(generate_voice_from_text, reply_msg)
+                
             if filename: 
                 audio_url = f"{BASE_URL}/static/audio/{filename}"
                 messages_to_send.append(AudioSendMessage(original_content_url=audio_url, duration=duration_ms))
@@ -154,18 +117,11 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         
     except Exception as e: 
         logger.error(f"❌ Error in Processing: {e}")
-        try:
-            await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text="ขออภัยครับ ขณะนี้ระบบประมวลผลหลักกำลังอัปเดตข้อมูล ท่านสามารถพิมพ์ 'เมนู' เพื่อดูบริการของเราได้ครับ"))
-        except:
-            pass
     finally:
-        # 🧹 ทำความสะอาดลบไฟล์ชั่วคราว (Zero-Data Retention)
+        # 🧹 ระบบทำลายข้อมูล (Zero-Data Retention)
         if file_path and os.path.exists(file_path):
-            try: 
-                os.remove(file_path)
-            except Exception as clean_e: 
-                logger.error(f"⚠️ [Cleanup Warning]: {clean_e}")
-
+            try: os.remove(file_path)
+            except: pass
 
 # 🌐 Endpoint รับสัญญาณจาก LINE (Webhook Gateway)
 @router.post("/webhook")
@@ -190,6 +146,10 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         message_type = event.message.type
         incoming_message, file_path, file_type = "", None, None
 
+        # 🛡️ ระบบกรอง LINE Verification (กันระบบพังตอนกด Verify ใน LINE Developers)
+        if reply_token == "00000000000000000000000000000000" or reply_token == "ffffffffffffffffffffffffffffffff":
+            logger.info("✅ [System]: ตอบรับการทดสอบ Webhook จาก LINE เรียบร้อย")
+            continue
         # ==========================================
         # 📝 ตรวจสอบว่าเป็นข้อความตัวอักษร หรือ การกดปุ่ม
         # ==========================================
@@ -205,17 +165,14 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=reply_msg))
                 continue
 
-            # 🛍️ จัดการระบบปุ่มกดโปรโมชัน (ดักจับตรงนี้เพื่อไม่ให้ระบบค้าง)
+            # 🛍️ จัดการระบบปุ่มกดโปรโมชันแบบ Real-Time
             if incoming_message.startswith("ACTION:PROMO_ACCEPT:"):
                 promo_id = incoming_message.split(":")[-1]
-                reply_text = f"✅ ยืนยันความสำเร็จ! แคมเปญรหัส [{promo_id}] ถูกส่งไปยังระบบเผยแพร่และยิงแอดอัตโนมัติเรียบร้อยแล้วครับ!"
-                background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=reply_text))
+                background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=f"✅ แคมเปญรหัส [{promo_id}] ถูกส่งไปยังระบบเผยแพร่แล้วครับ!"))
                 continue
-                
             if incoming_message.startswith("ACTION:PROMO_MODIFY:"):
                 promo_id = incoming_message.split(":")[-1]
-                reply_text = f"📝 รับทราบครับ! สำหรับแคมเปญรหัส [{promo_id}] ท่านประธานต้องการปรับปรุงส่วนไหน (เช่น เปลี่ยนโทนสี, เพิ่มส่วนลด) พิมพ์บอกผมได้เลยครับ!"
-                background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=reply_text))
+                background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text=f"📝 รับทราบครับ! แคมเปญ [{promo_id}] ต้องการปรับปรุงส่วนไหน พิมพ์บอกผมได้เลยครับ!"))
                 continue
 
         # ==========================================
@@ -224,14 +181,8 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         elif message_type in ['audio', 'image', 'video', 'file']:
             message_id = event.message.id
             try:
-                # ⏳ ตอบกลับให้ลูกค้ารู้ว่า AI กำลังแกะไฟล์ (กันลูกค้าหงุดหงิด)
-                background_tasks.add_task(
-                    line_bot_api.reply_message, 
-                    reply_token, 
-                    TextSendMessage(text="กำลังประมวลผลไฟล์มัลติมีเดีย กรุณารอสักครู่นะครับ...")
-                )
+                background_tasks.add_task(line_bot_api.reply_message, reply_token, TextSendMessage(text="ระบบกำลังสแกนและประมวลผลไฟล์มัลติมีเดีย กรุณารอสักครู่นะครับ..."))
                 
-                # โหลดไฟล์แบบ Async ไม่ให้เซิร์ฟเวอร์โดนบล็อก
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ""
                 file_name = getattr(event.message, 'file_name', f"file_{message_id}") if message_type == 'file' else f"{message_id}{ext}"
@@ -242,24 +193,17 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 def save_media():
                     with open(file_path, 'wb') as fd:
                         for chunk in message_content.iter_content(): fd.write(chunk)
-                        
                 await asyncio.to_thread(save_media)
                 
                 incoming_message = f"[System Alert: อัปโหลดไฟล์ {message_type} สำเร็จ ช่วยวิเคราะห์ไฟล์นี้ให้หน่อยครับ]"
                 file_type = message_type
-                
-                # เมื่อประมวลผลไฟล์เสร็จ ให้ดันเข้า Background Task ให้ AI ทำงานต่อทันทีโดยไม่ต้องรอให้จบ Loop (ใช้ Token เปล่าๆ เพื่อไม่ให้ชนกับข้อความแจ้งเตือนด้านบน)
-                reply_token_dummy = "dummy_token" # เพราะตอบกลับด่านแรกไปแล้ว ต้องส่งต่อผลลัพธ์ผ่าน push_message เบื้องหลังแทน
-                
+                reply_token = "dummy_token" # ป้องกันการตอบกลับซ้ำซ้อน
             except Exception as e: 
                 logger.error(f"❌ File processing error: {e}")
-                background_tasks.add_task(line_bot_api.push_message, user_id, TextSendMessage(text="⚠️ ขออภัยครับ ระบบดึงไฟล์ไม่สำเร็จ โปรดลองใหม่อีกครั้ง"))
                 continue
         else: 
             continue
     
-        # 🚀 ส่งต่องานให้ AI ประมวลผลแบบเบื้องหลัง (Background Task)
-        # (กรณีไฟล์มัลติมีเดีย reply_token จะใช้งานไม่ได้แล้ว AI จะต้องใช้ push_message แทนในระบบสมองหลัก)
         background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
         
     return {"status": "OK"}

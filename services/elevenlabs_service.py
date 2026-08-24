@@ -1,34 +1,36 @@
 import os
-import requests
 import uuid
+import logging
+import httpx
+import asyncio
 
-# 1. ดึง API Key จากไฟล์ .env (ถ้าไม่มีจะข้ามการทำเสียงอัตโนมัติ)
+logger = logging.getLogger("ElevenLabs-VoiceEngine")
+
+# 1. ดึง API Key
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
-
-# 2. ตั้งค่า Voice ID เริ่มต้น (สามารถเปลี่ยนเป็น ID ของธนัตถ์ หรือ สิรินทร์ ได้ในอนาคต)
-# ปัจจุบันใช้เสียงพื้นฐาน (Rachel) เป็นค่าเริ่มต้น
 DEFAULT_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM") 
 
-def generate_voice_from_text(text: str):
+async def generate_voice_from_text(text: str) -> tuple[str | None, int]:
     """
-    ฟังก์ชันแปลงข้อความเป็นเสียงพูดภาษาไทย (Text-to-Speech)
+    ฟังก์ชันแปลงข้อความเป็นเสียงพูดภาษาไทยแบบ Asynchronous ระดับ Enterprise
     คืนค่าเป็น: (ชื่อไฟล์เสียง, ความยาวเสียงเป็นมิลลิวินาที)
     """
     if not ELEVENLABS_API_KEY:
-        print("⚠️ [System]: ไม่พบ ELEVENLABS_API_KEY สลับกลับไปใช้ข้อความตัวอักษรอย่างเดียว")
+        logger.warning("⚠️ [System]: ไม่พบ ELEVENLABS_API_KEY ปิดโหมดสังเคราะห์เสียง")
         return None, 0
         
     try:
+        # 🛡️ ตัดข้อความส่วนเกินป้องกัน API Reject (สูงสุด 5000 ตัวอักษร)
+        clean_text = text.strip()[:5000]
+        
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{DEFAULT_VOICE_ID}"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json",
             "xi-api-key": ELEVENLABS_API_KEY
         }
-        
-        # ใช้โมเดล eleven_multilingual_v2 เพื่อให้ออกเสียงภาษาไทยได้ชัดเจนและเป็นธรรมชาติ
         data = {
-            "text": text,
+            "text": clean_text,
             "model_id": "eleven_multilingual_v2", 
             "voice_settings": {
                 "stability": 0.5,
@@ -36,34 +38,33 @@ def generate_voice_from_text(text: str):
             }
         }
         
-        print(f"🎙️ [ElevenLabs]: กำลังสังเคราะห์เสียงสำหรับข้อความความยาว {len(text)} ตัวอักษร...")
-        response = requests.post(url, json=data, headers=headers)
-        
-        if response.status_code == 200:
-            # สร้างชื่อไฟล์แบบสุ่มป้องกันการทับซ้อน (UUID)
-            filename = f"reply_{uuid.uuid4().hex}.mp3"
+        # 🚀 ใช้ httpx สำหรับ Asynchronous Non-blocking I/O
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            logger.info(f"🎙️ [ElevenLabs]: สังเคราะห์เสียงความยาว {len(clean_text)} ตัวอักษร...")
+            response = await client.post(url, json=data, headers=headers)
+            response.raise_for_status() # โยน Error ทันทีถ้าสถานะไม่ใช่ 200
             
-            # ตรวจสอบและสร้างโฟลเดอร์ static/audio หากยังไม่มี
+            # สร้างชื่อไฟล์แบบสุ่มป้องกันการทับซ้อน
+            filename = f"reply_{uuid.uuid4().hex}.mp3"
             save_dir = os.path.join(os.getcwd(), "static", "audio")
             os.makedirs(save_dir, exist_ok=True)
-            
             save_path = os.path.join(save_dir, filename)
             
-            # บันทึกไฟล์เสียงลงโฟลเดอร์
-            with open(save_path, "wb") as f:
-                f.write(response.content)
+            # 💾 บันทึกไฟล์ลง Disk แบบ Async
+            def save_file():
+                with open(save_path, "wb") as f:
+                    f.write(response.content)
+            await asyncio.to_thread(save_file)
             
-            # ประเมินความยาวเสียงคร่าวๆ สำหรับส่งให้ LINE (ภาษาไทย 1 ตัวอักษร ~ 80ms)
-            estimated_duration_ms = len(text) * 80 
-            if estimated_duration_ms < 1000:
-                estimated_duration_ms = 1000 # ขั้นต่ำ 1 วินาที
-                
-            print(f"✅ [ElevenLabs]: สร้างไฟล์เสียงสำเร็จ -> {filename}")
+            # คำนวณความยาวเสียง (ภาษาไทย 1 ตัวอักษร ~ 80ms)
+            estimated_duration_ms = max(len(clean_text) * 80, 1000)
+            
+            logger.info(f"✅ [ElevenLabs]: สร้างไฟล์เสียงสำเร็จ -> {filename}")
             return filename, estimated_duration_ms
-        else:
-            print(f"❌ [ElevenLabs Error]: API ปฏิเสธการเชื่อมต่อ -> {response.text}")
-            return None, 0
             
+    except httpx.HTTPStatusError as http_err:
+        logger.error(f"❌ [ElevenLabs API Error]: {http_err.response.text}")
     except Exception as e:
-        print(f"❌ [Voice Gen Error]: เกิดข้อผิดพลาดระหว่างสร้างเสียง -> {e}")
-        return None, 0
+        logger.error(f"❌ [Voice Gen Error]: {e}")
+        
+    return None, 0
