@@ -30,7 +30,7 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI 2.5 Pro พร้อมระบบ "ดวงตา" วิเคราะห์ไฟล์ และ VVIP Engine
+    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI 1.5 Pro (Stable Flagship) พร้อมระบบ "ดวงตา" วิเคราะห์ไฟล์
     """
     
     def __init__(self):
@@ -41,8 +41,8 @@ class CeoSecretaryWorker:
         self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
-        # 🧠 อัปเกรดเป็น Gemini 2.5 Pro (โมเดลเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุดของโลก)
-        self.model_name = 'gemini-2.5-pro'
+        # 🧠 อัปเกรดเป็น Gemini 1.5 Pro (โมเดลเรือธงที่เสถียรและทรงพลังที่สุดในการอ่านเอกสาร/รูปภาพ)
+        self.model_name = 'gemini-1.5-pro'
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์
@@ -65,8 +65,16 @@ class CeoSecretaryWorker:
 
     async def process_ceo_command(self, message: str, file_path: str = None, file_type: str = None) -> dict:
         """รับคำสั่งและไฟล์ตรงจาก CEO และสั่งการระบบเบื้องหลังแบบ Asynchronous"""
+        if message is None:
+            message = ""
+        message = message.strip()
+        
         logger.info(f"👑 [CEO Command Received]: {message[:50]}... | File: {file_type}")
         
+        # 🛡️ Guardrail: หากประธานส่งแต่ไฟล์มาโดยไม่พิมพ์อะไรเลย ให้สร้างคำสั่งวิเคราะห์ให้อัตโนมัติ
+        if not message and file_path:
+            message = "[System Auto-Prompt]: โปรดวิเคราะห์ข้อมูลในรูปภาพหรือเอกสารที่แนบมานี้อย่างละเอียดครับ และสรุปประเด็นสำคัญให้ผมทราบ"
+
         # ==========================================
         # 1. ระบบดักจับการกดปุ่มจาก Flex Message (Approval Workflow)
         # ==========================================
@@ -82,9 +90,10 @@ class CeoSecretaryWorker:
             }
 
         # ==========================================
-        # 2. ระบบสิทธิพิเศษ (VVIP Single-use Link Generator)
+        # 2. ระบบสิทธิพิเศษ (VVIP Single-use Link Generator) แบบ Smart Detection
         # ==========================================
-        if "สร้างโค้ดลิงก์" in message or "VVIP" in message or "ไม่ต้องผ่านระบบ Token" in message:
+        check_msg = message.lower().replace(" ", "")
+        if any(keyword in check_msg for keyword in ["สร้างโค้ด", "vvip", "ไม่ต้องผ่านระบบtoken", "ระบบtoken", "รหัสเชิญ"]):
             return await self._generate_vvip_invite()
 
         # ==========================================
@@ -137,16 +146,11 @@ class CeoSecretaryWorker:
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
                 content_to_send.append(uploaded_file)
-                
-                # จัดการข้อความที่ส่งมาพร้อมไฟล์
-                if not message or message.startswith("[System Alert:"):
-                    content_to_send.append("โปรดวิเคราะห์ข้อมูลในรูปภาพหรือเอกสารที่แนบมานี้อย่างละเอียดครับ และรายงานให้ผมทราบ")
-                else:
-                    content_to_send.append(message)
+                content_to_send.append(message)
             else:
                 content_to_send.append(message)
 
-            # ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Gemini 2.5 Pro)
+            # ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Gemini 1.5 Pro)
             if not self.client:
                 return {"type": "text", "text": "⚠️ ขออภัยครับท่านประธาน ระบบ AI ขาดการเชื่อมต่อ (API Key Missing)"}
 
