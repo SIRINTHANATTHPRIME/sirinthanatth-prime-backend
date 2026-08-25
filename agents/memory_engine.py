@@ -9,14 +9,26 @@ from supabase import create_client, Client
 logger = logging.getLogger("MemoryEngine")
 
 # ==========================================
-# 🔑 1. การเชื่อมต่อระบบฐานข้อมูลและ AI
+# 🌐 1. ศูนย์บัญชาการ AI และฐานข้อมูล
 # ==========================================
+# ดึงการเชื่อมต่อ AI จากส่วนกลาง (รองรับ Zero Downtime Fallback)
+try:
+    from core_services.ai_config import PrimeAIConfig
+except ImportError:
+    class PrimeAIConfig:
+        EMBEDDING_MODEL = "gemini-embedding-2-preview" # Fallback ไปใช้สมองกลความจำล่าสุด
+        @staticmethod
+        def get_client():
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            return genai.Client(api_key=api_key) if api_key else None
+
+client = PrimeAIConfig.get_client()
+EMBEDDING_MODEL_NAME = PrimeAIConfig.EMBEDDING_MODEL
+
+# เชื่อมต่อ Supabase (Vector Database)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-
-GEMINI_KEY = os.environ.get("AI_API_KEY") or os.environ.get("GEMINI_API_KEY") or ""
-client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
 # ==========================================
 # 🧠 2. แกนประมวลผลความจำ (Vector Embedding Engine)
@@ -24,18 +36,19 @@ client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 def get_text_embedding(text: str) -> list:
     """
     แปลงข้อความเป็นตัวเลข (Vector) ผ่านโมเดล Embedding ล่าสุดของ Google
-    อัปเกรดใช้ text-embedding-004 เพื่อความแม่นยำสูงและเลี่ยง Error 404
+    อัปเกรด: ใช้ gemini-embedding-2-preview เพื่อความแม่นยำสูงระดับ Enterprise
     """
     if not client or not text:
         logger.warning("⚠️ ไม่พบ API Key หรือข้อความว่างเปล่า ข้ามการสร้าง Embedding")
         return []
         
     try:
-        # ใช้โมเดล text-embedding-004 ซึ่งเป็นมาตรฐานล่าสุดของ Google GenAI
+        # ใช้โมเดล Embedding มาตรฐานเจเนอเรชันที่ 3
         result = client.models.embed_content(
-            model="text-embedding-004",
+            model=EMBEDDING_MODEL_NAME,
             contents=text,
         )
+        
         # ตรวจสอบโครงสร้างข้อมูลที่ส่งกลับมาจาก SDK ใหม่
         if hasattr(result, 'embeddings') and result.embeddings:
             return result.embeddings[0].values
@@ -47,23 +60,26 @@ def get_text_embedding(text: str) -> list:
         return []
 
 # ==========================================
-# 🌐 3. ระบบสกัดความรู้จากเว็บไซต์ (Live Web Scraper)
+# 🌐 3. ระบบสกัดความรู้จากเว็บไซต์ (Live Web Scraper Advanced)
 # ==========================================
 def extract_text_from_url(url: str) -> str:
-    """ดึงข้อมูลเนื้อหาจาก URL ที่ส่งมา พร้อมระบบป้องกัน Anti-Bot"""
+    """ดึงข้อมูลเนื้อหาจาก URL ที่ส่งมา พร้อมระบบป้องกัน Anti-Bot ขั้นสูง"""
     try:
+        # อัปเกรด Headers สวมรอยเป็นเบราว์เซอร์ยุคใหม่ล่าสุด
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml',
-            'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
         }
+        # จำกัดเวลา 15 วินาทีเพื่อป้องกันระบบค้าง
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.content, 'html.parser', from_encoding=response.encoding)
         
-        # ลบส่วนที่ไม่ได้เป็นเนื้อหาหลักออก (Script, Style, เมนู, ฟุตเตอร์)
-        for element in soup(["script", "style", "noscript", "header", "footer", "nav", "aside"]):
+        # คลีนข้อมูลขยะ (Script, Style, เมนู, โฆษณา, ฟุตเตอร์)
+        for element in soup(["script", "style", "noscript", "header", "footer", "nav", "aside", "iframe"]):
             element.extract()
             
         text = soup.get_text(separator=' ', strip=True)
@@ -71,8 +87,9 @@ def extract_text_from_url(url: str) -> str:
         # คัดกรองเว้นวรรคส่วนเกินและปรับให้เป็นเนื้อหาบริสุทธิ์
         text = ' '.join(text.split())
         
-        # สรุปย่อเนื้อหาหากยาวเกินไป ป้องกันเกินโควตา Token ของระบบ
-        return text[:8000] 
+        # ตัดข้อมูลให้พอดีกับข้อจำกัดของ Vector DB (รักษาแก่นสำคัญไว้)
+        return text[:9000] 
+        
     except requests.exceptions.RequestException as re_err:
         logger.error(f"❌ [URL Scrape Network Error]: {re_err}")
         return ""
@@ -86,16 +103,16 @@ def process_and_save_link_knowledge(url: str, added_by: str = "CEO"):
     extracted_text = extract_text_from_url(url)
     
     if not extracted_text:
-        return False, "ไม่สามารถดึงข้อมูลจากลิงก์นี้ได้ อาจถูกป้องกันจากเว็บไซต์ปลายทาง"
+        return False, "ไม่สามารถดึงข้อมูลจากลิงก์นี้ได้ อาจถูกบล็อกหรือมีระบบป้องกันจากเว็บไซต์ปลายทาง"
         
     title = f"Knowledge_From_URL_{url.split('//')[-1][:30]}"
     
     # บันทึกลงฐานข้อมูลความรู้บริษัท
     success = save_corporate_knowledge(title, f"อ้างอิงจาก URL: {url}\n\n{extracted_text}")
     if success:
-        return True, "ดึงข้อมูลจากลิงก์และนำเข้าสู่ระบบสมองกลสำเร็จ"
+        return True, "ดึงข้อมูลจากลิงก์และนำเข้าสู่ระบบสมองกล (Vector Database) สำเร็จ"
     else:
-        return False, "ดึงข้อมูลได้ แต่เกิดข้อผิดพลาดในการบันทึกลงฐานข้อมูล"
+        return False, "ดึงข้อมูลได้สำเร็จ แต่เกิดข้อผิดพลาดในการนำเข้าสู่ระบบฐานข้อมูลเวกเตอร์"
 
 # ==========================================
 # 🏢 4. จัดการฐานข้อมูลความรู้บริษัท (Corporate Knowledge Base - RAG)
@@ -124,18 +141,18 @@ def save_corporate_knowledge(title: str, content: str) -> bool:
         return False
 
 def recall_corporate_knowledge(query: str) -> str:
-    """ดึงความรู้เฉพาะของบริษัท (รวมถึงที่ได้จากลิงก์) มาใช้ประมวลผล"""
+    """ดึงความรู้เฉพาะของบริษัท (รวมถึงที่ได้จากลิงก์) มาใช้ประมวลผล (Semantic Search)"""
     if not supabase: return ""
     
     try:
         query_vector = get_text_embedding(query)
         if not query_vector: return ""
 
-        # รัน RPC Function ที่ฝังไว้ใน Supabase
+        # รัน RPC Function ที่ฝังไว้ใน Supabase (ค้นหาข้อมูลที่ใกล้เคียงที่สุด)
         response = supabase.rpc('match_corporate_knowledge', { 
             'query_embedding': query_vector, 
-            'match_threshold': 0.70, 
-            'match_count': 3
+            'match_threshold': 0.70, # ความแม่นยำ 70% ขึ้นไป
+            'match_count': 3 # ดึงมา 3 บริบทที่เกี่ยวข้องกันที่สุด
         }).execute()
         
         if not response.data: 
@@ -151,7 +168,7 @@ def recall_corporate_knowledge(query: str) -> str:
 # 🧠 5. ระบบจัดเก็บและดึงประวัติการคุยลูกค้า (Chat Memory RAG)
 # ==========================================
 def save_memory(line_user_id: str, chat_summary: str):
-    """บันทึกบริบทการคุยรายบุคคล"""
+    """บันทึกบริบทการคุยรายบุคคลแบบฝังเวกเตอร์ (Vectorized Personal Memory)"""
     if not supabase: return
     
     vector_data = get_text_embedding(chat_summary)
@@ -166,16 +183,17 @@ def save_memory(line_user_id: str, chat_summary: str):
             logger.error(f"❌ [Save Memory Error]: {e}")
 
 def recall_memory(line_user_id: str, current_message: str) -> str:
-    """รื้อฟื้นความจำก่อนหน้าของลูกค้าคนนั้นๆ ออกมาช่วยตอบคำถาม"""
+    """รื้อฟื้นความจำก่อนหน้าของลูกค้าคนนั้นๆ ออกมาช่วยตอบคำถามอย่างเป็นธรรมชาติ"""
     if not supabase: return ""
     
     try:
         query_vector = get_text_embedding(current_message)
         if not query_vector: return ""
         
+        # ค้นหาประวัติการคุยเฉพาะของ User คนนั้น ที่ตรงกับบริบทคำถามปัจจุบัน
         response = supabase.rpc('match_memories', {
             'query_embedding': query_vector, 
-            'match_threshold': 0.70, 
+            'match_threshold': 0.65, # ลด Threshold เล็กน้อยเพื่อให้ดึงประวัติได้ง่ายขึ้น
             'match_count': 3, 
             'p_line_user_id': line_user_id
         }).execute()
