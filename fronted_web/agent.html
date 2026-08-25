@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIRINTHANATTH PRIME | Executive Agent Ecosystem</title>
-    <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     
     <style>
@@ -95,6 +94,7 @@
             position: relative; margin-bottom: 50px;
             box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25), inset 0 0 30px rgba(255, 215, 0, 0.05);
             animation: floatGlow 4s infinite ease-in-out;
+            transition: all 0.5s ease;
         }
         @keyframes floatGlow {
             0% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); }
@@ -210,7 +210,6 @@
 
     <nav class="top-navbar">
         <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
-        
         <a href="index.html" class="btn-back-neon">
             <span>🏠 กลับสู่หน้าหลัก</span>
         </a>
@@ -253,7 +252,7 @@
                     <br><em style="font-size: 0.85rem; color: #888;">(หลังจากหมดโควตา 100 VIP รายได้จะปรับเข้าสู่เรท Standard Recurring อัตโนมัติ)</em>
                 </p>
                 
-                <!-- 📊 แดชบอร์ดแสดงผลตัวเลขและสถานะแบบใหม่ -->
+                <!-- 📊 แดชบอร์ดแสดงผลตัวเลขและสถานะแบบใหม่ (Real-Time Synchronized) -->
                 <div class="live-counter-box">
                     <div class="counter-item">
                         <div class="counter-label">โควตาทั้งหมด</div>
@@ -278,7 +277,10 @@
                 <div class="progress-container">
                     <div class="progress-bar" id="liveProgressBar"></div>
                 </div>
-                <div style="font-size: 0.8rem; color: #666; margin-top: 10px;">*อัปเดตสถิติเรียลไทม์จากระบบ Stripe Payment Gateway</div>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 10px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #00e5ff; border-radius: 50%; box-shadow: 0 0 8px #00e5ff; margin-right: 5px; animation: pulse 2s infinite;"></span>
+                    *สถานะเชื่อมต่อ Real-Time กับ Stripe Payment Gateway
+                </div>
             </div>
 
             <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
@@ -404,23 +406,100 @@
         // ⚙️ ระบบสมองกลดึงข้อมูลแบบ Real-Time (Async Automation Engine)
         // ==========================================
         const MAX_VIP_QUOTA = 100;
+        
+        // กำหนด Endpoint ของระบบหลังบ้าน (Cloud Run) ที่ต่อกับ Stripe
+        const API_URL = 'https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota';
+        
+        // เก็บตัวเลขล่าสุดไว้ เพื่อไม่ให้ Animation เล่นซ้ำถ้าไม่มีคนโอนเงินเพิ่ม
+        let currentPaidCount = 0; 
 
-        // ฟังก์ชันจำลองการยิง API ไปถามหลังบ้าน (Backend Cloud Run / Stripe / Supabase)
+        // 📡 1. ฟังก์ชันดึงข้อมูลจาก Server แบบสมบูรณ์ (Real-Time Fetching)
         async function fetchRealVipPaidCount() {
             try {
-                // (ในอนาคต สามารถเปลี่ยนเป็น URL API ของระบบ Cloud Run ได้เลย เช่น fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota'))
-                // const response = await fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota');
-                // const data = await response.json();
-                // return data.paid_count; 
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-cache' // ป้องกันการดึงข้อมูลเก่าจาก Cache
+                });
                 
-                // คืนค่าสมมติที่จ่ายชำระแล้ว เพื่อโชว์ความสามารถการคำนวณและแสดงผลของระบบ
-                return 82; 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                // ถ้า API ตอบกลับเป็น JSON เช่น {"paid_count": 82}
+                return parseInt(data.paid_count) || 0; 
+                
             } catch (error) {
-                console.error("Failed to fetch VIP stats:", error);
-                return 0; // กรณีระบบขัดข้อง จะแสดงผลเป็น 0 ป้องกันการ Error หน้าเว็บ
+                console.warn("⚠️ [Live Sync Warning]: ไม่สามารถดึงยอดจาก Stripe ได้, สลับใช้ระบบ Fallback", error);
+                return currentPaidCount; // คืนค่าล่าสุดแทน 0 เพื่อไม่ให้หน้าเว็บกระตุก
             }
         }
 
+        // 🔄 2. ฟังก์ชันซิงค์ข้อมูลและสั่งรัน UI (Auto Sync Loop)
+        async function syncLiveQuota() {
+            const latestPaidCount = await fetchRealVipPaidCount();
+            
+            // อัปเดตเฉพาะเมื่อมีคนโอนเงินใหม่เพิ่มเข้ามาเท่านั้น (เพื่อความลื่นไหลของหน้าเว็บ)
+            if (latestPaidCount !== currentPaidCount) {
+                const oldPaid = currentPaidCount;
+                currentPaidCount = latestPaidCount;
+                updateVipQuotaUI(oldPaid, currentPaidCount);
+            }
+        }
+
+        // 🎨 3. ฟังก์ชันอัปเดตหน้าจอและการซ่อนสถานะเมื่อครบกำหนด (Status Trigger)
+        function updateVipQuotaUI(startVal, endVal) {
+            const promoSection = document.getElementById('vipPromoSection');
+            
+            if (endVal >= MAX_VIP_QUOTA) {
+                // 🛑 เงื่อนไขสุดขีด: เมื่อโควตาเต็ม 100 จะเล่นแอนิเมชันพับเก็บโปรโมชันแบบสวยงาม
+                promoSection.style.opacity = '0';
+                setTimeout(() => {
+                    promoSection.style.display = 'none';
+                    console.log("🔒 [System Event]: VIP Quota Reached. Promotion Section Hidden.");
+                }, 500);
+            } else {
+                const remainCount = Math.max(0, MAX_VIP_QUOTA - endVal);
+                const oldRemain = Math.max(0, MAX_VIP_QUOTA - startVal);
+
+                // เล่นแอนิเมชันตัวเลขวิ่งขึ้น-ลง เฉพาะส่วนต่าง (Delta Animation)
+                animateValue("livePaidCount", startVal, endVal, 1500);
+                animateValue("liveRemainCount", oldRemain, remainCount, 1500);
+                
+                // คำนวณหลอด Progress Bar
+                const percentage = (endVal / MAX_VIP_QUOTA) * 100;
+                setTimeout(() => {
+                    document.getElementById('liveProgressBar').style.width = percentage + '%';
+                }, 100); // ดีเลย์นิดหน่อยให้ตัวเลขวิ่งไปก่อน
+            }
+        }
+
+        // ✨ 4. เอฟเฟกต์ตัวเลขวิ่งแบบสมูท (Smooth Counter Animation)
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                
+                const currentVal = Math.floor(progress * (end - start) + start);
+                obj.innerHTML = currentVal;
+                
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end; // ยืนยันค่าสุดท้ายให้แม่นยำ
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // ==========================================
+        // 🚀 Event Listeners & Initialization
+        // ==========================================
         document.addEventListener('DOMContentLoaded', async () => {
             // 1. จัดการระบบ Accordion (หน้าต่างเลื่อนลง)
             const acc = document.getElementsByClassName("accordion-btn");
@@ -437,53 +516,12 @@
             }
 
             // 2. ดึงข้อมูลยอดจ่ายเงินจริงจาก Backend ทันทีที่โหลดหน้าเว็บเสร็จ
-            const currentVipPaid = await fetchRealVipPaidCount();
-            checkVipQuotaStatus(currentVipPaid);
-        });
-
-        // ฟังก์ชันตรวจสอบโควตาและสั่งเล่นแอนิเมชันตัวเลข
-        function checkVipQuotaStatus(paidCount) {
-            const promoSection = document.getElementById('vipPromoSection');
+            await syncLiveQuota();
             
-            if (paidCount >= MAX_VIP_QUOTA) {
-                // ถ้าคนจ่ายเงินครบ 100 คนแล้ว ระบบจะซ่อนกล่องโปรโมชัน 30% ทิ้งทันที! (God Mode Control)
-                promoSection.style.display = 'none';
-                console.log("VIP Quota is full. Promotion hidden automatically.");
-            } else {
-                const remainCount = MAX_VIP_QUOTA - paidCount;
-
-                // เล่นแอนิเมชันตัวเลขวิ่งขึ้น (จำนวนชำระเงินสำเร็จ)
-                animateValue("livePaidCount", 0, paidCount, 2000);
-                
-                // เล่นแอนิเมชันตัวเลขวิ่งลง (จำนวนสิทธิ์คงเหลือ)
-                animateValue("liveRemainCount", MAX_VIP_QUOTA, remainCount, 2000);
-                
-                // คำนวณความยาวของหลอด Progress Bar
-                const percentage = (paidCount / MAX_VIP_QUOTA) * 100;
-                setTimeout(() => {
-                    document.getElementById('liveProgressBar').style.width = percentage + '%';
-                }, 500);
-            }
-        }
-
-        // เอฟเฟกต์ตัวเลขวิ่งแบบสมูท (Smooth Counter Animation)
-        function animateValue(id, start, end, duration) {
-            const obj = document.getElementById(id);
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                
-                // คำนวณค่าตัวเลขปัจจุบันตาม Progress
-                const currentVal = Math.floor(progress * (end - start) + start);
-                obj.innerHTML = currentVal;
-                
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
-        }
+            // 3. เริ่มวงจร Real-Time Polling ทุกๆ 10 วินาที 
+            // (10 วินาทีคือมาตรฐานที่เร็วพอสำหรับ Real-time และไม่ทำให้ Server ทำงานหนักเกินไป)
+            setInterval(syncLiveQuota, 10000);
+        });
 
         // ==========================================
         // 🛡️ ระบบควบคุม PDPA และการสมัครพาร์ทเนอร์
@@ -542,11 +580,10 @@
         
             if (inviteCode) {
                 console.log("🎟️ ตรวจพบรหัสเชิญ VVIP:", inviteCode);
-                // แสดงป๊อปอัปต้อนรับสุดหรู
                 alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \nระบบกำลังยืนยันรหัสเชิญของคุณ...");
             
                 // (ในอนาคต: จะใช้ LIFF ดึง LINE ID ของเพื่อนคนนี้ แล้วยิง API ไปบอก Supabase ว่าขอใช้สิทธิ์รหัสนี้)
-                fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/verify-invite', { ... })
+                // fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/verify-invite', { ... })
             }
         });
     </script>

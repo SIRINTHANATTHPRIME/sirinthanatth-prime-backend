@@ -2,6 +2,7 @@ import os
 import logging
 import stripe
 import uvicorn
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
@@ -63,14 +64,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SIRINTHANATTH PRIME Core Engine",
     description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
-    version="3.0.1",
+    version="3.1.0",
     lifespan=lifespan
 )
 
-# 🛡️ Security Protocols & CORS (เกราะป้องกันขั้นสูง)
+# 🛡️ Security Protocols & CORS (เปิดรับหน้าเว็บ Agent สำหรับดึงข้อมูล)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"], # อนุญาตให้หน้าเว็บ (Frontend) ยิง API เข้ามาได้
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,22 +96,35 @@ if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"
 try:
     from api.routes_line import router as line_router
     app.include_router(line_router) # Mount ที่ Root
-    app.include_router(line_router, prefix="/api/v1/line") # Mount ที่ API v1
+    app.include_router(line_router, prefix="/api/v1/line", tags=["LINE OA"])
     logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
 except ImportError as e:
     logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
 
-try: from services.task_dispatcher import HybridTaskDispatcher; task_dispatcher = HybridTaskDispatcher()
+# 🔥 โหลด Router แผนกสถิติ สำหรับส่งข้อมูลให้เว็บ Agent แบบ Real-Time
+try:
+    from api.routes_stats import router as stats_router
+    app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
+    logger.info("✅ [System]: Stats Router (Live Counter) mounted successfully.")
+except ImportError as e:
+    logger.warning(f"⚠️ [System Warning]: Stats Router not found or failed to mount -> {e}")
+
+try: 
+    from services.task_dispatcher import HybridTaskDispatcher
+    task_dispatcher = HybridTaskDispatcher()
 except ImportError:
-    try: from task_dispatcher import HybridTaskDispatcher; task_dispatcher = HybridTaskDispatcher()
-    except ImportError: task_dispatcher = None
+    try: 
+        from task_dispatcher import HybridTaskDispatcher
+        task_dispatcher = HybridTaskDispatcher()
+    except ImportError: 
+        task_dispatcher = None
 
 # =========================================================
 # 🌍 Frontend & Health Check Endpoints
 # =========================================================
 @app.get("/")
 def root():
-    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "3.0.1"}
+    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "3.1.0"}
 
 @app.get("/health")
 def health_check():
@@ -134,7 +148,7 @@ async def open_live_call_room():
     return "<h1>System Updating. Voice Room is temporarily unavailable.</h1>"
 
 # =========================================================
-# 👑 VIP Invitation & Licensing System (Pydantic V2 Strict)
+# 👑 VIP Invitation & Licensing System
 # =========================================================
 class InviteRequest(BaseModel):
     model_config = ConfigDict(strict=True)
@@ -143,30 +157,33 @@ class InviteRequest(BaseModel):
 
 @app.post("/api/verify-invite")
 async def verify_invite(req: InviteRequest):
-    """ระบบลงทะเบียนคำเชิญ (Single-Use Invitation)"""
+    """ระบบลงทะเบียนคำเชิญ (Single-Use Invitation) แบบ Asynchronous 100%"""
     if not supabase: raise HTTPException(status_code=500, detail="Database connection not available")
 
-    # 👑 ปลดล็อกสิทธิ์ CEO ทันทีโดยไม่ต้องใช้โค้ด
+    # 👑 ปลดล็อกสิทธิ์ CEO ทันที
     if req.line_id in [MASTER_ADMIN_LINE_ID, CEO_LINE_ID]:
         return {"status": "success", "role": "admin", "message": "ยินดีต้อนรับท่านประธาน! สิทธิ์ผู้ดูแลระบบสูงสุดทำงานเต็มรูปแบบ"}
 
-    response = supabase.table("invite_codes").select("*").eq("code", req.invite_code).execute()
-    if not response.data: raise HTTPException(status_code=400, detail="ไม่พบรหัสคำเชิญนี้ในระบบ กรุณาติดต่อผู้ดูแล")
-        
-    invite_data = response.data[0]
-    
-    if invite_data.get("is_used"):
-        if invite_data.get("used_by_line_id") == req.line_id:
-            return {"status": "success", "role": "user", "message": "ยินดีต้อนรับกลับสู่ระบบ SIRINTHANATTH PRIME"}
-        raise HTTPException(status_code=403, detail="❌ รหัสคำเชิญนี้ถูกใช้งานโดยบุคคลอื่นไปแล้ว ไม่อนุญาตให้ใช้ซ้ำ")
+    def _verify_db():
+        response = supabase.table("invite_codes").select("*").eq("code", req.invite_code).execute()
+        if not response.data: return None, "ไม่พบรหัสคำเชิญนี้ในระบบ กรุณาติดต่อผู้ดูแล"
             
-    # อัปเดตสถานะโค้ดแบบรัดกุม
-    supabase.table("invite_codes").update({"is_used": True, "used_by_line_id": req.line_id}).eq("code", req.invite_code).execute()
+        invite_data = response.data[0]
+        if invite_data.get("is_used"):
+            if invite_data.get("used_by_line_id") == req.line_id:
+                return "user", "ยินดีต้อนรับกลับสู่ระบบ SIRINTHANATTH PRIME"
+            return None, "❌ รหัสคำเชิญนี้ถูกใช้งานโดยบุคคลอื่นไปแล้ว ไม่อนุญาตให้ใช้ซ้ำ"
+                
+        # อัปเดตสถานะและเปิดบัญชี
+        supabase.table("invite_codes").update({"is_used": True, "used_by_line_id": req.line_id}).eq("code", req.invite_code).execute()
+        supabase.table("prime_clients").upsert({"line_user_id": req.line_id, "role": "user", "token_balance": 0.00}, on_conflict="line_user_id").execute()
+        return "user", "ยืนยันรหัสเชิญสำเร็จ! เปิดสิทธิ์การใช้งานระบบให้คุณเรียบร้อยแล้ว"
+
+    role, msg = await asyncio.to_thread(_verify_db)
+    if not role:
+        raise HTTPException(status_code=400, detail=msg)
     
-    # เปิดบัญชีผู้ใช้ใหม่
-    supabase.table("prime_clients").upsert({"line_user_id": req.line_id, "role": "user", "token_balance": 0.00}, on_conflict="line_user_id").execute()
-    
-    return {"status": "success", "role": "user", "message": "ยืนยันรหัสเชิญสำเร็จ! เปิดสิทธิ์การใช้งานระบบให้คุณเรียบร้อยแล้ว"}
+    return {"status": "success", "role": role, "message": msg}
 
 # =========================================================
 # ⚙️ Core Execution Engine
@@ -181,12 +198,12 @@ async def execute_task(request_data: ExecutionRequest):
     """ท่อประมวลผลหลัก รองรับงานหนักเอกสาร, ภาพ, เสียง และวิดีโอ (Hybrid Dispatcher)"""
     try:
         if supabase and request_data.user_id not in [MASTER_ADMIN_LINE_ID, CEO_LINE_ID]:
-            client_res = supabase.table("prime_clients").select("token_balance, role").eq("line_user_id", request_data.user_id).execute()
+            client_res = await asyncio.to_thread(supabase.table("prime_clients").select("token_balance, role").eq("line_user_id", request_data.user_id).execute)
             if not client_res.data:
                 raise HTTPException(status_code=403, detail="กรุณาลงทะเบียนหรือรับสิทธิ์ใช้งานระบบก่อนเข้าถึงฟังก์ชันนี้")
             
             client_info = client_res.data[0]
-            if client_info.get("role") != "admin" and float(client_info.get("token_balance", 0)) <= 0:
+            if client_info.get("role") != "admin" and client_info.get("role") != "vip" and float(client_info.get("token_balance", 0)) <= 0:
                 raise HTTPException(status_code=402, detail="PRIME CREDITS คงเหลือไม่เพียงพอ กรุณาอัปเกรดแพ็กเกจ")
 
         if task_dispatcher:
@@ -212,15 +229,19 @@ class UserProfile(BaseModel):
 
 @app.post("/api/sync-user")
 async def sync_user_profile(profile: UserProfile):
-    """อัปเดตข้อมูลโปรไฟล์ผู้ใช้ล่าสุดเข้าฐานข้อมูล"""
+    """อัปเดตข้อมูลโปรไฟล์ผู้ใช้ล่าสุดเข้าฐานข้อมูล (Non-Blocking)"""
     if not supabase: raise HTTPException(status_code=500, detail="Database connection not available")
-    try:
+    
+    def _sync():
         supabase.table("users").upsert({
             "line_user_id": profile.line_user_id,
             "display_name": profile.display_name,
             "picture_url": profile.picture_url,
             "status": "active"
         }, on_conflict="line_user_id").execute()
+        
+    try:
+        await asyncio.to_thread(_sync)
         logger.info(f"🔄 [Sync System]: User profile ({profile.display_name}) securely synced.")
         return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
     except Exception as e:
@@ -232,7 +253,7 @@ async def sync_user_profile(profile: UserProfile):
 # =========================================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request):
-    """แจ้งเตือนจาก Stripe และอัปเดตฐานข้อมูลการเงินให้อัตโนมัติ 100%"""
+    """แจ้งเตือนจาก Stripe และอัปเดตฐานข้อมูลการเงินให้อัตโนมัติ 100% (Async Mode)"""
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
@@ -252,39 +273,40 @@ async def stripe_webhook(request: Request):
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         client_ref = session.get('client_reference_id', '')
-        amount_paid_thb = session.get('amount_total', 0) / 100 # ค่าที่ส่งมาเป็นหน่วยสตางค์
+        amount_paid_thb = session.get('amount_total', 0) / 100 
         
         logger.info(f"💰 [Stripe Incoming]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
 
-        # 🌟 ฟังก์ชันเติม Token เข้ากระเป๋าลูกค้าอัตโนมัติ (1 THB = 10 Credits)
-        if supabase and client_ref:
+        # ประมวลผลธุรกรรมหลังบ้านแบบไม่บล็อกเซิร์ฟเวอร์หลัก (Asynchronous DB Query)
+        def _process_payment():
+            if not supabase or not client_ref: return
+            
             if client_ref.startswith('topup_'):
                 user_id = client_ref.replace('topup_', '')
                 credits_to_add = amount_paid_thb * 10
                 
-                # ดึงยอดเดิม และบวกยอดใหม่เข้าไป
                 try:
                     res = supabase.table("users_wallet").select("balance").eq("user_id", user_id).execute()
                     current_balance = float(res.data[0].get("balance", 0)) if res.data else 0.0
                     new_balance = current_balance + credits_to_add
                     
                     supabase.table("users_wallet").upsert({"user_id": user_id, "balance": new_balance}, on_conflict="user_id").execute()
-                    
-                    # อัปเดตในตารางหลักด้วย
                     supabase.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
                     logger.info(f"✅ [Revenue Engine]: เติม {credits_to_add} Credits ให้ผู้ใช้ {user_id} สำเร็จ!")
                 except Exception as db_err:
                     logger.error(f"❌ [DB Topup Error]: ไม่สามารถเติมเครดิตได้ -> {db_err}")
 
-            elif client_ref.startswith('sub_') or 'VIP' in client_ref:
-                # กรณีสมัครแพ็กเกจ (เช่น VIP) ให้เปลี่ยนสถานะเป็น Token Exempt (ฟรีไม่อั้น)
-                user_id = client_ref.split("_")[-1] # ดึง user_id ออกมาจากรูปแบบ sub_{user_id} หรือ VIP-XX_AGENT_XX
+            elif client_ref.startswith('sub_') or 'VIP' in client_ref.upper():
+                user_id = client_ref.split("_")[-1]
                 try:
                     supabase.table("users").update({"is_token_exempt": True}).eq("line_user_id", user_id).execute()
                     supabase.table("prime_clients").update({"role": "vip"}).eq("line_user_id", user_id).execute()
                     logger.info(f"👑 [Revenue Engine]: อัปเกรดสถานะ VVIP ให้ผู้ใช้ {user_id} สำเร็จ!")
                 except Exception as db_err:
                     logger.error(f"❌ [DB Upgrade Error]: ไม่สามารถอัปเกรด VVIP ได้ -> {db_err}")
+
+        # โยนภาระไปให้ Thread ทำงาน เพื่อให้เซิร์ฟเวอร์หลักรับโหลดได้ต่อทันที
+        asyncio.create_task(asyncio.to_thread(_process_payment))
 
     return {"status": "success"}
 
