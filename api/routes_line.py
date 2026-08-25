@@ -24,7 +24,7 @@ router = APIRouter()
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
 parser = WebhookParser(os.getenv("LINE_CHANNEL_SECRET", "")) if os.getenv("LINE_CHANNEL_SECRET") else None
-BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
+BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/line/webhook")
 GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or ""
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 
