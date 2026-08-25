@@ -40,16 +40,13 @@ logger = logging.getLogger("CeoSecretary")
 class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
-    ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI 3.1 Pro Preview (Executive Reasoning)
+    อัปเกรดระบบ Self-Healing Retry (429 Protection) และ Smart Database Handling
     """
 
     def __init__(self):
-        # 👑 รับค่า LINE ID ให้อัตโนมัติ
         self.ceo_line_id = os.getenv("CEO_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
         self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
 
-        # 🚀 เชื่อมต่อขุมพลังสมองกลเจเนอเรชันที่ 3 จากส่วนกลาง
         self.client = PrimeAIConfig.get_client()
         self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
 
@@ -65,28 +62,45 @@ class CeoSecretaryWorker:
         5. หากประธานสั่ง 'แก้ไข' แผน ให้รับฟังและสร้างสรรค์แผนใหม่ที่อุดรอยรั่วทั้งหมดทันที
         """
 
-        # หน่วยความจำชั่วคราวสำหรับเก็บแผนงานที่รอการอนุมัติ/แก้ไข
         self.pending_plans = {}
 
     def is_ceo(self, user_id: str) -> bool:
         """ตรวจสอบความปลอดภัยว่าเป็นท่านประธานหรือไม่"""
         return user_id in [self.ceo_line_id, self.master_admin_id] if user_id else False
 
+    async def _safe_generate_content(self, contents, config):
+        """ระบบ Self-Healing อัจฉริยะ: พยายามเชื่อมต่อใหม่แบบ Exponential Backoff หากเจอ Error 429"""
+        max_retries = 3
+        delay = 3
+        for attempt in range(max_retries):
+            try:
+                return await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model_name,
+                    contents=contents,
+                    config=config
+                )
+            except Exception as e:
+                err_str = str(e)
+                if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_retries - 1:
+                    logger.warning(f"⚠️ [AI Quota Limit 429]: กำลังลองใหม่รอบที่ {attempt+1} ในอีก {delay} วินาที...")
+                    await asyncio.sleep(delay)
+                    delay *= 2  # เพิ่มเวลาหน่วงทบต้น
+                    continue
+                raise e
+
     async def process_ceo_command(self, message: str, file_path: str = None, file_type: str = None) -> dict:
-        """รับคำสั่งและไฟล์ตรงจาก CEO และสั่งการระบบเบื้องหลังแบบ Asynchronous"""
+        """รับคำสั่งและไฟล์ตรงจาก CEO พร้อมระบบจัดการข้อผิดพลาดระดับองค์กร"""
         if message is None:
             message = ""
         message = message.strip()
 
         logger.info(f"👑 [CEO Command Received]: {message[:50]}... | File: {file_type}")
 
-        # 🛡️ Guardrail: หากประธานส่งแต่ไฟล์มาโดยไม่พิมพ์อะไรเลย ให้สร้างคำสั่งวิเคราะห์ให้อัตโนมัติ
         if not message and file_path:
             message = "[System Auto-Prompt]: โปรดวิเคราะห์ข้อมูลในรูปภาพหรือเอกสารที่แนบมานี้อย่างละเอียดครับ และสรุปประเด็นสำคัญให้ผมทราบ"
 
-        # ==========================================
-        # 1. ระบบดักจับการกดปุ่มจาก Flex Message (Approval Workflow)
-        # ==========================================
+        # 1. ระบบจัดการปุ่มกด Flex Message
         if message.startswith("ACTION:APPROVE:"):
             return self._execute_approved_plan(message)
         elif message.startswith("ACTION:REJECT:"):
@@ -98,16 +112,12 @@ class CeoSecretaryWorker:
                 "text": f"📝 รับทราบครับสำหรับแผนรหัส [{plan_id}]\nท่านประธานต้องการให้ผมปรับปรุงหรือแก้ไขกลยุทธ์ในจุดไหน พิมพ์สั่งการมาได้เลยครับ เดี๋ยวผมจัดการร่างใหม่ทันทีครับ"
             }
 
-        # ==========================================
-        # 2. ระบบสิทธิพิเศษ (VVIP Single-use Link Generator) แบบ Smart Detection
-        # ==========================================
+        # 2. ระบบสิทธิ์ VVIP
         check_msg = message.lower().replace(" ", "")
         if any(keyword in check_msg for keyword in ["สร้างโค้ด", "vvip", "ไม่ต้องผ่านระบบtoken", "ระบบtoken", "รหัสเชิญ"]):
             return await self._generate_vvip_invite()
 
-        # ==========================================
-        # 3. ระบบเรียนรู้ความรู้ใหม่ (Corporate Knowledge Ingestion)
-        # ==========================================
+        # 3. ระบบเรียนรู้ความรู้ใหม่
         if message.startswith("เรียนรู้ลิงก์:") or message.startswith("LEARN:"):
             url_match = re.search(r'(https?://[^\s]+)', message)
             if url_match:
@@ -119,7 +129,6 @@ class CeoSecretaryWorker:
                     else:
                         return {"type": "text", "text": f"⚠️ [Error]: {msg}"}
                 except Exception as e:
-                    logger.error(f"❌ [Link Learning Error]: {e}")
                     return {"type": "text", "text": f"⚠️ [Error]: เกิดข้อผิดพลาดในการดึงข้อมูลจากลิงก์: {e}"}
             else:
                  return {"type": "text", "text": "⚠️ ไม่พบ URL ในข้อความ กรุณาพิมพ์ในรูปแบบ 'เรียนรู้ลิงก์: [URL]'"}
@@ -134,22 +143,17 @@ class CeoSecretaryWorker:
                 else:
                     return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในการนำเข้าข้อมูลสู่ฐานข้อมูลเวกเตอร์ครับ"}
             except Exception as e:
-                logger.error(f"❌ [Feed Learning Error]: {e}")
-                return {"type": "text", "text": "⚠️ เกิดข้อผิดพลาดในระบบฐานข้อมูลความรู้ครับ"}
+                return {"type": "text", "text": f"⚠️ เกิดข้อผิดพลาดในระบบฐานข้อมูลความรู้: {e}"}
 
-        # ==========================================
-        # 4. การประมวลผลคำสั่งทั่วไปและไฟล์มัลติมีเดีย (Multimodal Async)
-        # ==========================================
+        # 4. การประมวลผลคำสั่งและไฟล์
         uploaded_file = None
         content_to_send = []
 
         try:
-            # 👁️ โหมดประมวลผลไฟล์ (เอกสาร, รูปภาพ, วิดีโอ) พร้อม Anti-Freeze Guardrail
             if file_path and os.path.exists(file_path):
                 logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดไฟล์ {file_type} เพื่อให้ AI วิเคราะห์...")
                 uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
 
-                # รอกระบวนการแปลงไฟล์บนเซิร์ฟเวอร์ Google (จำกัดเวลา 60 วินาทีป้องกันระบบค้าง)
                 timeout = 60
                 start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
@@ -163,13 +167,11 @@ class CeoSecretaryWorker:
             else:
                 content_to_send.append(message)
 
-            # ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Executive Model)
             if not self.client:
                 return {"type": "text", "text": "⚠️ ขออภัยครับท่านประธาน ระบบ AI ขาดการเชื่อมต่อ (API Key Missing)"}
 
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_name,
+            # เรียกใช้งานผ่านระบบปลอดภัย Self-Healing Retry
+            response = await self._safe_generate_content(
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=self.system_instruction,
@@ -179,21 +181,20 @@ class CeoSecretaryWorker:
             reply_text = response.text if response.text else "รับทราบคำสั่งครับท่านประธาน"
 
         except Exception as e:
-            logger.error(f"⚠️ [CEO Secretary Error]: {e}")
-            reply_text = f"ขออภัยครับท่านประธาน ขณะนี้สมองกลประมวลผลขัดข้องเล็กน้อย ({str(e)[:50]}) กำลังดำเนินการแก้ไขให้กลับมาทำงาน 100% ครับ"
+            error_str = str(e)
+            logger.error(f"⚠️ [CEO Secretary Error]: {error_str}")
+            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                reply_text = "⚠️ ขออภัยครับท่านประธาน ขณะนี้โควตา AI เต็มชั่วคราว ระบบได้พยายามเชื่อมต่อใหม่แล้วแต่ไม่สำเร็จ กรุณารอสัก 30 วินาทีแล้วลองส่งคำสั่งใหม่อีกครั้งครับ"
+            else:
+                reply_text = f"ขออภัยครับท่านประธาน สมองกลขัดข้องชั่วคราว ({error_str[:50]}) กำลังดำเนินการแก้ไขครับ"
 
         finally:
-            # 🗑️ Zero-Data Retention: ลบไฟล์ออกจากเซิร์ฟเวอร์ Google ทันทีเพื่อความปลอดภัยของข้อมูลบริษัท
             if uploaded_file:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
-                    logger.info("🧹 [Security]: ลบไฟล์ลับของท่านประธานออกจากเซิร์ฟเวอร์เรียบร้อยแล้ว")
-                except Exception as e:
-                    logger.error(f"⚠️ Failed to delete sensitive file: {e}")
+                except:
+                    pass
 
-        # ==========================================
-        # 5. ส่ง Flex Message ขออนุมัติ (หาก AI เสนอแผนงาน)
-        # ==========================================
         if any(keyword in reply_text for keyword in ["เสนอ", "พิจารณา", "แผนการ", "ปรับปรุงใหม่", "อนุมัติ"]):
             plan_id = f"PLAN_{int(time.time())}"
             self.pending_plans[plan_id] = reply_text
@@ -202,16 +203,14 @@ class CeoSecretaryWorker:
         return {"type": "text", "text": reply_text}
 
     async def _generate_vvip_invite(self) -> dict:
-        """ระบบสร้างรหัส VVIP แบบใช้ครั้งเดียว (Single-use Invite Code)"""
+        """ระบบสร้างรหัส VVIP พร้อมดักจับข้อผิดพลาดกรณีไม่มีตารางฐานข้อมูล"""
         if not supabase:
-            return {"type": "text", "text": "⚠️ ไม่สามารถสร้างรหัสได้ครับ เนื่องจากระบบยังไม่ได้เชื่อมต่อฐานข้อมูล Supabase อย่างสมบูรณ์"}
+            return {"type": "text", "text": "⚠️ ไม่สามารถสร้างรหัสได้ครับ เนื่องจากระบบยังไม่ได้เชื่อมต่อฐานข้อมูล Supabase"}
 
         try:
-            # สร้างรหัสลับ 8 หลักสุดพรีเมียม (เช่น VVIP-A1B2C3D4)
             random_code = uuid.uuid4().hex[:8].upper()
             invite_code = f"VVIP-{random_code}"
 
-            # บันทึกลงตาราง invite_codes อย่างปลอดภัย
             def insert_code():
                 supabase.table("invite_codes").insert({
                     "code": invite_code,
@@ -220,25 +219,25 @@ class CeoSecretaryWorker:
 
             await asyncio.to_thread(insert_code)
 
-            # สร้าง URL อ้างอิง
             base_url = "https://www.sirinthanatthprime.com/agent.html"
             invite_link = f"{base_url}?code={invite_code}"
 
             reply = (
                 f"🎟️ สร้างรหัสเชิญ VVIP พิเศษสำเร็จแล้วครับท่านประธาน!\n\n"
                 f"🔑 รหัสอ้างอิง: {invite_code}\n\n"
-                f"ท่านสามารถคัดลอกลิงก์ด้านล่างนี้ ส่งให้ลูกค้าระดับ VIP (1 ท่าน) เพื่อเข้าใช้งานระบบได้ทุกฟังก์ชัน โดยไม่ต้องผ่านระบบ Token ครับ:\n\n"
-                f"{invite_link}\n\n"
-                f"🛡️ Security Note: ลิงก์และรหัสนี้ถูกล็อกเป็นแบบ Single-use เมื่อลูกค้าลงทะเบียนแล้ว ระบบจะทำลายสิทธิ์รหัสนี้ทิ้งทันที เพื่อป้องกันการส่งต่อให้บุคคลอื่นครับ"
+                f"ลิงก์สำหรับเข้าใช้งานระบบแบบไม่ต้องผ่าน Token:\n{invite_link}\n\n"
+                f"🛡️ Security Note: ลิงก์นี้เป็นแบบ Single-use ใช้ได้ 1 ครั้งเท่านั้นครับ"
             )
             return {"type": "text", "text": reply}
 
         except Exception as e:
-            logger.error(f"❌ [VVIP Gen Error]: {e}")
-            return {"type": "text", "text": f"เกิดข้อผิดพลาดในการบันทึกรหัส VVIP ลงฐานข้อมูลครับ: {str(e)}"}
+            error_msg = str(e)
+            logger.error(f"❌ [VVIP Gen Error]: {error_msg}")
+            if "PGRST125" in error_msg or "relation" in error_msg.lower():
+                return {"type": "text", "text": "⚠️ แจ้งเตือนท่านประธาน: ยังไม่ได้สร้างตาราง 'invite_codes' ในฐานข้อมูล Supabase ครับ\n\nกรุณาเข้าไปที่ Supabase Dashboard -> SQL Editor แล้วรันคำสั่งสร้างตาราง invite_codes ก่อนใช้งานครับ"}
+            return {"type": "text", "text": f"เกิดข้อผิดพลาดในการบันทึกรหัส VVIP: {error_msg[:60]}"}
 
     def _build_approval_flex_message(self, report_text: str, plan_id: str) -> dict:
-        """สร้าง LINE Flex Message สไตล์พรีเมียม (Navy & Gold) พร้อมปุ่มคำสั่ง"""
         return {
             "type": "flex",
             "altText": "แฟ้มรายงานจากเลขาฯ อัจฉริยะ (รอการพิจารณาอนุมัติ)",
