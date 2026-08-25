@@ -9,7 +9,7 @@ from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, AudioMessage, ImageMessage, VideoMessage, FileMessage, 
-    TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage, FileSendMessage
+    TextSendMessage, AudioSendMessage, ImageSendMessage, VideoSendMessage
 )
 from google import genai
 
