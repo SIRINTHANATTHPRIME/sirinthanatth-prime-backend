@@ -8,6 +8,17 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
+# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลาง (รองรับ Zero Downtime Fallback)
+try:
+    from core_services.ai_config import PrimeAIConfig
+except ImportError:
+    class PrimeAIConfig:
+        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # Fallback Model
+        @staticmethod
+        def get_client():
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            return genai.Client(api_key=api_key) if api_key else None
+
 # นำเข้าระบบความจำเพื่อบันทึกข้อมูลระดับองค์กร (Corporate RAG)
 try:
     from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge
@@ -30,24 +41,22 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI 1.5 Pro (Stable Flagship) พร้อมระบบ "ดวงตา" วิเคราะห์ไฟล์
+    อัปเกรดสถาปัตยกรรมระดับโลกด้วย Google GenAI 3.1 Pro Preview (Executive Reasoning)
     """
-    
+
     def __init__(self):
-        # 👑 รับค่า LINE ID ให้อัตโนมัติ (ดึงจากตัวแปร Cloud Run)
+        # 👑 รับค่า LINE ID ให้อัตโนมัติ
         self.ceo_line_id = os.getenv("CEO_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
         self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
-        
-        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
-        
-        # 🧠 อัปเกรดเป็น Gemini 1.5 Pro (โมเดลเรือธงที่เสถียรและทรงพลังที่สุดในการอ่านเอกสาร/รูปภาพ)
-        self.model_name = 'gemini-1.5-pro'
-        
+
+        # 🚀 เชื่อมต่อขุมพลังสมองกลเจเนอเรชันที่ 3 จากส่วนกลาง
+        self.client = PrimeAIConfig.get_client()
+        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์
         ระบบที่คุณดูแลคือ SIRINTHANATTH PRIME (Enterprise AI SaaS บน LINE OA)
-        
+
         หน้าที่และกฎเหล็กของคุณ:
         1. ตอบกลับด้วยความเคารพ เป็นมืออาชีพขั้นสูง และใช้คำลงท้ายหรือเรียกขานว่า 'ครับท่านประธาน' เสมอ
         2. หากประธานส่งรูปภาพ เอกสาร หรืองบการเงิน ให้วิเคราะห์ สกัดข้อมูล และสรุป Executive Summary ที่เฉียบคม
@@ -55,7 +64,7 @@ class CeoSecretaryWorker:
         4. เสนอแนะกลยุทธ์อย่างชาญฉลาด ทันสมัยระดับ Global Tech Company
         5. หากประธานสั่ง 'แก้ไข' แผน ให้รับฟังและสร้างสรรค์แผนใหม่ที่อุดรอยรั่วทั้งหมดทันที
         """
-        
+
         # หน่วยความจำชั่วคราวสำหรับเก็บแผนงานที่รอการอนุมัติ/แก้ไข
         self.pending_plans = {}
 
@@ -68,9 +77,9 @@ class CeoSecretaryWorker:
         if message is None:
             message = ""
         message = message.strip()
-        
+
         logger.info(f"👑 [CEO Command Received]: {message[:50]}... | File: {file_type}")
-        
+
         # 🛡️ Guardrail: หากประธานส่งแต่ไฟล์มาโดยไม่พิมพ์อะไรเลย ให้สร้างคำสั่งวิเคราะห์ให้อัตโนมัติ
         if not message and file_path:
             message = "[System Auto-Prompt]: โปรดวิเคราะห์ข้อมูลในรูปภาพหรือเอกสารที่แนบมานี้อย่างละเอียดครับ และสรุปประเด็นสำคัญให้ผมทราบ"
@@ -133,24 +142,28 @@ class CeoSecretaryWorker:
         # ==========================================
         uploaded_file = None
         content_to_send = []
-        
+
         try:
-            # 👁️ โหมดประมวลผลไฟล์ (เอกสาร, รูปภาพ, วิดีโอ)
+            # 👁️ โหมดประมวลผลไฟล์ (เอกสาร, รูปภาพ, วิดีโอ) พร้อม Anti-Freeze Guardrail
             if file_path and os.path.exists(file_path):
                 logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดไฟล์ {file_type} เพื่อให้ AI วิเคราะห์...")
                 uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
-                
-                # รอกระบวนการแปลงไฟล์บนเซิร์ฟเวอร์ Google
+
+                # รอกระบวนการแปลงไฟล์บนเซิร์ฟเวอร์ Google (จำกัดเวลา 60 วินาทีป้องกันระบบค้าง)
+                timeout = 60
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("เซิร์ฟเวอร์ของระบบประมวลผลไฟล์ใช้เวลานานเกินกำหนดครับท่านประธาน")
                     await asyncio.sleep(2)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
-                    
+
                 content_to_send.append(uploaded_file)
                 content_to_send.append(message)
             else:
                 content_to_send.append(message)
 
-            # ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Gemini 1.5 Pro)
+            # ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Executive Model)
             if not self.client:
                 return {"type": "text", "text": "⚠️ ขออภัยครับท่านประธาน ระบบ AI ขาดการเชื่อมต่อ (API Key Missing)"}
 
@@ -164,11 +177,11 @@ class CeoSecretaryWorker:
                 )
             )
             reply_text = response.text if response.text else "รับทราบคำสั่งครับท่านประธาน"
-            
+
         except Exception as e:
             logger.error(f"⚠️ [CEO Secretary Error]: {e}")
-            reply_text = "ขออภัยครับท่านประธาน ขณะนี้สมองกลประมวลผลส่วนผู้บริหารขัดข้องเล็กน้อย กำลังดำเนินการแก้ไขให้กลับมาทำงาน 100% ครับ"
-            
+            reply_text = f"ขออภัยครับท่านประธาน ขณะนี้สมองกลประมวลผลขัดข้องเล็กน้อย ({str(e)[:50]}) กำลังดำเนินการแก้ไขให้กลับมาทำงาน 100% ครับ"
+
         finally:
             # 🗑️ Zero-Data Retention: ลบไฟล์ออกจากเซิร์ฟเวอร์ Google ทันทีเพื่อความปลอดภัยของข้อมูลบริษัท
             if uploaded_file:
@@ -185,32 +198,32 @@ class CeoSecretaryWorker:
             plan_id = f"PLAN_{int(time.time())}"
             self.pending_plans[plan_id] = reply_text
             return self._build_approval_flex_message(reply_text, plan_id)
-        
+
         return {"type": "text", "text": reply_text}
 
     async def _generate_vvip_invite(self) -> dict:
         """ระบบสร้างรหัส VVIP แบบใช้ครั้งเดียว (Single-use Invite Code)"""
         if not supabase:
             return {"type": "text", "text": "⚠️ ไม่สามารถสร้างรหัสได้ครับ เนื่องจากระบบยังไม่ได้เชื่อมต่อฐานข้อมูล Supabase อย่างสมบูรณ์"}
-            
+
         try:
             # สร้างรหัสลับ 8 หลักสุดพรีเมียม (เช่น VVIP-A1B2C3D4)
             random_code = uuid.uuid4().hex[:8].upper()
             invite_code = f"VVIP-{random_code}"
-            
+
             # บันทึกลงตาราง invite_codes อย่างปลอดภัย
             def insert_code():
                 supabase.table("invite_codes").insert({
                     "code": invite_code,
                     "is_used": False
                 }).execute()
-                
+
             await asyncio.to_thread(insert_code)
-            
+
             # สร้าง URL อ้างอิง
             base_url = "https://www.sirinthanatthprime.com/agent.html"
             invite_link = f"{base_url}?code={invite_code}"
-            
+
             reply = (
                 f"🎟️ สร้างรหัสเชิญ VVIP พิเศษสำเร็จแล้วครับท่านประธาน!\n\n"
                 f"🔑 รหัสอ้างอิง: {invite_code}\n\n"
@@ -219,7 +232,7 @@ class CeoSecretaryWorker:
                 f"🛡️ Security Note: ลิงก์และรหัสนี้ถูกล็อกเป็นแบบ Single-use เมื่อลูกค้าลงทะเบียนแล้ว ระบบจะทำลายสิทธิ์รหัสนี้ทิ้งทันที เพื่อป้องกันการส่งต่อให้บุคคลอื่นครับ"
             )
             return {"type": "text", "text": reply}
-            
+
         except Exception as e:
             logger.error(f"❌ [VVIP Gen Error]: {e}")
             return {"type": "text", "text": f"เกิดข้อผิดพลาดในการบันทึกรหัส VVIP ลงฐานข้อมูลครับ: {str(e)}"}
