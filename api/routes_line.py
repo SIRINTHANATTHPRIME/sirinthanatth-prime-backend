@@ -14,7 +14,6 @@ from linebot.models import (
 )
 from google import genai
 from google.genai import types
-from services.elevenlabs_service import generate_voice_from_text
 
 load_dotenv()
 

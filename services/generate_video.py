@@ -4,7 +4,6 @@ from PIL import Image
 from google.genai import types
 from gtts import gTTS
 from moviepy.editor import *
-from services.elevenlabs_service import generate_voice_from_text
 
 # 1. ตั้งค่า ImageMagick 
 magick_path = r"C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\magick.exe" # (ปรับตาม Server จริงภายหลัง)
