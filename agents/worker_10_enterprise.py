@@ -1,180 +1,196 @@
 import os
 import time
-import re
 import logging
 import asyncio
+import mimetypes
 from google import genai
 from google.genai import types
 
-# นำเข้าระบบความจำเพื่อบันทึกข้อมูลระดับองค์กร
+# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
 try:
-    from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge
+    from core_services.ai_config import PrimeAIConfig
 except ImportError:
-    def save_corporate_knowledge(t, c): return True
-    def process_and_save_link_knowledge(u): return True, "จำลองการบันทึกสำเร็จ"
+    class PrimeAIConfig:
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
+        @staticmethod
+        def get_client():
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            return genai.Client(api_key=api_key) if api_key else None
 
-logger = logging.getLogger("CeoSecretary")
+try:
+    from supabase import create_client, Client
+except ImportError:
+    Client = None
 
-class CeoSecretaryWorker:
+logger = logging.getLogger("Worker10-Enterprise")
+
+class EnterprisePartnerWorker:
     """
-    👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
-    ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    รองรับการวิเคราะห์ไฟล์วิดีโอ (Video), PDF, รูปภาพ และระบบสั่งการ 3 ปุ่ม (Approve/Modify/Reject)
+    🏢 Worker 10: Executive Enterprise Partner & Big Data Architect
+    อัปเกรด: [Gemini 2.5 Pro] ระบบจัดการข้อมูลองค์กรระดับมหาภาค, คลังสินค้า และความปลอดภัยสูงสุด
     """
-    
     def __init__(self):
-        self.ceo_line_id = os.getenv("CEO_LINE_ID", "Uxxxxxxxxxxxxxxxxx")
-        self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "")
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+        self.client = PrimeAIConfig.get_client()
+        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
         
-        self.client = genai.Client(api_key=api_key) if api_key else None
-        self.model_name = 'gemini-3.1-pro-preview'
+        # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจและ Token
+        supa_url = os.getenv("SUPABASE_URL")
+        supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+        self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
-        self.system_instruction = """
-        คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์
-        ระบบที่คุณดูแลคือ SIRINTHANATTH PRIME (AI SaaS บน LINE OA)
-        
-        หน้าที่ของคุณ:
-        1. ตอบกลับด้วยความสุภาพ เป็นมืออาชีพ และใช้คำทักทายว่า 'ครับท่านประธาน' เสมอ
-        2. หากท่านประธานส่งวิดีโอ (Video), รูปภาพ หรือไฟล์ PDF มา ให้วิเคราะห์ สกัดข้อมูล ถอดสคริปต์ และสรุปใจความสำคัญอย่างละเอียด
-        3. หากประธานขอดูสรุป (Report) ให้จำลองข้อมูลสรุปภาพรวม 4 แกนหลัก (การเงิน, การตลาด, กฎหมาย, วิศวกรรม)
-        4. เสนอแนะกลยุทธ์เชิงรุกอย่างชาญฉลาด
-        """
-        
-        self.pending_plans = {}
+        # 🔗 ลิงก์สำหรับระบบชำระเงิน (อ้างอิงจากแผนแม่บท)
+        self.topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # แทนที่ด้วยลิงก์เติม Token 
+        self.enterprise_upgrade_m = "https://buy.stripe.com/eVqeVf2Nh1OBaM7eJa6Zy04" # 4,900 / เดือน
+        self.enterprise_upgrade_y = "https://buy.stripe.com/bJe9AVfA3ctf2fB0Sk6Zy05" # 39,900 / ปี (ประหยัด 20%)
 
-    def is_ceo(self, user_id: str) -> bool:
-        """ตรวจสอบว่าเป็นท่านประธานหรือไม่"""
-        # อนุมัติสิทธิ์ให้ CEO หรือ Master Admin
-        return user_id == self.ceo_line_id or user_id == self.master_admin_id
-
-    async def process_ceo_command(self, message: str, file_path: str = None, file_type: str = None) -> dict:
-        """รับคำสั่งและไฟล์ตรงจาก CEO และสั่งการระบบเบื้องหลัง"""
-        logger.info(f"👑 [CEO Command Received]: {message[:50]}... | File: {file_type}")
-        
-        # 1. ระบบดักจับการกดปุ่มจาก Flex Message
-        if message.startswith("ACTION:APPROVE:"):
-            return self._execute_approved_plan(message)
-        elif message.startswith("ACTION:REJECT:"):
-            return {"type": "text", "text": "❌ รับทราบครับท่านประธาน แผนนี้ถูกปัดตกเรียบร้อยแล้ว ผมจะบันทึกไว้เป็นแนวทางครับ"}
-        elif message.startswith("ACTION:MODIFY:"):
-            plan_id = message.split(":")[-1]
-            return {"type": "text", "text": f"📝 รับทราบครับสำหรับแผนรหัส [{plan_id}]\nท่านประธานต้องการให้ผมปรับปรุงหรือแก้ไขในจุดไหน พิมพ์สั่งการมาได้เลยครับ"}
-
-        # 2. การประมวลผลข้อความและไฟล์ (Multimodal Video/Vision & PDF Reader)
-        uploaded_file = None
-        content_to_send = []
+    async def _check_tier_and_deduct_token(self, user_id: str, tokens_needed: int) -> dict:
+        """💳 ตรวจสอบสิทธิ์ระดับองค์กร (ENTERPRISE) และหักเครดิตอย่างชาญฉลาด"""
+        if not self.db:
+            return {"authorized": True, "tier": "ENTERPRISE"} # Fallback โหมด Offline
         
         try:
-            if not self.client:
-                return {"type": "text", "text": "⚠️ ระบบออฟไลน์ ไม่พบการเชื่อมต่อ API Key ครับท่านประธาน"}
-
-            # อัปโหลดไฟล์วิดีโอ/ภาพ/PDF ไปให้ Gemini ประมวลผล
-            if file_path and os.path.exists(file_path):
-                logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดไฟล์ {file_type} ขนาด {os.path.getsize(file_path)} bytes...")
-                uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
+            user_data = await asyncio.to_thread(
+                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
+            )
+            
+            if not user_data.data:
+                return {"authorized": False, "msg": "⚠️ ขออภัยครับ ไม่พบข้อมูลบัญชีองค์กรของท่านในระบบ กรุณาติดต่อทีมงานครับ"}
                 
-                # ⏳ กรณีเป็นไฟล์ "วิดีโอ" ระบบต้องรอให้ Google AI ย่อยภาพและเสียงจนเสร็จ (สถานะเปลี่ยนจาก PROCESSING)
+            balance = float(user_data.data[0].get("token_balance", 0.0))
+            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
+            
+            # 🛡️ ตรวจสอบสิทธิ์: สงวนสิทธิ์เฉพาะ ENTERPRISE, VIP_FOUNDER และ ADMIN
+            if tier not in ["ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
+                # 🧠 จิตวิทยาการ Upsell: ทำให้รู้สึกถึงความเหนือระดับ และเสนอแพ็กเกจที่คุ้มค่า
+                upsell_msg = (
+                    f"🏢 [Enterprise Exclusive]: ท่านผู้บริหารครับ ระบบวิเคราะห์ข้อมูลตลาด Real-time และการจัดการ Big Data/คลังสินค้า "
+                    f"เป็นฟีเจอร์ระดับเอ็กซ์คลูซีฟที่สงวนสิทธิ์เฉพาะแพ็กเกจ **'พันธมิตรองค์กร (ENTERPRISE)'** ขึ้นไปเท่านั้นครับ\n\n"
+                    f"💡 เพื่อปกป้องแบรนด์ของคุณและยกระดับระบบหลังบ้านด้วยทีมวิศวกร AI ของเรา ขออนุญาตเรียนเชิญอัปเกรดแพ็กเกจครับ:\n"
+                    f"🔹 รายเดือน (4,900 ฿): {self.enterprise_upgrade_m}\n"
+                    f"⭐ รายปีสุดคุ้ม (39,900 ฿ - ประหยัด 20%): {self.enterprise_upgrade_y}"
+                )
+                return {"authorized": False, "msg": upsell_msg}
+            
+            # 👑 VIP_FOUNDER และ ADMIN ใช้งานได้ไร้ขีดจำกัด
+            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                return {"authorized": True, "tier": tier}
+                
+            if balance >= tokens_needed:
+                new_balance = balance - tokens_needed
+                await asyncio.to_thread(
+                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                )
+                logger.info(f"🪙 [Enterprise Token Engine]: หัก {tokens_needed} Credits จาก {user_id}. คงเหลือ {new_balance}")
+                return {"authorized": True, "tier": tier}
+            else:
+                # 🧠 จิตวิทยาการแจ้งเตือนเติมเงิน (Psychological Top-up) สำหรับระดับองค์กร
+                psychological_topup = (
+                    f"🏢 เรียนท่านผู้บริหาร ระบบตรวจพบว่า 'PRIME CREDITS' ใน Smart Wallet ขององค์กรท่านใกล้หมดแล้วครับ "
+                    f"(ปริมาณ Data ชุดนี้ต้องการ {tokens_needed} เครดิตในการประมวลผล)\n\n"
+                    f"⚡ เพื่อไม่ให้การวิเคราะห์ข้อมูล Real-time และการจัดการคลังสินค้าของท่านหยุดชะงัก "
+                    f"ท่านสามารถให้ฝ่ายบัญชีเติมเครดิตเข้าสู่ระบบองค์กรได้ทันทีผ่านลิงก์นี้ครับ:\n"
+                    f"👉 {self.topup_link}"
+                )
+                return {"authorized": False, "msg": psychological_topup}
+                
+        except Exception as e:
+            logger.error(f"❌ [Enterprise Token Error]: {e}")
+            return {"authorized": True, "tier": "ENTERPRISE"}
+
+    async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
+        """ทำงานเบื้องหลัง: วิเคราะห์ Big Data, วางแผน Supply Chain และ Whitelisting"""
+        if not self.client:
+            return "⚠️ [Worker 10]: ระบบพันธมิตรองค์กรออฟไลน์ (ไม่พบ API Key)"
+
+        # 🪙 ตรวจสอบค่าใช้จ่าย: ถามกลยุทธ์องค์กร = 50 Credits, ย่อยไฟล์ Big Data/คลังสินค้า = 300 Credits
+        tokens_needed = 300 if file_path else 50
+        auth_status = await self._check_tier_and_deduct_token(user_id, tokens_needed)
+        
+        if not auth_status["authorized"]:
+            return auth_status["msg"]
+            
+        package_tier = auth_status.get("tier", "ENTERPRISE")
+        logger.info(f"🏢 [Enterprise Analytics]: เริ่มกระบวนการระดับภาคอุตสาหกรรมให้ User {user_id}...")
+
+        # 🧠 System Prompt สวมวิญญาณ Enterprise Architect ระดับโลก
+        system_instruction = f"""
+        คุณคือ 'Chief Data Officer' และ 'Enterprise Security Architect' ระดับโลก ของ SIRINTHANATTH PRIME
+        ลูกค้าท่านนี้คือพันธมิตรองค์กรระดับ: {package_tier}
+        
+        หน้าที่ของคุณ (Enterprise Solutions):
+        1. 📊 Big Data & Supply Chain: วิเคราะห์ข้อมูลคลังสินค้า (Inventory), การพยากรณ์อุปสงค์ (Demand Forecasting) และข้อมูลตลาดแบบ Real-time
+        2. 🛡️ Brand Protection & Whitelisting: วางแผนกลยุทธ์การปกป้องแบรนด์ การจัดการลิขสิทธิ์ และความปลอดภัยระดับองค์กร (Zero-Trust Security)
+        3. ⚙️ Automation Integration: เสนอโครงสร้างการเชื่อมต่อ API, ERP, หรือ CRM เพื่อให้ระบบของลูกค้าทำงานร่วมกับ AI ได้อัตโนมัติ
+        
+        รูปแบบการตอบกลับ:
+        - ภาษาระดับ Corporate Executive (ใช้ศัพท์เทคนิคทางธุรกิจและ IT ได้อย่างแม่นยำ)
+        - โครงสร้างต้องชัดเจน มีการสรุปเป็น Action Plan (สิ่งที่ต้องทำทันที, ระยะกลาง, ระยะยาว)
+        - คำนึงถึง "กฎหมาย", "ความเสี่ยงทางธุรกิจ", และ "ความคุ้มค่า (ROI)" เสมอ
+        """
+
+        uploaded_file = None
+        content_to_send = []
+
+        try:
+            # ==========================================
+            # 📂 1. จัดการอัปโหลดไฟล์ (Big Data, CSV, SQL, JSON)
+            # ==========================================
+            if file_path and os.path.exists(file_path):
+                logger.info(f"🏢 [Worker 10]: กำลังอัปโหลด Big Data เข้าสู่ Secure Cloud เพื่อทำการ Data Mining...")
+                
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if file_path.lower().endswith(('.csv', '.json', '.xml', '.sql')): 
+                    mime_type = "text/plain" # ไฟล์ Data ดิบ
+                elif file_path.lower().endswith('.xlsx'): 
+                    mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                if not mime_type: 
+                    mime_type = "application/octet-stream"
+
+                try:
+                    upload_config = types.UploadFileConfig(mime_type=mime_type)
+                    uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                except Exception as e:
+                    return f"⚠️ [Enterprise Analytics]: โครงสร้าง Database File ซับซ้อนเกินไป รบกวนส่งเป็นไฟล์ .csv, .json หรือ .xlsx ครับ"
+
+                # ⏳ Async Sync รอ Google วิเคราะห์ Big Data (อาจใช้เวลา)
                 while uploaded_file.state.name == "PROCESSING":
-                    logger.info("⏳ [CEO Secretary]: AI กำลังย่อยข้อมูลไฟล์วิดีโอ/มัลติมีเดีย...")
                     await asyncio.sleep(3)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
                 if uploaded_file.state.name == "FAILED":
-                    return {"type": "text", "text": "⚠️ ขออภัยครับ AI ไม่สามารถประมวลผลไฟล์วิดีโอ/เอกสารนี้ได้ (Processing Failed)"}
-                    
-                content_to_send.append(uploaded_file)
-                
-                if not message or message.startswith("[System Alert:"):
-                    content_to_send.append("โปรดวิเคราะห์ ถอดรหัส และสรุปเนื้อหาจากไฟล์วิดีโอ/เอกสารที่แนบมานี้อย่างละเอียดครับท่านประธาน")
-                else:
-                    content_to_send.append(message)
-            else:
-                content_to_send.append(message)
+                    return "⚠️ [Enterprise Analytics]: เกิดข้อผิดพลาดในการทำ Data Mining ระดับลึกครับ"
 
-            # สั่งรันโมเดล Gemini แบบ Async
+                content_to_send.append(uploaded_file)
+                content_to_send.append(f"โปรดทำการวิเคราะห์ Big Data / คลังสินค้า จากฐานข้อมูลนี้: {message}")
+            else:
+                content_to_send.append(f"โปรดให้คำปรึกษาระดับองค์กร/Supply Chain สำหรับประเด็นนี้: {message}")
+
+            # ==========================================
+            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction,
-                    temperature=0.7
+                    system_instruction=system_instruction,
+                    temperature=0.1 # ใช้อุณหภูมิต่ำสุด (0.1) เพื่อความถูกต้องของตัวเลข สถิติ และความปลอดภัย 100%
                 )
             )
-            reply_text = response.text if response.text else "รับทราบคำสั่งครับท่านประธาน"
             
+            return response.text if response.text else "🏢 การวิเคราะห์ข้อมูลระดับองค์กรและคลังสินค้า เสร็จสมบูรณ์ครับ"
+
         except Exception as e:
-            logger.error(f"⚠️ [CEO Secretary Error Details]: {e}")
-            # ข้อความ Error รูปแบบใหม่ (ถ้าเห็นข้อความนี้แปลว่าระบบอัปเดตแล้ว)
-            reply_text = f"⚠️ ขออภัยครับท่านประธาน สมองกลเลขาฯ ขัดข้องชั่วคราวเนื่องจาก: {str(e)[:150]}"
-            
+            logger.error(f"❌ [Worker 10 Error]: {e}")
+            return f"⚠️ [Enterprise Analytics]: ระบบฐานข้อมูลองค์กรขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ (Error: {str(e)[:50]})"
+
         finally:
-            # ทำลายไฟล์ชั่วคราวบนเซิร์ฟเวอร์ Google ทันทีเพื่อความปลอดภัยระดับองค์กร
+            # ==========================================
+            # 🧹 3. Zero-Data Retention Policy (Military-Grade Cyber Shield)
+            # ==========================================
             if uploaded_file:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
-                except Exception as e:
-                    logger.error(f"⚠️ Failed to delete file: {e}")
-
-        # 3. ตรวจจับคีย์เวิร์ดเพื่อส่ง Flex Message ขออนุมัติ (ถ้ามี)
-        if any(keyword in reply_text for keyword in ["เสนอ", "พิจารณา", "แผนการ", "ปรับปรุงใหม่"]):
-            plan_id = f"PLAN_{int(time.time())}"
-            self.pending_plans[plan_id] = reply_text
-            return self._build_approval_flex_message(reply_text, plan_id)
-        
-        return {"type": "text", "text": reply_text}
-
-    def _build_approval_flex_message(self, report_text: str, plan_id: str) -> dict:
-        """สร้าง LINE Flex Message สไตล์พรีเมียม (Navy & Gold) พร้อม 3 ปุ่ม"""
-        return {
-            "type": "flex",
-            "altText": "แฟ้มรายงานจากเลขาฯ อัจฉริยะ (รอการพิจารณา)",
-            "contents": {
-                "type": "bubble",
-                "header": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [{"type": "text", "text": "👑 EXECUTIVE REPORT", "weight": "bold", "color": "#D4AF37"}],
-                    "backgroundColor": "#0F172A"
-                },
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [{"type": "text", "text": report_text[:300] + "...\n\n(โปรดดูรายละเอียดเต็มด้านบน)", "wrap": True, "size": "sm"}]
-                },
-                "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "color": "#00B900",
-                            "action": {"type": "message", "label": "✅ อนุมัติ (Approve)", "text": f"ACTION:APPROVE:{plan_id}"}
-                        },
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "color": "#D4AF37",
-                            "action": {"type": "message", "label": "📝 แก้ไขปรับปรุง (Modify)", "text": f"ACTION:MODIFY:{plan_id}"}
-                        },
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "color": "#FF334B",
-                            "action": {"type": "message", "label": "❌ ปฏิเสธ (Reject)", "text": f"ACTION:REJECT:{plan_id}"}
-                        }
-                    ]
-                }
-            }
-        }
-
-    def _execute_approved_plan(self, action_data: str) -> dict:
-        plan_id = action_data.split(":")[-1]
-        logger.info(f"🔄 [Hot Reload]: อัปเดตระบบด้วยแผน {plan_id}")
-        return {
-            "type": "text", 
-            "text": f"✅ อนุมัติสำเร็จ! เลขาฯ ได้นำแผนรหัส [{plan_id}] ไปสั่งการอัปเดตระบบหลังบ้านเรียบร้อยแล้วครับ"
-        }
+                    logger.info("🛡️ [Zero-Trust Security]: ทำลายฐานข้อมูลลับขององค์กรลูกค้าออกจากระบบทันที (Data Wiped)")
+                except:
+                    pass

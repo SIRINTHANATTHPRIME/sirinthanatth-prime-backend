@@ -203,39 +203,39 @@ class CeoSecretaryWorker:
         return {"type": "text", "text": reply_text}
 
     async def _generate_vvip_invite(self) -> dict:
-        """ระบบสร้างรหัส VVIP พร้อมดักจับข้อผิดพลาดกรณีไม่มีตารางฐานข้อมูล"""
+        """ระบบสร้างรหัส VVIP แบบใช้ครั้งเดียว (Single-use Invite Code)"""
         if not supabase:
             return {"type": "text", "text": "⚠️ ไม่สามารถสร้างรหัสได้ครับ เนื่องจากระบบยังไม่ได้เชื่อมต่อฐานข้อมูล Supabase"}
-
+            
         try:
             random_code = uuid.uuid4().hex[:8].upper()
             invite_code = f"VVIP-{random_code}"
-
+            
             def insert_code():
                 supabase.table("invite_codes").insert({
                     "code": invite_code,
                     "is_used": False
                 }).execute()
-
+                
             await asyncio.to_thread(insert_code)
-
-            base_url = "https://www.sirinthanatthprime.com/agent.html"
-            invite_link = f"{base_url}?code={invite_code}"
-
+            
+            # 🚀 แก้ไขจุดนี้: เปลี่ยนจากเว็บตรง เป็นลิงก์ LIFF เพื่อให้เปิดใน LINE ได้อย่างสมบูรณ์ ไม่เด้งออก
+            # (ใช้ LIFF ID ของท่านประธาน: 2011067128-fnWmOak4)
+            liff_base_url = "https://liff.line.me/2011067128-fnWmOak4"
+            invite_link = f"{liff_base_url}?code={invite_code}"
+            
             reply = (
                 f"🎟️ สร้างรหัสเชิญ VVIP พิเศษสำเร็จแล้วครับท่านประธาน!\n\n"
                 f"🔑 รหัสอ้างอิง: {invite_code}\n\n"
-                f"ลิงก์สำหรับเข้าใช้งานระบบแบบไม่ต้องผ่าน Token:\n{invite_link}\n\n"
-                f"🛡️ Security Note: ลิงก์นี้เป็นแบบ Single-use ใช้ได้ 1 ครั้งเท่านั้นครับ"
+                f"ท่านสามารถคัดลอกลิงก์ด้านล่างนี้ ส่งให้ลูกค้าระดับ VIP เพื่อเข้าใช้งานระบบได้ทุกฟังก์ชัน โดยไม่ต้องผ่านระบบ Token ครับ:\n\n"
+                f"{invite_link}\n\n"
+                f"🛡️ Security Note: ลิงก์และรหัสนี้เป็นแบบใช้ครั้งเดียว เมื่อลูกค้าลงทะเบียนผ่านระบบ LIFF แล้ว ระบบจะทำลายสิทธิ์รหัสนี้ทิ้งทันทีครับ"
             )
             return {"type": "text", "text": reply}
-
+            
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"❌ [VVIP Gen Error]: {error_msg}")
-            if "PGRST125" in error_msg or "relation" in error_msg.lower():
-                return {"type": "text", "text": "⚠️ แจ้งเตือนท่านประธาน: ยังไม่ได้สร้างตาราง 'invite_codes' ในฐานข้อมูล Supabase ครับ\n\nกรุณาเข้าไปที่ Supabase Dashboard -> SQL Editor แล้วรันคำสั่งสร้างตาราง invite_codes ก่อนใช้งานครับ"}
-            return {"type": "text", "text": f"เกิดข้อผิดพลาดในการบันทึกรหัส VVIP: {error_msg[:60]}"}
+            logger.error(f"❌ [VVIP Gen Error]: {e}")
+            return {"type": "text", "text": f"เกิดข้อผิดพลาดในการบันทึกรหัส VVIP ลงฐานข้อมูลครับ: {str(e)}"}
 
     def _build_approval_flex_message(self, report_text: str, plan_id: str) -> dict:
         return {

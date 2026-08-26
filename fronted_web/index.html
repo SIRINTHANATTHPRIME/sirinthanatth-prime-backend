@@ -81,7 +81,6 @@
             50% { text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 40px rgba(255, 215, 0, 0.95), 0 0 60px rgba(255, 215, 0, 0.6); color: #ffffff; }
             100% { text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(255, 215, 0, 0.2); color: #FFD700; }
         }
-
         .gold-text { color: #FFD700; animation: primeGlow 4s infinite ease-in-out; }
 
         .section-title {
@@ -154,6 +153,20 @@
         .card { padding: 30px 20px; background: rgba(10, 10, 15, 0.92); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
         .card-prime { border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.96); position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12); }
 
+        /* 🎁 Token Promotion Badge Styles */
+        .promo-badge {
+            margin: 15px 0; padding: 12px; border-radius: 8px; text-align: center;
+            font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px;
+            animation: pulse-badge 3s infinite;
+        }
+        .promo-cyan { background: rgba(0, 229, 255, 0.1); border: 1px dashed #00e5ff; color: #00e5ff; }
+        .promo-gold { background: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; color: #FFD700; }
+        @keyframes pulse-badge {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 0.8; }
+        }
+
         /* 🎚️ Billing Switch Styling */
         .billing-toggle { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 30px; }
         .billing-label { font-size: 0.95rem; color: #888; font-weight: 600; transition: color 0.3s; }
@@ -169,13 +182,11 @@
         .site-footer a { color: #888; text-decoration: none; margin: 0 10px; transition: color 0.3s; }
         .site-footer a:hover { color: #FFD700; }
 
-        @media (min-width: 992px) {
-            .card-prime { transform: scale(1.04); z-index: 2; }
-        }
+        @media (min-width: 992px) { .card-prime { transform: scale(1.04); z-index: 2; } }
     
         /* =========================================
-           ส่วนดีไซน์ 3D / วิดีโอ และ Google Compliance 
-           ========================================= */
+            ส่วนดีไซน์ 3D / วิดีโอ และ Google Compliance 
+            ========================================= */
         .title-3d {
             font-size: 3.5rem; font-weight: 800; text-align: center; margin: 50px 0 20px;
             color: #D4AF37; text-transform: uppercase; letter-spacing: 2px;
@@ -251,54 +262,20 @@
 
         /* 🔥 สไตล์ตกแต่งกล่อง VIP Privileges & Tokenomics (Accordion) */
         .accordion-btn {
-            background: rgba(255, 215, 0, 0.08);
-            color: #FFD700;
-            cursor: pointer;
-            padding: 16px 20px;
-            width: 100%;
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            text-align: left;
-            outline: none;
-            font-size: 1.05rem;
-            font-weight: 800;
-            transition: 0.4s;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: rgba(255, 215, 0, 0.08); color: #FFD700; cursor: pointer; padding: 16px 20px; width: 100%;
+            border: 1px solid rgba(255, 215, 0, 0.4); text-align: left; outline: none; font-size: 1.05rem; font-weight: 800;
+            transition: 0.4s; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
         }
-        .accordion-btn:hover, .accordion-btn.active {
-            background: rgba(255, 215, 0, 0.2);
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.15);
-        }
-        .accordion-btn:after {
-            content: '\002B'; /* เครื่องหมายบวก */
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        .accordion-btn.active:after {
-            content: "\2212"; /* เครื่องหมายลบ */
-        }
+        .accordion-btn:hover, .accordion-btn.active { background: rgba(255, 215, 0, 0.2); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.15); }
+        .accordion-btn:after { content: '\002B'; font-size: 1.8rem; font-weight: bold; }
+        .accordion-btn.active:after { content: "\2212"; }
         .accordion-panel {
-            padding: 0 20px;
-            background: rgba(0, 0, 0, 0.4);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.4s ease;
-            border-left: 2px solid rgba(255, 215, 0, 0.3);
-            border-right: 2px solid rgba(255, 215, 0, 0.3);
-            border-bottom: none;
-            border-radius: 0 0 12px 12px;
-            margin-top: -15px;
-            margin-bottom: 15px;
+            padding: 0 20px; background: rgba(0, 0, 0, 0.4); max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease; border-left: 2px solid rgba(255, 215, 0, 0.3);
+            border-right: 2px solid rgba(255, 215, 0, 0.3); border-bottom: none; border-radius: 0 0 12px 12px; margin-top: -15px; margin-bottom: 15px;
         }
-        .accordion-panel.show {
-            max-height: 900px; /* ขยายความสูงเมื่อแสดงผล */
-            padding: 20px;
-            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
-        }
+        .accordion-panel.show { max-height: 900px; padding: 20px; border-bottom: 2px solid rgba(255, 215, 0, 0.3); }
 
         .vip-privilege-list { list-style: none; padding: 0; margin: 0; }
         .vip-privilege-list li {
@@ -376,21 +353,26 @@
         </div>
     </div>
 
-    <!-- Modal ข้อตกลงเงื่อนไข (Disclaimer) -->
+    <!-- Modal ข้อตกลงเงื่อนไข (Disclaimer) - ทำงานร่วมกับทุกแพ็กเกจ และอ้างอิง PDPA ครอบคลุมกฎหมาย -->
     <div id="disclaimerModal" class="modal-overlay">
         <div class="modal-box" id="disclaimerBox">
             <h3 style="color: #FFD700; margin-top: 0; font-size: 1.3rem; text-align: center;">🛡️ คำมั่นสัญญาและข้อตกลงการรับบริการระดับสากล</h3>
             <div style="font-size: 0.85rem; color: #ccc; line-height: 1.6; overflow-y: auto; padding-right: 10px; margin: 15px 0; flex-grow: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding-top: 12px; padding-bottom: 12px; max-height: 300px;">
-                <p><strong>1. เครื่องมือสนับสนุนผู้บริหาร (Executive Decision Support):</strong> ข้อมูลบทวิเคราะห์กราฟหุ้น งบการเงิน และกลยุทธ์ที่ประมวลผลโดย SIRINTHANATTH PRIME เป็นการนำฐานข้อมูลสถิติมาจัดโครงสร้างเพื่อ "ช่วยประหยัดเวลา" และ "เพิ่มมุมมอง" ให้กับท่าน ระบบไม่ได้มีเจตนาหรือนโยบายชี้ชวนการลงทุนแต่อย่างใด ความสำเร็จทางธุรกิจที่ยิ่งใหญ่ เกิดจากข้อมูลอัจฉริยะผสานกับวิจารณญาณที่เฉียบขาดของท่านเสมอ</p>
-                <p><strong>2. ความโปร่งใสของระบบ Smart Logistics:</strong> เครดิต (Token) สำหรับบริการจัดการขนส่ง เป็นค่าธรรมเนียมอำนวยความสะดวกในการให้ AI จัดการระบบหลังบ้านและสร้างใบปะหน้า เพื่อให้ท่านมีเวลาโฟกัสกับการขาย (ไม่รวมอัตราค่าจัดส่งพัสดุจริง ซึ่งจะคำนวณตามน้ำหนักและโปรโมชั่นจากบริษัทขนส่ง)</p>
-                <p><strong>3. ขอบเขตการสร้างสรรค์ผลงาน 4K:</strong> เพื่อให้ท่านได้รับผลงานระดับสตูดิโอที่รวดเร็วและเกิด Conversion สูงสุด การสร้างวิดีโอ 4K จะอยู่ในรูปแบบคลิปไฮไลท์ (3-5 วินาที) และเสียงพากย์ 1 นาที ผลงานที่ถูกสร้างขึ้น ท่านถือสิทธิ์นำไปใช้ประโยชน์ทางการค้าได้ 100%</p>
-                <p><strong>4. มาตรฐานความปลอดภัยของข้อมูล (PDPA & Zero-Data Retention):</strong> เราดูแลข้อมูลธุรกิจของท่านเสมือนความลับระดับองค์กร ข้อมูลเอกสาร ภาพถ่าย และงบการเงินที่ท่านอัปโหลด จะถูกประมวลผลผ่านเซิร์ฟเวอร์ความปลอดภัยสูง และมีระบบล้างข้อมูลชั่วคราว (Auto-Delete) ภายใน 48 ชั่วโมง เพื่อป้องกันการรั่วไหล 100%</p>
-                <p><strong>5. นโยบายการใช้ทรัพยากรอัจฉริยะ (Smart Token Utilization):</strong> เพื่อรักษามาตรฐานความเร็วและเสถียรภาพของเซิร์ฟเวอร์สำหรับสมาชิก VIP ระบบจะเบิกจ่าย Token ทันทีเมื่อมีการสั่งประมวลผล บริษัทฯ ขอสงวนสิทธิ์การคืนทรัพยากรเมื่อคำสั่งเริ่มทำงานแล้ว (No-Refund) และเพื่อประสิทธิภาพสูงสุด Token จะมีอายุการใช้งาน 1 ปี นับจากวันที่สั่งซื้อ</p>
+                <p><strong>1. เครื่องมือสนับสนุนผู้บริหาร (No Financial Advice):</strong> ข้อมูลบทวิเคราะห์กราฟหุ้น งบการเงิน และกลยุทธ์ที่ประมวลผลโดย SIRINTHANATTH PRIME เป็นการนำฐานข้อมูลสถิติมาจัดโครงสร้างเพื่อ "ช่วยประหยัดเวลา" <strong>ระบบไม่ได้มีเจตนาหรือนโยบายชี้ชวนการลงทุนแต่อย่างใด</strong> ความสำเร็จทางธุรกิจที่ยิ่งใหญ่ เกิดจากข้อมูลอัจฉริยะผสานกับวิจารณญาณที่เฉียบขาดของท่านเสมอ บริษัทฯ ไม่ขอรับผิดชอบต่อผลกำไรหรือขาดทุนใดๆ ที่เกิดขึ้น</p>
+                <p><strong>2. มาตรฐานความปลอดภัยข้อมูล (PDPA & Zero-Data Retention):</strong> ภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 เราดูแลข้อมูลธุรกิจของท่านเสมือนความลับระดับองค์กร ข้อมูลเอกสาร ภาพถ่าย จะถูกประมวลผลผ่านเซิร์ฟเวอร์ความปลอดภัยสูง และมีระบบล้างข้อมูลชั่วคราว (Auto-Delete) ทันทีหลังประมวลผลเสร็จ เพื่อป้องกันการรั่วไหล 100%</p>
+                <p><strong>3. ข้อจำกัดความรับผิดชอบเชิงเทคนิค (AI Hallucinations):</strong> เทคโนโลยีปัญญาประดิษฐ์ (AI) อาจมีข้อจำกัดในการตีความบริบทบางประการ ผู้ใช้ต้องทำการทบทวนข้อมูลสำคัญอีกครั้งก่อนนำไปใช้งานจริงเสมอ</p>
+                <p><strong>4. นโยบายการใช้ทรัพยากร (No-Refund Policy):</strong> เพื่อรักษามาตรฐานความเร็วของเซิร์ฟเวอร์ ระบบจะเบิกจ่าย Token ทันทีเมื่อมีการสั่งประมวลผล บริษัทฯ ขอสงวนสิทธิ์ไม่คืนเงิน (No-Refund) เมื่อสถานะการชำระเสร็จสิ้นและสิทธิ์เปิดใช้งานแล้ว</p>
             </div>
+            
+            <div id="dynamicAgentInputArea" class="agent-input-group" style="display: none; margin-bottom: 15px;">
+                <p style="color: #00e5ff; margin: 0 0 5px 0; font-size: 0.85rem; font-weight: 600;">🔑 รหัสผู้แนะนำ Agent Code (ถ้ามี):</p>
+                <input type="text" id="globalAgentCode" placeholder="ระบุรหัสอ้างอิงพาร์ทเนอร์" style="padding: 12px; font-size: 1rem;">
+            </div>
+
             <div style="margin: 15px 0; display: flex; align-items: flex-start; gap: 10px;">
                 <input type="checkbox" id="acceptCheck" onchange="toggleConsent()" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
                 <label for="acceptCheck" style="font-size: 0.83rem; color: #eee; cursor: pointer; line-height: 1.4;">
-                    ข้าพเจ้าได้อ่าน เข้าใจ และตกลงรับคำมั่นสัญญาด้านความปลอดภัย นโยบายการใช้ Token (PDPA) และเงื่อนไขการบริการทั้งหมดโดยสมบูรณ์
+                    ข้าพเจ้าได้อ่าน เข้าใจ และตกลงรับคำมั่นสัญญาด้านความปลอดภัย นโยบายตามกฎหมายอิเล็กทรอนิกส์ (PDPA) และเงื่อนไขการบริการทั้งหมดโดยสมบูรณ์
                 </label>
             </div>
             <div style="display: flex; gap: 15px; margin-top: 10px;">
@@ -407,7 +389,6 @@
             <h2 style="color: #FFD700; text-align: center; margin-top: 0; font-size: 1.6rem;">👑 สมัครสมาชิก 100 VIP Founder</h2>
             <p style="color: #ccc; text-align: center; font-size: 0.9rem; margin-bottom: 20px;">กรุณาตรวจสอบสิทธิพิเศษและทำรายการเพื่อรับสิทธิ์ (Founders Pass)</p>
             
-            <!-- ปุ่มที่ 1: สิทธิพิเศษกลุ่ม 100 VIP -->
             <button class="accordion-btn">💎 1. สิทธิพิเศษกลุ่ม 100 VIP</button>
             <div class="accordion-panel">
                 <p style="color: #aaa; font-size: 0.85rem; margin-top: 0;">เอกสิทธิ์เฉพาะผู้นำ 100 ท่านแรก พร้อมสิทธิ์การใช้ระบบ AI และสิทธิประโยชน์ครบวงจร:</p>
@@ -420,14 +401,12 @@
                 </ul>
             </div>
 
-            <!-- ปุ่มที่ 2: รายละเอียดระบบ Smart Wallet & Token -->
             <button class="accordion-btn">⚡ 2. รายละเอียดระบบ Smart Wallet & Token</button>
             <div class="accordion-panel">
                 <h4 style="color: #fff; margin: 15px 0 10px 0; font-size: 0.95rem; display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(212, 175, 55, 0.4); padding-bottom: 12px; font-weight: 400;">
                     อัตราแลกเปลี่ยนคลาวด์ <span style="color: #D4AF37; font-weight: 600;">1 ฿ = 10 Credits</span>
                 </h4>
                 <ul class="tokenomics-list" style="margin-bottom: 15px;">
-                    <!-- แชท (Unlimited Fair Use) -->
                     <li style="border-left-color: #00E676;">
                         <div class="token-item-header">
                             <span class="token-title">💬 Smart Chat & Strategy</span>
@@ -435,8 +414,6 @@
                         </div>
                         <span class="token-desc">จดจำบริบทลึกระดับองค์กร ไม่จำกัดตัวอักษร ภายใต้ Fair Use Policy</span>
                     </li>
-    
-                    <!-- คุยสด Voice AI (ใหม่) -->
                     <li style="border-left-color: #9C27B0;">
                         <div class="token-item-header">
                             <span class="token-title">📞 Live Voice Call (AI Advisor)</span>
@@ -444,8 +421,6 @@
                         </div>
                         <span class="token-desc">คุยสดแบบ Real-time กับคุณธนัตถ์ หรือ คุณสิรินทร์ (เศษนาทีปัดขึ้น)</span>
                     </li>
-    
-                    <!-- วิเคราะห์ภาพ -->
                     <li style="border-left-color: #42A5F5;">
                         <div class="token-item-header">
                             <span class="token-title">📊 AI Vision & Graph Analysis</span>
@@ -453,8 +428,6 @@
                         </div>
                         <span class="token-desc">สแกนความละเอียดสูงระดับ OCR (รองรับ JPG/PNG สูงสุด 20 MB/ภาพ)</span>
                     </li>
-    
-                    <!-- วิเคราะห์เอกสาร -->
                     <li style="border-left-color: #FF7043;">
                         <div class="token-item-header">
                             <span class="token-title">📄 Executive Document Audit</span>
@@ -462,8 +435,6 @@
                         </div>
                         <span class="token-desc">วิเคราะห์เชิงลึก PDF/Excel (ความยาวสูงสุด 20 หน้า, ไม่เกิน 25 MB/ไฟล์)</span>
                     </li>
-    
-                    <!-- เรียกขนส่ง -->
                     <li style="border-left-color: #FFA726;">
                         <div class="token-item-header">
                             <span class="token-title">🚚 ระบบเรียกขนส่ง Flash Express</span>
@@ -471,8 +442,6 @@
                         </div>
                         <span class="token-desc">AI ดึงที่อยู่จัดส่งอัตโนมัติสูงสุด 10 ออเดอร์/ครั้ง (*ไม่รวมค่าขนส่งจริง)</span>
                     </li>
-    
-                    <!-- วิดีโอ 4K -->
                     <li style="border-left-color: #FFD700; background: linear-gradient(90deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.3) 100%);">
                         <div class="token-item-header">
                             <strong class="token-title" style="color: #FFD700;">🎬 Cinematic 4K Video Production</strong>
@@ -483,7 +452,6 @@
                 </ul>
             </div>
 
-            <!-- ส่วนชำระเงินที่คงที่และมองเห็นตลอดเวลา -->
             <div class="vip-payment-box">
                 <div class="personal-token-id">
                     <p>YOUR PERSONAL VIP TOKEN ID</p>
@@ -498,7 +466,7 @@
 
                 <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border-left: 3px solid #00E5FF;">
                     <input type="checkbox" id="ackVipCheck" onchange="toggleVipPayBtn()" style="margin-top: 2px; width: 22px; height: 22px; accent-color: #00E5FF; cursor: pointer;">
-                    <label for="ackVipCheck" style="font-size: 0.85rem; color: #eee; cursor: pointer; line-height: 1.5; font-weight: 600;">ข้าพเจ้าได้เปิดอ่าน รับทราบสิทธิพิเศษกลุ่ม 100 VIP และเงื่อนไขการใช้ระบบ Token ทั้งหมดเรียบร้อยแล้ว</label>
+                    <label for="ackVipCheck" style="font-size: 0.85rem; color: #eee; cursor: pointer; line-height: 1.5; font-weight: 600;">ข้าพเจ้าได้รับทราบสิทธิพิเศษกลุ่ม 100 VIP และเงื่อนไขการใช้ระบบ Token ทั้งหมดเรียบร้อยแล้ว</label>
                 </div>
 
                 <button class="checkout-btn" id="vipPayBtn" onclick="processVipPayment()" disabled style="background: #333; color: #777; cursor: not-allowed; opacity: 0.7; box-shadow: none;">💳 ชำระเงินเข้าสู่ระบบ 100 VIP (฿4,490) ผ่าน Stripe</button>
@@ -514,14 +482,14 @@
                 <h2>Company Overview & Operational Roadmap</h2>
                 <p>Marketing Spark Combine Co., Ltd. | Official Google Cloud Startup Program Compliance</p>
             </div>
-      
+       
             <div class="compliance-card">
                 <h3><span style="font-size: 1.5rem;">🎯</span> 1. Business Description & Core Problem</h3>
                 <p><strong>Marketing Spark Combine Co., Ltd.</strong> operates <strong>SIRINTHANATTH PRIME</strong>, an enterprise-grade AI SaaS ecosystem designed for SMEs, e-commerce merchants, and retail investors across Thailand and Southeast Asia.</p>
                 <p><strong>Core Problem Solved:</strong> SMEs and online traders suffer from severe "App-Switching Fatigue," delayed customer response times (>3 minutes), rising advertising costs, and legal/financial compliance risks. SIRINTHANATTH PRIME solves this by delivering zero-latency multi-agent AI assistants directly through native messaging platforms (LINE OA) and integrated web portals.</p>
                 <p style="margin-bottom: 0;"><strong>Target Market:</strong> Over 2.5 million e-commerce merchants, 2 million retail investors, and corporate professionals in Thailand and the broader SEA region.</p>
             </div>
-      
+       
             <div class="compliance-card">
                 <h3><span style="font-size: 1.5rem;">👤</span> 2. Leadership & AI-Driven Infrastructure</h3>
                 <div class="team-grid">
@@ -538,7 +506,7 @@
                     </div>
                 </div>
             </div>
-      
+       
             <div class="compliance-card">
                 <h3><span style="font-size: 1.5rem;">🚀</span> 3. Product Architecture & Current Stage</h3>
                 <p><strong>Product Offering:</strong> A multi-tenant AI SaaS ecosystem providing 24/7 automated sales closing, multi-agent RAG knowledge bases, automated document processing, real-time market data analysis, and high-fidelity 4K media rendering.</p>
@@ -666,12 +634,17 @@
         </div>
 
         <div class="pricing-cards">
+            <!-- ESSENTIAL -->
             <div class="card">
                 <div>
                     <h3>เพื่อนคู่คิด (ESSENTIAL)</h3>
                     <div style="font-size: 2rem; font-weight: 600; margin: 15px 0; color: #fff;">
                         ฿ <span class="amount" data-monthly="990" data-yearly="4,900">990</span> 
                         <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
+                    </div>
+                    <!-- 🎁 Token Promotion Badge -->
+                    <div class="promo-badge promo-cyan">
+                        🎁 รับโบนัสฟรี 1,000 Tokens ทันที
                     </div>
                     <ul class="features" style="list-style: none; padding: 0;">
                         <li><span class="feature-highlight">ยิ่งส่งเยอะยิ่งถูก ลดต้นทุนขนส่ง ด้วยค่าส่งพัสดุเริ่มต้นเพียง 12 บาท*</span></li>
@@ -682,6 +655,7 @@
                 <button class="btn-3d btn-cyan" style="width: 100%; margin-top: 20px;" onclick="initiateNormalFlow('ESSENTIAL')">เลือกแพ็กเกจ Essential</button>
             </div>
 
+            <!-- PRIME -->
             <div class="card card-prime">
                 <div style="position: absolute; top: -15px; right: -15px; background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; padding: 5px 15px; font-weight: 800; border-radius: 20px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.7);">ยอดนิยม</div>
                 <div>
@@ -689,6 +663,10 @@
                     <div class="gold-text" style="font-size: 2.2rem; font-weight: 800; margin: 15px 0;">
                         ฿ <span class="amount" data-monthly="2,500" data-yearly="12,900">2,500</span> 
                         <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
+                    </div>
+                    <!-- 🎁 Token Promotion Badge -->
+                    <div class="promo-badge promo-gold">
+                        🎁 รับโบนัสฟรี 3,000 Tokens พิเศษ
                     </div>
                     <ul class="features" style="list-style: none; padding: 0;">
                         <li>รวมสิทธิประโยชน์ทั้งหมดจากแพ็กเกจ Essential</li>
@@ -699,12 +677,17 @@
                 <button class="btn-3d btn-gold" style="width: 100%; margin-top: 20px;" onclick="initiateNormalFlow('PRIME')">เลือกแพ็กเกจ Prime</button>
             </div>
 
+            <!-- ENTERPRISE -->
             <div class="card">
                 <div>
                     <h3>พันธมิตรองค์กร (ENTERPRISE)</h3>
                     <div style="font-size: 2rem; font-weight: 600; margin: 15px 0; color: #fff;">
                         ฿ <span class="amount" data-monthly="4,900" data-yearly="39,900">4,900</span> 
                         <span class="period" style="font-size: 1rem; color: #999;">/ เดือน</span>
+                    </div>
+                    <!-- 🎁 Token Promotion Badge -->
+                    <div class="promo-badge promo-cyan">
+                        🎁 รับโบนัสฟรี 10,000 Tokens องค์กร
                     </div>
                     <ul class="features" style="list-style: none; padding: 0;">
                         <li>เชื่อมต่อข้อมูลตลาดแบบ Real-time แม่นยำสูง</li>
@@ -762,13 +745,16 @@
 
         let currentVipToken = ""; 
         let currentFlowStatus = ""; 
+        
+        // 🔥 การรับข้อมูลผู้ใช้จาก LIFF เพื่อเตรียมส่งผ่าน Stripe (Client Reference ID)
+        let userLineId = "WEB_GUEST"; 
 
-        // ระบบเชื่อมหน้าเว็บ (Storage) และหลังบ้าน (Cloud Run)
         async function initializeLiffAndBackend() {
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
+                    userLineId = profile.userId; // ดึง UserID ไว้เชื่อมหลังบ้านอัตโนมัติ
                     console.log("เชื่อมต่อผู้ใช้งาน LINE ID สำเร็จ:", profile.displayName);
                     sendDataToBackend(profile);
                 }
@@ -780,7 +766,7 @@
         async function sendDataToBackend(profile) {
             if(CLOUD_RUN_API_URL.includes("YOUR_CLOUD_RUN_URL")) return; 
             try {
-                const response = await fetch("https://prime-core-agent-601183279633.asia-southeast3.run.app/api/sync-user", {
+                const response = await fetch(`${CLOUD_RUN_API_URL}/api/sync-user`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -799,6 +785,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             initializeLiffAndBackend();
             
+            // Accordion Logic
             const acc = document.getElementsByClassName("accordion-btn");
             for (let i = 0; i < acc.length; i++) {
                 acc[i].addEventListener("click", function() {
@@ -813,13 +800,16 @@
             }
         });
 
+        // 🧠 Logic การเข้าสู่ระบบชำระเงิน
         function initiateVipFlow() {
             currentFlowStatus = "VIP_FLOW";
+            document.getElementById('dynamicAgentInputArea').style.display = 'none'; // ซ่อนช่อง Agent เพราะ VIP มีกล่องรับต่างหาก
             openDisclaimer(); 
         }
 
         function initiateNormalFlow(planName) {
             currentFlowStatus = "NORMAL_FLOW_" + planName;
+            document.getElementById('dynamicAgentInputArea').style.display = 'block'; // แสดงกล่องให้กรอก Agent สำหรับแพ็กเกจทั่วไป
             openDisclaimer(); 
         }
 
@@ -879,7 +869,6 @@
             document.getElementById('vipModalBox').style.display = 'none';
         }
 
-        // 🔄 ฟังก์ชันสวิตช์ปุ่มชำระเงินเมื่อลูกค้ายอมรับเงื่อนไข
         function toggleVipPayBtn() {
             const isChecked = document.getElementById('ackVipCheck').checked;
             const btn = document.getElementById('vipPayBtn');
@@ -900,26 +889,19 @@
             }
         }
 
+        // 🧠 การสร้าง Payload อัจฉริยะส่งให้ Stripe (เชื่อมระบบ Agent อัตโนมัติ)
         function processVipPayment() {
-            const agentCodeInput = document.getElementById('agentCode').value.trim();
-            // ถ้าลูกค้าลืมกรอกรหัสแนะนำ ระบบจะไม่ให้ผ่าน
-            if(!agentCodeInput) {
-                alert("กรุณากรอก Agent Code (รหัสผู้แนะนำ) ให้ครบถ้วนก่อนทำรายการครับ");
-                document.getElementById('agentCode').focus();
-                return;
-            }
-            
+            const agentCodeInput = document.getElementById('agentCode').value.trim() || "NOAGENT";
             let targetUrl = STRIPE_VIP_CHECKOUT_URL;
-            if (targetUrl.includes("YOUR_VIP_STRIPE_LINK")) {
-                targetUrl = LINE_OA_REDIRECT_URL;
-            } else {
-                // ผูกรหัส VIP ส่วนตัวและรหัส Agent ติดไปกับลิงก์ Stripe เพื่อให้ Database จำได้
-                targetUrl += "?client_reference_id=" + encodeURIComponent(currentVipToken + "_AGENT_" + agentCodeInput);
-            }
+            
+            // นำ Token + AgentCode + LineID มัดรวมเข้าไปใน Stripe (client_reference_id)
+            const payload = currentVipToken + "_AGENT_" + agentCodeInput + "_LINE_" + userLineId;
+            targetUrl += "?client_reference_id=" + encodeURIComponent(payload);
+            
             window.location.href = targetUrl;
         }
 
-        // 🎚️ ฟังก์ชันเปลี่ยนราคาและหน่วย (/ เดือน vs / ปี) ปรับปรุงระบบป้องกันข้อผิดพลาดสมบูรณ์ 100%
+        // 🎚️ ฟังก์ชันเปลี่ยนราคาและหน่วย (/ เดือน vs / ปี)
         function toggleBilling() {
             const isYearly = document.getElementById('billingSwitch').checked;
             document.getElementById('label-monthly').classList.toggle('active', !isYearly);
@@ -936,7 +918,7 @@
             });
         }
 
-        // 🚀 ฟังก์ชันเลือกเปิดลิงก์ Stripe ชำระเงินแบบไดนามิก (เช็กแพ็กเกจ + เช็กรายเดือน/รายปี)
+        // 🚀 ฟังก์ชันไดนามิก สำหรับแพ็กเกจทั่วไป
         function checkoutDynamic(planName) {
             const isYearly = document.getElementById('billingSwitch').checked;
             let targetUrl = "";
@@ -949,12 +931,13 @@
                 targetUrl = isYearly ? STRIPE_ENTERPRISE_YEARLY_URL : STRIPE_ENTERPRISE_MONTHLY_URL;
             }
 
-            // ถ้าใส่ลิงก์ Stripe ของจริงแล้ว ให้พาลูกค้าไปจ่ายเงินทันที
+            const globalAgentCode = document.getElementById('globalAgentCode').value.trim() || "NOAGENT";
+            const payload = planName + "_AGENT_" + globalAgentCode + "_LINE_" + userLineId;
+
             if (targetUrl && !targetUrl.includes("YOUR_")) {
-                window.location.href = targetUrl;
+                window.location.href = targetUrl + "?client_reference_id=" + encodeURIComponent(payload);
             } else {
-                // หากยังไม่ได้ใส่ลิงก์จริง จะนำทางไปแชท LINE OA เป็นด่านสำรอง
-                alert('กำลังนำท่านสู่ระบบชำระเงินสากลสำหรับแพ็กเกจ: ' + planName + (isYearly ? ' (รายปี)' : ' (รายเดือน)'));
+                alert('กำลังนำท่านสู่ระบบชำระเงินสากลสำหรับแพ็กเกจ: ' + planName);
                 window.location.href = LINE_OA_REDIRECT_URL; 
             }
         }

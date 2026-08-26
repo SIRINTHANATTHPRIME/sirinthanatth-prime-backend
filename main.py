@@ -64,14 +64,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SIRINTHANATTH PRIME Core Engine",
     description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
-    version="3.1.0",
+    version="3.5.0", # อัปเกรดเวอร์ชัน
     lifespan=lifespan
 )
 
-# 🛡️ Security Protocols & CORS (เปิดรับหน้าเว็บ Agent สำหรับดึงข้อมูล)
+# 🛡️ Security Protocols & CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # อนุญาตให้หน้าเว็บ (Frontend) ยิง API เข้ามาได้
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,45 +95,33 @@ if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"
 # =========================================================
 try:
     from api.routes_line import router as line_router
-    app.include_router(line_router) # Mount ที่ Root
+    app.include_router(line_router) 
     app.include_router(line_router, prefix="/api/v1/line", tags=["LINE OA"])
     logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
 except ImportError as e:
     logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
 
-# 🔥 โหลด Router แผนกสถิติ สำหรับส่งข้อมูลให้เว็บ Agent แบบ Real-Time
 try:
     from api.routes_stats import router as stats_router
     app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
-    logger.info("✅ [System]: Stats Router (Live Counter) mounted successfully.")
+    logger.info("✅ [System]: Stats Router mounted successfully.")
 except ImportError as e:
-    logger.warning(f"⚠️ [System Warning]: Stats Router not found or failed to mount -> {e}")
-
-try: 
-    from services.task_dispatcher import HybridTaskDispatcher
-    task_dispatcher = HybridTaskDispatcher()
-except ImportError:
-    try: 
-        from task_dispatcher import HybridTaskDispatcher
-        task_dispatcher = HybridTaskDispatcher()
-    except ImportError: 
-        task_dispatcher = None
+    logger.warning(f"⚠️ [System Warning]: Stats Router not found -> {e}")
 
 # =========================================================
 # 🌍 Frontend & Health Check Endpoints
 # =========================================================
 @app.get("/")
 def root():
-    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "3.1.0"}
+    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "3.5.0"}
 
 @app.get("/health")
 def health_check():
-    """ตรวจสอบสถานะชีพจรของเซิร์ฟเวอร์หลัก (Load Balancer Health Check)"""
+    """ตรวจสอบสถานะชีพจรของเซิร์ฟเวอร์หลัก"""
     return {
         "status": "success",
         "system": "SIRINTHANATTH PRIME Enterprise AI SaaS",
-        "database": "connected" if supabase else "disconnected",
-        "message": "Executive Backend engine is running smoothly."
+        "database": "connected" if supabase else "disconnected"
     }
 
 @app.get("/wallet_menu")
@@ -141,83 +129,35 @@ def read_wallet():
     if os.path.exists("wallet_menu.html"): return FileResponse("wallet_menu.html")
     return {"status": "error", "message": "Smart Wallet layout is currently unavailable."}
 
-@app.get("/live-call", response_class=HTMLResponse)
-async def open_live_call_room():
-    if os.path.exists("templates/call_ai.html"):
-        with open("templates/call_ai.html", "r", encoding="utf-8") as f: return f.read()
-    return "<h1>System Updating. Voice Room is temporarily unavailable.</h1>"
-
 # =========================================================
-# 👑 VIP Invitation & Licensing System
+# 🧠 Psychological LIFF API (ระบบส่งข้อมูลเชิงจิตวิทยาให้หน้าเว็บ)
 # =========================================================
-class InviteRequest(BaseModel):
-    model_config = ConfigDict(strict=True)
-    line_id: str = Field(..., min_length=1)
-    invite_code: str = Field(..., min_length=1)
-
-@app.post("/api/verify-invite")
-async def verify_invite(req: InviteRequest):
-    """ระบบลงทะเบียนคำเชิญ (Single-Use Invitation) แบบ Asynchronous 100%"""
-    if not supabase: raise HTTPException(status_code=500, detail="Database connection not available")
-
-    # 👑 ปลดล็อกสิทธิ์ CEO ทันที
-    if req.line_id in [MASTER_ADMIN_LINE_ID, CEO_LINE_ID]:
-        return {"status": "success", "role": "admin", "message": "ยินดีต้อนรับท่านประธาน! สิทธิ์ผู้ดูแลระบบสูงสุดทำงานเต็มรูปแบบ"}
-
-    def _verify_db():
-        response = supabase.table("invite_codes").select("*").eq("code", req.invite_code).execute()
-        if not response.data: return None, "ไม่พบรหัสคำเชิญนี้ในระบบ กรุณาติดต่อผู้ดูแล"
-            
-        invite_data = response.data[0]
-        if invite_data.get("is_used"):
-            if invite_data.get("used_by_line_id") == req.line_id:
-                return "user", "ยินดีต้อนรับกลับสู่ระบบ SIRINTHANATTH PRIME"
-            return None, "❌ รหัสคำเชิญนี้ถูกใช้งานโดยบุคคลอื่นไปแล้ว ไม่อนุญาตให้ใช้ซ้ำ"
-                
-        # อัปเดตสถานะและเปิดบัญชี
-        supabase.table("invite_codes").update({"is_used": True, "used_by_line_id": req.line_id}).eq("code", req.invite_code).execute()
-        supabase.table("prime_clients").upsert({"line_user_id": req.line_id, "role": "user", "token_balance": 0.00}, on_conflict="line_user_id").execute()
-        return "user", "ยืนยันรหัสเชิญสำเร็จ! เปิดสิทธิ์การใช้งานระบบให้คุณเรียบร้อยแล้ว"
-
-    role, msg = await asyncio.to_thread(_verify_db)
-    if not role:
-        raise HTTPException(status_code=400, detail=msg)
+@app.get("/api/user-status/{line_id}")
+async def get_user_status(line_id: str):
+    """API สำหรับหน้าเว็บ Smart Wallet เพื่อดึง Tier และ Token พร้อมข้อความเชิงจิตวิทยา"""
+    if not supabase: raise HTTPException(status_code=500, detail="DB Error")
     
-    return {"status": "success", "role": role, "message": msg}
-
-# =========================================================
-# ⚙️ Core Execution Engine
-# =========================================================
-class ExecutionRequest(BaseModel):
-    user_id: str
-    task_type: str
-    payload: Dict[str, Any]
-
-@app.post("/api/v1/execute")
-async def execute_task(request_data: ExecutionRequest):
-    """ท่อประมวลผลหลัก รองรับงานหนักเอกสาร, ภาพ, เสียง และวิดีโอ (Hybrid Dispatcher)"""
     try:
-        if supabase and request_data.user_id not in [MASTER_ADMIN_LINE_ID, CEO_LINE_ID]:
-            client_res = await asyncio.to_thread(supabase.table("prime_clients").select("token_balance, role").eq("line_user_id", request_data.user_id).execute)
-            if not client_res.data:
-                raise HTTPException(status_code=403, detail="กรุณาลงทะเบียนหรือรับสิทธิ์ใช้งานระบบก่อนเข้าถึงฟังก์ชันนี้")
+        res = await asyncio.to_thread(supabase.table("prime_clients").select("*").eq("line_user_id", line_id).execute)
+        if not res.data:
+            return {"tier": "GUEST", "balance": 0, "message": "ยินดีต้อนรับ! ลงทะเบียนวันนี้เพื่อรับสิทธิพิเศษ"}
             
-            client_info = client_res.data[0]
-            if client_info.get("role") != "admin" and client_info.get("role") != "vip" and float(client_info.get("token_balance", 0)) <= 0:
-                raise HTTPException(status_code=402, detail="PRIME CREDITS คงเหลือไม่เพียงพอ กรุณาอัปเกรดแพ็กเกจ")
-
-        if task_dispatcher:
-            dispatch_result = await task_dispatcher.route_and_execute(task_type=request_data.task_type, payload=request_data.payload)
-            if dispatch_result.get("status") == "error":
-                raise HTTPException(status_code=500, detail=dispatch_result.get("message", "Task execution failed"))
-            return {"status": "success", "user_id": request_data.user_id, "execution_info": dispatch_result}
-        else:
-            return {"status": "success", "message": "System routing offline. Mock completed.", "payload": request_data.payload}
-
-    except HTTPException as he: raise he
+        user_data = res.data[0]
+        tier = user_data.get("package_tier", "ESSENTIAL").upper()
+        balance = float(user_data.get("token_balance", 0.0))
+        
+        # 💎 กฎจิตวิทยาการแจ้งเตือน (Psychological Alert)
+        msg = f"ยินดีต้อนรับกลับครับ ท่านผู้บริหารระดับ {tier}"
+        if tier not in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+            if balance < 1000:
+                msg = "💡 เพื่อให้การวิเคราะห์กลยุทธ์ธุรกิจและสื่อ 4K ดำเนินไปอย่างต่อเนื่องไร้รอยต่อ ขออนุญาตแนะนำให้เติม PRIME CREDITS ครับ"
+            elif tier == "ESSENTIAL":
+                msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME วันนี้ เพื่อปลดล็อกที่ปรึกษาเชิงลึกระดับ CFO และ CTO ครับ"
+                
+        return {"tier": tier, "balance": balance, "message": msg}
     except Exception as e:
-        logger.error(f"❌ API Exception: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error during execution")
+        logger.error(f"Error fetching user status: {e}")
+        return {"tier": "ERROR", "balance": 0, "message": "ไม่สามารถดึงข้อมูลได้ชั่วคราว"}
 
 # =========================================================
 # 🔄 Profile Synchronization System
@@ -230,7 +170,7 @@ class UserProfile(BaseModel):
 @app.post("/api/sync-user")
 async def sync_user_profile(profile: UserProfile):
     """อัปเดตข้อมูลโปรไฟล์ผู้ใช้ล่าสุดเข้าฐานข้อมูล (Non-Blocking)"""
-    if not supabase: raise HTTPException(status_code=500, detail="Database connection not available")
+    if not supabase: raise HTTPException(status_code=500, detail="Database not available")
     
     def _sync():
         supabase.table("users").upsert({
@@ -242,71 +182,114 @@ async def sync_user_profile(profile: UserProfile):
         
     try:
         await asyncio.to_thread(_sync)
-        logger.info(f"🔄 [Sync System]: User profile ({profile.display_name}) securely synced.")
         return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
     except Exception as e:
         logger.error(f"❌ [Sync System Error]: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # =========================================================
-# 💳 Automated Stripe Revenue Engine (ระบบรับเงินและเติม Token อัตโนมัติ)
+# 💳 Automated Stripe Revenue & Tokenomics Engine
 # =========================================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request):
-    """แจ้งเตือนจาก Stripe และอัปเดตฐานข้อมูลการเงินให้อัตโนมัติ 100% (Async Mode)"""
+    """
+    💰 ระบบบริหารการเงินหลังบ้าน: ตัดจ่าย Token, คำนวณ Tier และบันทึก Commission
+    """
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
     if not STRIPE_WEBHOOK_SECRET:
-        logger.warning("⚠️ STRIPE_WEBHOOK_SECRET ไม่ได้ถูกตั้งค่า การเชื่อมต่อถูกปฏิเสธ")
+        logger.warning("⚠️ STRIPE_WEBHOOK_SECRET is missing.")
         return Response(content="Webhook secret missing", status_code=400)
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"❌ Stripe Signature Error: {e}")
         return Response(content="Invalid signature", status_code=400)
     except Exception as e:
-        logger.error(f"❌ Stripe Webhook Error: {e}")
         return Response(content=str(e), status_code=400)
 
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        client_ref = session.get('client_reference_id', '')
+        client_ref = session.get('client_reference_id', '') # รูปแบบ: PLAN_AGENT_CODE_LINE_USERID
         amount_paid_thb = session.get('amount_total', 0) / 100 
         
-        logger.info(f"💰 [Stripe Incoming]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
+        logger.info(f"💰 [Stripe Revenue]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
 
-        # ประมวลผลธุรกรรมหลังบ้านแบบไม่บล็อกเซิร์ฟเวอร์หลัก (Asynchronous DB Query)
-        def _process_payment():
+        def _process_financials():
             if not supabase or not client_ref: return
             
-            if client_ref.startswith('topup_'):
-                user_id = client_ref.replace('topup_', '')
-                credits_to_add = amount_paid_thb * 10
+            user_id = ""
+            agent_code = "NOAGENT"
+            package_tier = "ESSENTIAL"
+            is_subscription = False
+            base_tokens = amount_paid_thb * 10 # อัตราแลกเปลี่ยนคลาวด์พื้นฐาน 1 ฿ = 10 Credits
+            bonus_tokens = 0
+            
+            # 1. 🔍 ถอดรหัส Payload (Data Extraction)
+            if "_LINE_" in client_ref:
+                parts = client_ref.split("_LINE_")
+                user_id = parts[1]
+                prefix_parts = parts[0].split("_AGENT_")
+                plan_name = prefix_parts[0].upper()
                 
-                try:
-                    res = supabase.table("users_wallet").select("balance").eq("user_id", user_id).execute()
-                    current_balance = float(res.data[0].get("balance", 0)) if res.data else 0.0
-                    new_balance = current_balance + credits_to_add
+                if len(prefix_parts) > 1:
+                    agent_code = prefix_parts[1]
+                
+                if plan_name in ["ESSENTIAL", "PRIME", "ENTERPRISE", "VIP"]:
+                    is_subscription = True
+                    package_tier = plan_name if plan_name != "VIP" else "VIP_FOUNDER"
+            elif client_ref.startswith('topup_'):
+                user_id = client_ref.replace('topup_', '') # กรณีซื้อ Token เปล่าๆ
+
+            if not user_id: return
+
+            try:
+                # 2. 🧮 คำนวณ Tokenomics (กำไรไม่ขาดทุน)
+                if is_subscription:
+                    # มอบโบนัส Token ตามความเหมาะสมของแพ็กเกจ (เพื่อเป็น Hook จิตวิทยา)
+                    if package_tier == "ESSENTIAL": bonus_tokens = 1000
+                    elif package_tier == "PRIME": bonus_tokens = 3000
+                    elif package_tier == "ENTERPRISE": bonus_tokens = 10000
+                    elif package_tier == "VIP_FOUNDER": base_tokens = 49000; bonus_tokens = 0 # Fix Token สำหรับ VIP
+                
+                total_tokens_to_add = base_tokens + bonus_tokens
+
+                # 3. 🏦 อัปเดตสมุดบัญชีลูกค้า (Update Wallet)
+                res = supabase.table("prime_clients").select("token_balance").eq("line_user_id", user_id).execute()
+                current_balance = float(res.data[0].get("token_balance", 0)) if res.data else 0.0
+                new_balance = current_balance + total_tokens_to_add
+                
+                update_data = {"token_balance": new_balance}
+                if is_subscription:
+                    update_data["package_tier"] = package_tier
+                    # อัปเกรด Role สำหรับการเข้าถึงคำสั่งหลังบ้าน
+                    if package_tier in ["ENTERPRISE", "VIP_FOUNDER"]: update_data["role"] = "vip"
+                
+                supabase.table("prime_clients").upsert({"line_user_id": user_id, **update_data}, on_conflict="line_user_id").execute()
+                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} เป็นระดับ {package_tier} รับ {total_tokens_to_add} Credits")
+
+                # 4. 🤝 ระบบคำนวณ Commission พันธมิตร (Affiliate Split)
+                if agent_code and agent_code != "NOAGENT":
+                    # โบนัส Fast-Action 30% สำหรับ 100 VIP, เรทปกติ 15%
+                    commission_rate = 0.30 if package_tier == "VIP_FOUNDER" else 0.15 
+                    commission_amount = amount_paid_thb * commission_rate
                     
-                    supabase.table("users_wallet").upsert({"user_id": user_id, "balance": new_balance}, on_conflict="user_id").execute()
-                    supabase.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                    logger.info(f"✅ [Revenue Engine]: เติม {credits_to_add} Credits ให้ผู้ใช้ {user_id} สำเร็จ!")
-                except Exception as db_err:
-                    logger.error(f"❌ [DB Topup Error]: ไม่สามารถเติมเครดิตได้ -> {db_err}")
+                    supabase.table("affiliate_transactions").insert({
+                        "agent_code": agent_code,
+                        "buyer_line_id": user_id,
+                        "package_bought": package_tier,
+                        "amount_paid": amount_paid_thb,
+                        "commission_amount": commission_amount,
+                        "status": "pending"
+                    }).execute()
+                    logger.info(f"🤝 [Affiliate System]: บันทึก Commission {commission_amount} THB ให้ Agent: {agent_code}")
 
-            elif client_ref.startswith('sub_') or 'VIP' in client_ref.upper():
-                user_id = client_ref.split("_")[-1]
-                try:
-                    supabase.table("users").update({"is_token_exempt": True}).eq("line_user_id", user_id).execute()
-                    supabase.table("prime_clients").update({"role": "vip"}).eq("line_user_id", user_id).execute()
-                    logger.info(f"👑 [Revenue Engine]: อัปเกรดสถานะ VVIP ให้ผู้ใช้ {user_id} สำเร็จ!")
-                except Exception as db_err:
-                    logger.error(f"❌ [DB Upgrade Error]: ไม่สามารถอัปเกรด VVIP ได้ -> {db_err}")
+            except Exception as db_err:
+                logger.error(f"❌ [Financial Engine Error]: {db_err}")
 
-        # โยนภาระไปให้ Thread ทำงาน เพื่อให้เซิร์ฟเวอร์หลักรับโหลดได้ต่อทันที
-        asyncio.create_task(asyncio.to_thread(_process_payment))
+        # ⚡ โยนเข้า Thread หลังบ้าน ไม่ให้ Stripe Webhook เกิด Timeout
+        asyncio.create_task(asyncio.to_thread(_process_financials))
 
     return {"status": "success"}
 
