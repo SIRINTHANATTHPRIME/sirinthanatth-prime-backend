@@ -146,7 +146,7 @@ class Worker11MediaEngine:
             logger.error(f"❌ [Voice Studio Error]: {e}")
             return "⚠️ [System]: เกิดข้อผิดพลาดในการสังเคราะห์เสียงพากย์"
 
-   async def _generate_4k_video(self, user_id: str, text: str) -> str:
+    async def _generate_4k_video(self, user_id: str, text: str) -> str:
         """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering) ผสาน Veo 3.1"""
         logger.info(f"🎬 [Worker 11 - 4K Studio]: กำลังเรนเดอร์วิดีโอ 4K ด้วย {self.video_model}...")
         
