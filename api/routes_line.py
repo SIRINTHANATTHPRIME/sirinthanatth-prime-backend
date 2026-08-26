@@ -143,7 +143,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบสั้นกระชับ {golden_rules}"
                 response = await asyncio.to_thread(
                     client.models.generate_content,
-                    model='gemini-2.5-flash',
+                    model='gemini-3.7-flash',
                     contents=enhanced_message,
                     config=types.GenerateContentConfig(system_instruction=sys_instruct)
                 )

@@ -36,6 +36,10 @@ class Worker11MediaEngine:
         api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.client = genai.Client(api_key=api_key) if api_key else None
         
+        # ประกาศใช้สุดยอดโมเดลผลิตสื่อระดับโลก (Vision & Cinematic Engine)
+        self.image_model = "imagen-4.0-ultra-generate-001"
+        self.video_model = "veo-3.1-generate-preview"
+        
         # เชื่อมต่อ Supabase สำหรับหัก Token ค่าโปรดักชัน
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
@@ -142,17 +146,17 @@ class Worker11MediaEngine:
             logger.error(f"❌ [Voice Studio Error]: {e}")
             return "⚠️ [System]: เกิดข้อผิดพลาดในการสังเคราะห์เสียงพากย์"
 
-    async def _generate_4k_video(self, user_id: str, text: str) -> str:
-        """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering)"""
-        logger.info(f"🎬 [Worker 11 - 4K Studio]: กำลังเรนเดอร์วิดีโอ 4K ความเร็วสูง...")
+   async def _generate_4k_video(self, user_id: str, text: str) -> str:
+        """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering) ผสาน Veo 3.1"""
+        logger.info(f"🎬 [Worker 11 - 4K Studio]: กำลังเรนเดอร์วิดีโอ 4K ด้วย {self.video_model}...")
         
         output_filename = f"video_4k_{user_id}_{int(time.time())}.mp4"
         output_path = os.path.join(self.output_dir, output_filename)
         
         try:
             if create_marketing_video:
-                # ⚡ การเรนเดอร์ด้วย MoviePy/FFmpeg กิน CPU 100% ต้องโยนเข้า Thread เสมอ
-                await asyncio.to_thread(create_marketing_video, user_id, text, output_path)
+                # ⚡ สั่งรัน MoviePy โดยส่ง client และโมเดลไปยังไฟล์ generate_video.py
+                await asyncio.to_thread(create_marketing_video, user_id, text, script_text, output_filename, output_path, self.client, self.video_model, self.image_model)
             else:
                 await asyncio.sleep(5) # จำลองการเรนเดอร์
                 

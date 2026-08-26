@@ -1,6 +1,7 @@
 import os
 import time
 from PIL import Image
+from google.genai import types
 from gtts import gTTS
 from moviepy.editor import *
 
@@ -18,10 +19,38 @@ def create_voiceover(text, filename):
     tts.save(filename)
     return AudioFileClip(filename)
 
-def create_marketing_video(user_id: str, script_text: str, output_filename: str):
+def create_marketing_video(user_id: str, text: str, script_text: str, output_filename: str, output_path: str, ai_client=None, video_model=None, image_model=None):
     """ฟังก์ชันเรนเดอร์วิดีโอ 4K อัตโนมัติ (จะถูกเรียกโดย Worker 11)"""
-    print(f"🎬 [Video Engine]: เริ่มต้นเรนเดอร์สื่อ 4K สำหรับ User: {user_id}")
+    print("🎬 กำลังเตรียมทรัพยากรภาพและเสียงระดับ 4K...")
     
+    bg_image_path = "bg_template.jpg"
+
+    # 1. 🌟 ใช้ Imagen 4.0 Ultra สร้างภาพกราฟิกโฆษณา
+    if ai_client and image_model:
+        try:
+            print(f"🎨 กำลังสร้างภาพโฆษณาด้วย {image_model}...")
+            img_result = ai_client.models.generate_images(
+                model=image_model,
+                prompt=f"Cinematic commercial photography, luxury 4K: {text}",
+                config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9")
+            )
+            # โค้ดสำหรับบันทึกภาพลงเซิร์ฟเวอร์
+        except Exception as e:
+            print(f"⚠️ Imagen 4.0 ขัดข้อง: {e}")
+
+    # 2. 🎥 ใช้ Veo 3.1 สร้างฟุตเทจวิดีโอ (B-roll) ระดับภาพยนตร์
+    if ai_client and video_model:
+        try:
+            print(f"🚀 กำลังเรนเดอร์ฟุตเทจด้วย {video_model}...")
+            video_result = ai_client.models.generate_videos(
+                model=video_model,
+                prompt=f"Professional commercial b-roll showing {text}",
+            )
+            # โค้ดสำหรับดึงไฟล์วิดีโอมาประกอบ
+        except Exception as e:
+            print(f"⚠️ Veo 3.1 ขัดข้อง: {e}")
+
+    # 3. [นำโค้ดตัดต่อ MoviePy เดิมของคุณมาวางต่อจากบรรทัดนี้ เพื่อประกอบร่างคลิป]
     # เพื่อความรวดเร็วในการทดสอบ เราจะสร้างวิดีโอเปล่าพร้อมตัวหนังสือและเสียงพากย์สั้นๆ
     # (โค้ดดั้งเดิมของคุณสามารถนำมาใส่ตรงนี้ได้ทั้งหมดครับ)
     

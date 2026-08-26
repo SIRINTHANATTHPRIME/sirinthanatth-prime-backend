@@ -18,7 +18,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash" # รุ่นด่านหน้าที่เร็วที่สุดในโลก
+        CORE_MODEL = "gemini-3.7-flash" # รุ่นด่านหน้าที่เร็วที่สุดในโลก
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")

@@ -13,8 +13,8 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # โมเดลเรือธงอัปเดตล่าสุด
-        CORE_MODEL = "gemini-2.5-flash"
+        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # โมเดลเรือธงอัปเดตล่าสุด
+        CORE_MODEL = "gemini-3.7-flash"
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
