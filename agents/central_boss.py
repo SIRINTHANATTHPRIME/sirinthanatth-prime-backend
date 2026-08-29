@@ -21,8 +21,12 @@ except ImportError:
         CORE_MODEL = "gemini-3.7-flash" # รุ่นด่านหน้าที่เร็วที่สุดในโลก
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
+            return self.client
 
 # =========================================================
 # 🏢 นำเข้าทีมผู้บริหารทั้ง 11 ฝ่าย (Dynamic Import)

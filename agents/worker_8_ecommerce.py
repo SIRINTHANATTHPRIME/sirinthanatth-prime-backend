@@ -15,11 +15,14 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro"
+        EXECUTIVE_MODEL = "gemini-3.1-pro"
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
 
 class EcommerceWorker:
     """
@@ -165,7 +168,7 @@ class EcommerceWorker:
                     is_order_context = True
                 content_to_send.append(f"โปรดดำเนินการ: {message}")
 
-            # สั่งการ Gemini 2.5 Pro (รันแบบ Thread ไม่บล็อกเซิร์ฟเวอร์หลัก)
+            # สั่งการ Gemini 3.1 Pro (รันแบบ Thread ไม่บล็อกเซิร์ฟเวอร์หลัก)
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,

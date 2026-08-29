@@ -10,11 +10,14 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro"
+        EXECUTIVE_MODEL = "gemini-3.1-pro"
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
 
 try:
     from supabase import create_client, Client
@@ -26,7 +29,7 @@ logger = logging.getLogger("Worker7-CFO")
 class FinancialAndAccountingWorker:
     """
     💰 Worker 7: Chief Financial Officer (CFO) & Risk Management Expert
-    อัปเกรด: [Gemini 2.5 Pro] ระบบวิเคราะห์งบการเงิน, วางแผนภาษี, โครงสร้างกำไร 80%+ และ Smart Wallet
+    อัปเกรด: [Gemini 3.1 Pro] ระบบวิเคราะห์งบการเงิน, วางแผนภาษี, โครงสร้างกำไร 80%+ และ Smart Wallet
     """
     def __init__(self):
         # 🚀 โหลด Client และโมเดลรุ่นท็อปสำหรับงานตรรกะการเงินที่ซับซ้อน
@@ -144,7 +147,7 @@ class FinancialAndAccountingWorker:
                 content_to_send.append(f"โปรดวางแผนและให้คำปรึกษาด้านการเงิน/การบัญชี สำหรับสถานการณ์นี้: {message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

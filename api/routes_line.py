@@ -36,8 +36,11 @@ BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-sou
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
 parser = WebhookParser(LINE_SECRET) if LINE_SECRET else None
 
-GEMINI_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY", "")
-client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
+GEMINI_KEY = self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
 
 # =========================================================
 # 🧩 Dynamic Imports (ดึงระบบต่างๆ มาประกอบร่าง ไม่พังแม้ไฟล์อื่นอัปเดต)

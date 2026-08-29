@@ -10,11 +10,15 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # ใช้รุ่นเรือธงสำหรับตรรกะข้อมูลและ Excel
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # ใช้รุ่นเรือธงสำหรับตรรกะข้อมูลและ Excel
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.client = genai.Client(
+    vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
+            return PrimeAIConfig.client
 
 try:
     from supabase import create_client, Client
@@ -145,7 +149,7 @@ class ReportWorker:
                 content_to_send.append(f"โปรดออกแบบโครงสร้างเอกสาร ตารางคำนวณ หรืองานวิจัย ตามคำสั่งนี้: {message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

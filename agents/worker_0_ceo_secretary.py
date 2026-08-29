@@ -41,11 +41,14 @@ class CeoSecretaryWorker:
         self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
-        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+        self.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+            location="asia-southeast3"
+        )
         
-        # 🧠 ขุมพลังประมวลผลสูงสุด (Gemini 2.5 Pro)
-        self.model_name = 'gemini-2.5-pro'
+        # 🧠 ขุมพลังประมวลผลสูงสุด (Gemini 3.1 Pro)
+        self.model_name = 'gemini-3.1-pro'
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์ 

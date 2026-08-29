@@ -10,11 +10,15 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # ใช้รุ่น Pro เพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # ใช้รุ่น Pro เพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
+            return PrimeAIConfig.self.client
 
 try:
     from supabase import create_client, Client
@@ -32,7 +36,7 @@ logger = logging.getLogger("Worker3-AudioStudio")
 class AudioWorker:
     """
     🎙️ Worker 3: Chief Audio Producer & Voice Synthesizer
-    อัปเกรด: [Gemini 2.5 Pro + ElevenLabs] ระบบวิเคราะห์เสียง, แต่งเพลง, และผลิตเสียงพากย์ 4K
+    อัปเกรด: [Gemini 3.1 Pro + ElevenLabs] ระบบวิเคราะห์เสียง, แต่งเพลง, และผลิตเสียงพากย์ 4K
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()

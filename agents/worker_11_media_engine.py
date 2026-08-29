@@ -33,8 +33,11 @@ class Worker11MediaEngine:
         os.makedirs(self.output_dir, exist_ok=True)
         
         # 🚀 อัปเกรดการเชื่อมต่อด้วย SDK มาตรฐานใหม่ล่าสุด
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=api_key) if api_key else None
+        self.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+                location="asia-southeast3"
+        )
         
         # ประกาศใช้สุดยอดโมเดลผลิตสื่อระดับโลก (Vision & Cinematic Engine)
         self.image_model = "imagen-4.0-ultra-generate-001"

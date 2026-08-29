@@ -11,11 +11,14 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับงานวิเคราะห์และ IT
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับงานวิเคราะห์และ IT
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+        )
 
 try:
     from supabase import create_client, Client
@@ -27,7 +30,7 @@ logger = logging.getLogger("Worker9-PrimeAdvisor")
 class PrimeAdvisorWorker:
     """
     👑 Worker 9: Executive Prime Advisor & Chief Technology Officer (CTO)
-    อัปเกรด: [Gemini 2.5 Pro] ระบบที่ปรึกษาผู้บริหาร, วิเคราะห์ IT/Security และจิตวิทยาการเติม Token
+    อัปเกรด: [Gemini 3.1 Pro] ระบบที่ปรึกษาผู้บริหาร, วิเคราะห์ IT/Security และจิตวิทยาการเติม Token
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
@@ -163,7 +166,7 @@ class PrimeAdvisorWorker:
                 content_to_send.append(f"โปรดให้คำปรึกษาเชิงลึกระดับผู้บริหาร/CTO ตามคำสั่งนี้: {message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

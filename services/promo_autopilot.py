@@ -13,9 +13,12 @@ class PromoAutopilotService:
     ระบบสร้างสรรค์แคมเปญโปรโมชันตามเทศกาลอัตโนมัติ พร้อมระบบ Human-in-the-Loop (Accept / Modify)
     """
     def __init__(self):
-        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
-        self.model_name = 'gemini-2.5-pro' # ใช้สมองกลสายวิเคราะห์เชิงลึกระดับโลก
+        self.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+            location="asia-southeast3"
+        )
+        self.model_name = 'gemini-3.1-pro' # ใช้สมองกลสายวิเคราะห์เชิงลึกระดับโลก
 
     async def generate_seasonal_campaign(self, store_name: str, festival_name: str, product_details: str) -> dict:
         """สร้างสรรค์แคมเปญและแคปชันโฆษณา พร้อมสร้าง Flex Message สำหรับพรีวิวแบบเรียลไทม์"""

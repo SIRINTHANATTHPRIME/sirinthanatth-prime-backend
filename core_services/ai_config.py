@@ -19,8 +19,9 @@ class PrimeAIConfig:
     @classmethod
     def get_client(cls) -> genai.Client:
         """สร้างและส่งออก GenAI Client ผ่าน SDK google-genai มาตรฐานใหม่"""
-        api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            logger.error("❌ ไม่พบ AI_API_KEY ใน Environment Variables")
-            return None
-        return genai.Client(api_key=api_key)
+        cls.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+            location="asia-southeast3"
+        )
+        return cls.client

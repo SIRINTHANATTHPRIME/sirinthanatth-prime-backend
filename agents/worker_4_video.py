@@ -10,11 +10,15 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # รุ่นเรือธงสำหรับการวิเคราะห์วิดีโอและวางโครงสร้าง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงสำหรับการวิเคราะห์วิดีโอและวางโครงสร้าง
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
+            return PrimeAIConfig.self.client
 
 try:
     from supabase import create_client, Client
@@ -26,7 +30,7 @@ logger = logging.getLogger("Worker4-VideoDirector")
 class VideoProductionWorker:
     """
     🎬 Worker 4: Executive Video Director & Analyst
-    อัปเกรด: [Gemini 2.5 Pro] ระบบวิเคราะห์วิดีโอ, ออกแบบ Storyboard 4K/HD และระบบ Approval Workflow
+    อัปเกรด: [Gemini 3.1 Pro] ระบบวิเคราะห์วิดีโอ, ออกแบบ Storyboard 4K/HD และระบบ Approval Workflow
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
@@ -141,7 +145,7 @@ class VideoProductionWorker:
                 content_to_send.append(f"โปรดออกแบบและวางแผนสคริปต์วิดีโอโฆษณา (Storyboard) สำหรับหัวข้อนี้: {message}")
 
             # ==========================================
-            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro
+            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 3.1 Pro
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

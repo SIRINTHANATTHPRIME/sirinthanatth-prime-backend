@@ -14,8 +14,11 @@ except ImportError:
         EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+            )
 
 try:
     from supabase import create_client, Client
@@ -27,7 +30,7 @@ logger = logging.getLogger("Worker10-Enterprise")
 class EnterprisePartnerWorker:
     """
     🏢 Worker 10: Executive Enterprise Partner & Big Data Architect
-    อัปเกรด: [Gemini 2.5 Pro] ระบบจัดการข้อมูลองค์กรระดับมหาภาค, คลังสินค้า และความปลอดภัยสูงสุด
+    อัปเกรด: [Gemini 3.1 Pro] ระบบจัดการข้อมูลองค์กรระดับมหาภาค, คลังสินค้า และความปลอดภัยสูงสุด
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
@@ -166,7 +169,7 @@ class EnterprisePartnerWorker:
                 content_to_send.append(f"โปรดให้คำปรึกษาระดับองค์กร/Supply Chain สำหรับประเด็นนี้: {message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

@@ -14,8 +14,12 @@ except ImportError:
         CORE_MODEL = "gemini-3.7-flash" # Fallback Model มาตรฐานสูงสุด
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+        )
+            return PrimeAIConfig.self.client
 
 # นำเข้าระบบความจำองค์กรและประวัติลูกค้า (Corporate & Chat Memory RAG)
 try:

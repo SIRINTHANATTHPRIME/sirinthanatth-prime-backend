@@ -19,9 +19,12 @@ except ImportError:
         EMBEDDING_MODEL = "gemini-embedding-2-preview" # Fallback ไปใช้สมองกลความจำล่าสุด
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
-
+            PrimeAIConfig.self.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+            location="asia-southeast3"
+        )
+            return PrimeAIConfig.self.client
 client = PrimeAIConfig.get_client()
 EMBEDDING_MODEL_NAME = PrimeAIConfig.EMBEDDING_MODEL
 

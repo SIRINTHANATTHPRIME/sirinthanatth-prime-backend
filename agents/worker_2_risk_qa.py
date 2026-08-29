@@ -19,8 +19,11 @@ class RiskQAWorker:
     อัปเกรด: ผสานระบบตรวจสอบสิทธิ์ 4 แพ็กเกจ, ระบบตัด Token อัจฉริยะ, และ Google Cloud Storage Sync
     """
     def __init__(self):
-        self.api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+        self.client = genai.Client(
+            vertexai=True, 
+            project="swift-area-503915-a1", 
+            location="asia-southeast3"
+        )
         
         # 🚀 อัปเกรดเป็น Gemini 1.5 Pro รุ่นเสถียรที่สุดเพื่อป้องกัน Error 404 Model Not Found บน Cloud Run
         self.model_name = 'gemini-1.5-pro'

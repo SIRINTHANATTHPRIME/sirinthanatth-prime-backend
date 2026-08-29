@@ -14,9 +14,11 @@ except ImportError:
         CORE_MODEL = "gemini-3.7-flash"
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
-
+            PrimeAIConfig.self.client = genai.Client(
+                vertexai=True, 
+                project="swift-area-503915-a1", 
+                location="asia-southeast3"
+        )
 try:
     from supabase import create_client, Client
 except ImportError:
@@ -145,7 +147,7 @@ class MarketingStrategyWorker:
                 content_to_send.append(f"โปรดวิเคราะห์และวางกลยุทธ์การตลาดระดับโลกสำหรับสถานการณ์นี้: {message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
