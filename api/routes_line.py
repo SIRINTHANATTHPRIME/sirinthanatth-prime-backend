@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import logging
 import requests
+import uuid
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookParser
@@ -263,8 +264,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 # ดาวน์โหลดไฟล์
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ""
-                file_name = getattr(event.message, 'file_name', f"file_{message_id}") if message_type == 'file' else f"{message_id}{ext}"
-                
+                file_name = f"file_{uuid.uuid4().hex}{ext}"
                 os.makedirs("/tmp", exist_ok=True)
                 file_path = f"/tmp/{file_name}"
                 
