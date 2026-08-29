@@ -45,7 +45,7 @@ class CeoSecretaryWorker:
         self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
         # 🧠 ขุมพลังประมวลผลสูงสุด (Gemini 2.5 Pro)
-        self.model_name = 'gemini-2.5-pro'
+        self.model_name = 'gemini-3.1-pro'
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์ 
