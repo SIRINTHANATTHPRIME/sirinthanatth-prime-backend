@@ -14,9 +14,10 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        PRIMARY_MODEL = os.getenv("EXECUTIVE_MODEL", "gemini-2.5-pro")
-        FALLBACK_MODEL = os.getenv("FAST_MODEL", "gemini-2.5-flash")
-        
+        def __init__(self):
+            self.primary_model = getattr(PrimeAIConfig, "PRIMARY_MODEL", os.getenv("EXECUTIVE_MODEL", "gemini-3.1-pro"))
+            self.fallback_model = getattr(PrimeAIConfig, "FALLBACK_MODEL", os.getenv("FAST_MODEL", "gemini-3.7-flash"))
+
         @staticmethod
         def get_client(api_key: str = None):
             key = api_key or os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
