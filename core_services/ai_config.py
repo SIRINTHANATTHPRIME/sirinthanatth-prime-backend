@@ -11,6 +11,8 @@ class PrimeAIConfig:
     CORE_MODEL = "gemini-3.7-flash"
     EXECUTIVE_MODEL = "gemini-3.1-pro-preview"
     EMBEDDING_MODEL = "gemini-embedding-2-preview"
+    PRIMARY_MODEL = os.getenv("EXECUTIVE_MODEL", "gemini-3.1-pro")
+    FALLBACK_MODEL = os.getenv("FAST_MODEL", "gemini-3.7-flash")
     IMAGE_MODEL = "imagen-4.0-ultra-generate-001"
     VIDEO_MODEL = "veo-3.1-generate-preview"
 

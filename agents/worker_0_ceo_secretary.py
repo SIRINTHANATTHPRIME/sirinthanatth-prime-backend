@@ -54,8 +54,8 @@ class CeoSecretaryWorker:
         self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "Uxxxxxxxxxxxxxxxxx")
 
         self.client = PrimeAIConfig.get_client()
-        self.primary_model = PrimeAIConfig.PRIMARY_MODEL
-        self.fallback_model = PrimeAIConfig.FALLBACK_MODEL
+        self.primary_model = getattr(PrimeAIConfig, "PRIMARY_MODEL", os.getenv("EXECUTIVE_MODEL", "gemini-3.1-pro"))
+        self.fallback_model = getattr(PrimeAIConfig, "FALLBACK_MODEL", os.getenv("FAST_MODEL", "gemini-3.7-flash"))
 
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์
