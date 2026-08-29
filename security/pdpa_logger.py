@@ -14,7 +14,7 @@ except ImportError:
         @staticmethod
         def get_client():
             PrimeAIConfig.client = genai.Client(
-    vertexai=True, 
+                vertexai=True, 
                 project="swift-area-503915-a1", 
                 location="asia-southeast3"
             )
@@ -30,7 +30,7 @@ logger = logging.getLogger("Worker1-Report")
 class ReportWorker:
     """
     📊 Worker 1: Chief Data Officer (CDO) & Executive Report Specialist
-    อัปเกรด: [Gemini 2.5 Pro] ระบบสร้างเอกสาร, ตารางคำนวณ, งานวิจัย และ Smart Wallet Tokenomics
+    อัปเกรด: [Gemini 3.1 Pro] ระบบสร้างเอกสาร, ตารางคำนวณ, งานวิจัย และ Smart Wallet Tokenomics
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
