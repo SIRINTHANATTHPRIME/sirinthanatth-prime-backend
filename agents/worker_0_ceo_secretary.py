@@ -47,8 +47,8 @@ class CeoSecretaryWorker:
             location="asia-southeast3"
         )
         
-        # 🧠 ขุมพลังประมวลผลสูงสุด (Gemini 3.1 Pro)
-        self.model_name = 'gemini-3.1-pro'
+        # 🧠 ขุมพลังประมวลผลสูงสุด (Gemini 2.5 Pro)
+        self.model_name = 'gemini-2.5-pro'
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์ 
