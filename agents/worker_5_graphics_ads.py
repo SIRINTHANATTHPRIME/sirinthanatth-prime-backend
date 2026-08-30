@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับงาน Creative ขั้นสูง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับงาน Creative ขั้นสูง
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -44,7 +44,7 @@ class GraphicsAdsWorker:
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # เชื่อมต่อ Supabase สำหรับระบบ Token
         supa_url = os.getenv("SUPABASE_URL")

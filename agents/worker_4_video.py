@@ -1,24 +1,28 @@
 import os
+import time
 import logging
 import asyncio
 import mimetypes
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# =========================================================
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล (Vertex AI / Zero Downtime)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงสำหรับการวิเคราะห์วิดีโอและวางโครงสร้าง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับการวิเคราะห์วิดีโอและภาพเคลื่อนไหว
         @staticmethod
         def get_client():
-            PrimeAIConfig.self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
             )
-            return PrimeAIConfig.self.client
 
 try:
     from supabase import create_client, Client
@@ -30,18 +34,19 @@ logger = logging.getLogger("Worker4-VideoDirector")
 class VideoProductionWorker:
     """
     🎬 Worker 4: Executive Video Director & Analyst
-    อัปเกรด: [Gemini 3.1 Pro] ระบบวิเคราะห์วิดีโอ, ออกแบบ Storyboard 4K/HD และระบบ Approval Workflow
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบวิเคราะห์วิดีโอแยกเฟรม, Storyboard 4K และ Zero-Data Shield
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # เชื่อมต่อ Supabase สำหรับระบบ Token
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
-        self.topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # เปลี่ยนเป็นลิงก์เติมเงินจริง
+        # ลิงก์ระบบ Smart Wallet อัตโนมัติ
+        self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
 
     async def _deduct_token(self, user_id: str, tokens_needed: int) -> dict:
         """💳 ตรวจสอบแพ็กเกจและหัก PRIME CREDITS อัจฉริยะ สำหรับงานวิดีโอ"""
@@ -49,29 +54,29 @@ class VideoProductionWorker:
             return {"authorized": True, "tier": "ESSENTIAL"} # Fallback โหมด Offline
         
         try:
-            user_data = await asyncio.to_thread(
-                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
-            )
-            
-            if not user_data.data:
-                return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนเพื่อเปิดใช้งานระบบ Video Production ครับ"}
+            def _check_and_deduct():
+                user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 
-            balance = float(user_data.data[0].get("token_balance", 0.0))
-            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
-            
-            # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบวิเคราะห์สื่อได้ตามสิทธิพิเศษ
-            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {"authorized": True, "tier": tier}
+                if not user_data.data:
+                    return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนเพื่อเปิดใช้งานระบบ Video Production ครับ"}
+                    
+                balance = float(user_data.data[0].get("token_balance", 0.0))
+                tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-            if balance >= tokens_needed:
-                new_balance = balance - tokens_needed
-                await asyncio.to_thread(
-                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                )
-                logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Video Production)")
-                return {"authorized": True, "tier": tier}
-            else:
-                return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์หรือสร้างสคริปต์วิดีโอ (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้ที่: {self.topup_link}"}
+                # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบวิเคราะห์สื่อได้ตามสิทธิพิเศษ
+                if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {"authorized": True, "tier": tier}
+                    
+                if balance >= tokens_needed:
+                    new_balance = balance - tokens_needed
+                    self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Video Production)")
+                    return {"authorized": True, "tier": tier}
+                else:
+                    return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์หรือสร้างสคริปต์วิดีโอ (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตอย่างปลอดภัยได้ที่: {self.topup_link}"}
+
+            return await asyncio.to_thread(_check_and_deduct)
+            
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
             return {"authorized": True, "tier": "ESSENTIAL"}
@@ -79,7 +84,7 @@ class VideoProductionWorker:
     async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         """ทำงานเบื้องหลัง: วิเคราะห์วิดีโอ สร้าง Storyboard และผูกระบบส่งเรนเดอร์"""
         if not self.client:
-            return "⚠️ [Worker 4]: ระบบ Video Director ออฟไลน์ (ไม่พบ API Key)"
+            return "⚠️ [Worker 4]: ระบบ Video Director ออฟไลน์ (ไม่พบ API Key ส่วนกลาง)"
 
         # 🪙 ตรวจสอบค่าใช้จ่าย: อัปโหลดวิดีโอให้ AI วิเคราะห์ = 100 Credits, คิดบทสคริปต์โฆษณา = 20 Credits
         tokens_needed = 100 if file_path else 20
@@ -89,7 +94,7 @@ class VideoProductionWorker:
             return auth_status["msg"]
             
         package_tier = auth_status.get("tier", "ESSENTIAL")
-        logger.info(f"🎬 [Video Production]: วางแผนวิดีโอให้ User {user_id} (Tier: {package_tier})")
+        logger.info(f"🎬 [Video Production]: เริ่มวางแผนวิดีโอให้ User {user_id} (Tier: {package_tier})")
 
         # 🧠 System Prompt ปรับแต่งตามระดับ Agency มืออาชีพ
         system_instruction = f"""
@@ -128,10 +133,15 @@ class VideoProductionWorker:
                     upload_config = types.UploadFileConfig(mime_type=mime_type)
                     uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 except Exception as e:
+                    logger.error(f"⚠️ [File Upload Error]: {e}")
                     return f"⚠️ [Worker 4]: โครงสร้างไฟล์วิดีโอไม่รองรับหรือใหญ่เกินไปครับ รบกวนส่งเป็นไฟล์ .mp4 ขนาดไม่เกิน 50MB ครับ"
 
-                # ⏳ Async Sync: วิดีโอจะใช้เวลาประมวลผลนานกว่าปกติ ระบบจะรออย่างใจเย็น
+                # ⏳ Async Sync: วิดีโอใช้เวลาประมวลผลนานกว่าปกติ จึงเผื่อเวลา Timeout ไว้ที่ 120 วินาที
+                timeout = 120
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("หมดเวลาการสแกนและแยกเฟรมวิดีโอ")
                     logger.info("⏳ [Worker 4]: AI กำลังแยกเฟรมภาพและเสียงในวิดีโอ (Processing)...")
                     await asyncio.sleep(4) # เช็กทุกๆ 4 วินาทีเพื่อลดภาระเซิร์ฟเวอร์
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
@@ -140,12 +150,12 @@ class VideoProductionWorker:
                     return "⚠️ [Worker 4]: ขออภัยครับ AI ไม่สามารถถอดรหัสวิดีโอนี้ได้ อาจมีความซับซ้อนเกินไป"
 
                 content_to_send.append(uploaded_file)
-                content_to_send.append(f"โปรดวิเคราะห์วิดีโอนี้อย่างละเอียด และให้คำแนะนำตามคำสั่ง: {message}")
+                content_to_send.append(f"โปรดวิเคราะห์วิดีโอนี้อย่างละเอียด และให้คำแนะนำตามคำสั่ง:\n{message}")
             else:
-                content_to_send.append(f"โปรดออกแบบและวางแผนสคริปต์วิดีโอโฆษณา (Storyboard) สำหรับหัวข้อนี้: {message}")
+                content_to_send.append(f"โปรดออกแบบและวางแผนสคริปต์วิดีโอโฆษณา (Storyboard) สำหรับหัวข้อนี้:\n{message}")
 
             # ==========================================
-            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 3.1 Pro
+            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
@@ -157,11 +167,14 @@ class VideoProductionWorker:
                 )
             )
             
-            return response.text if response.text else "✅ ออกแบบสคริปต์และวางแผนวิดีโอเสร็จสิ้นครับ"
+            return response.text.strip() if response.text else "✅ ออกแบบสคริปต์และวางแผนวิดีโอเสร็จสิ้นครับ"
 
+        except TimeoutError:
+            logger.error("❌ [Worker 4 Timeout]: ไฟล์วิดีโอมีความยาวเกินไป")
+            return "ขออภัยครับ ไฟล์วิดีโอมีความยาวหรือความละเอียดสูงเกินไป ทำให้ใช้เวลาประมวลผลเกินขีดจำกัด รบกวนตัดคลิปให้สั้นลงแล้วส่งมาใหม่อีกครั้งนะครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 4 Error]: {e}")
-            return f"⚠️ [Worker 4]: สตูดิโอวิดีโอขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ (Error: {str(e)[:50]})"
+            return f"⚠️ [Worker 4]: สตูดิโอวิดีโอขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ"
 
         finally:
             # ==========================================
@@ -171,5 +184,5 @@ class VideoProductionWorker:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
                     logger.info("🗑️ [Worker 4]: ลบไฟล์วิดีโอ Footage ลับของลูกค้าออกจากคลาวด์เรียบร้อย (Data Privacy Shield)")
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(f"⚠️ [File Deletion Failed]: {e}")

@@ -3,13 +3,15 @@ import time
 import logging
 import asyncio
 import requests
+import json
+import re
 from google import genai
 from google.genai import types
 from supabase import create_client, Client
 from fastapi import BackgroundTasks
 
 # ตั้งค่า Logger สำหรับตรวจสอบการทำงานระดับ Enterprise
-logger = logging.getLogger("CentralBoss")
+logger = logging.getLogger("CentralBoss-Swarm")
 
 # =========================================================
 # 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
@@ -18,53 +20,42 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # รุ่นด่านหน้าที่เร็วที่สุดในโลก
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดเป็นแกนสมองสายสปีดที่เร็วและฉลาดที่สุดของโลก
         @staticmethod
         def get_client():
-            self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
             )
-            return self.client
 
 # =========================================================
 # 🏢 นำเข้าทีมผู้บริหารทั้ง 11 ฝ่าย (Dynamic Import)
-# (ป้องกันเซิร์ฟเวอร์แครชหากไฟล์อื่นอยู่ระหว่างอัปเดต)
 # =========================================================
 try: from agents.worker_0_ceo_secretary import CeoSecretaryWorker
 except ImportError: CeoSecretaryWorker = None
-
 try: from agents.worker_1_report import ReportWorker
 except ImportError: ReportWorker = None
-
 try: from agents.worker_2_risk_qa import RiskQAWorker
 except ImportError: RiskQAWorker = None
-
 try: from agents.worker_3_audio import AudioWorker
 except ImportError: AudioWorker = None
-
 try: from agents.worker_4_video import VideoProductionWorker
 except ImportError: VideoProductionWorker = None
-
 try: from agents.worker_5_graphics_ads import GraphicsAdsWorker
 except ImportError: GraphicsAdsWorker = None
-
 try: from agents.worker_6_strategy import MarketingStrategyWorker
 except ImportError: MarketingStrategyWorker = None
-
 try: from agents.worker_7_finance import FinancialAndAccountingWorker
 except ImportError: FinancialAndAccountingWorker = None
-
 try: from agents.worker_8_ecommerce import EcommerceWorker
 except ImportError: EcommerceWorker = None
-
 try: from agents.worker_9_prime import PrimeAdvisorWorker
 except ImportError: PrimeAdvisorWorker = None
-
 try: from agents.worker_10_enterprise import EnterprisePartnerWorker
 except ImportError: EnterprisePartnerWorker = None
-
 try: from agents.worker_11_media_engine import Worker11MediaEngine
 except ImportError: Worker11MediaEngine = None
 
@@ -72,44 +63,37 @@ except ImportError: Worker11MediaEngine = None
 class CentralBossAgent:
     """
     🎩 ผู้บัญชาการส่วนกลาง (Central Boss Agent - The Master Orchestrator)
-    จัดการ Intent Routing, ควบคุม LIFF Smart Wallet, 
-    แยกแยะความจำลูกค้าตามแพ็กเกจ (ESSENTIAL, PRIME, ENTERPRISE, 100VIP)
-    และดันผลลัพธ์ (Push) กลับสู่ LINE อัตโนมัติด้วยจิตวิทยาชั้นสูง
+    อัปเกรดสถาปัตยกรรม: Multi-Agent Swarm Pipeline 
+    จ่ายงานให้พนักงานทำงานแบบส่งไม้ต่อกัน (Inter-Agent Communication) และ Push ผลลัพธ์กลับสู่ LINE อัตโนมัติ
     """
     def __init__(self):
-        # 🚀 เชื่อมต่อขุมพลังสมองกลสายสปีดความเร็วแสง
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.CORE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
         self.liff_url = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
         self.line_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
         
-        # 💾 เชื่อมต่อ Supabase Vector DB (ความจำแยกบุคคล)
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
 
-        # 🤝 โหลดทีมงานผู้เชี่ยวชาญเข้าสู่ระบบ
-        self.ceo_secretary = CeoSecretaryWorker() if CeoSecretaryWorker else None
-        self.report_worker = ReportWorker() if ReportWorker else None
-        self.legal_worker = RiskQAWorker() if RiskQAWorker else None
-        self.audio_worker = AudioWorker() if AudioWorker else None
-        self.video_worker = VideoProductionWorker() if VideoProductionWorker else None
-        self.graphics_worker = GraphicsAdsWorker() if GraphicsAdsWorker else None
-        self.strategy_worker = MarketingStrategyWorker() if MarketingStrategyWorker else None
-        self.finance_worker = FinancialAndAccountingWorker() if FinancialAndAccountingWorker else None
-        self.ecommerce_worker = EcommerceWorker() if EcommerceWorker else None
-        self.prime_worker = PrimeAdvisorWorker() if PrimeAdvisorWorker else None
-        self.enterprise_worker = EnterprisePartnerWorker() if EnterprisePartnerWorker else None
+        # 🤝 แผนที่ทีมงาน (Worker Map) สำหรับระบบ Swarm
+        self.workers = {
+            "worker_1": ReportWorker() if ReportWorker else None,
+            "worker_2": RiskQAWorker() if RiskQAWorker else None,
+            "worker_3": AudioWorker() if AudioWorker else None,
+            "worker_4": VideoProductionWorker() if VideoProductionWorker else None,
+            "worker_5": GraphicsAdsWorker() if GraphicsAdsWorker else None,
+            "worker_6": MarketingStrategyWorker() if MarketingStrategyWorker else None,
+            "worker_7": FinancialAndAccountingWorker() if FinancialAndAccountingWorker else None,
+            "worker_8": EcommerceWorker() if EcommerceWorker else None,
+            "worker_9": PrimeAdvisorWorker() if PrimeAdvisorWorker else None,
+            "worker_10": EnterprisePartnerWorker() if EnterprisePartnerWorker else None,
+        }
         self.worker_11 = Worker11MediaEngine() if Worker11MediaEngine else None
         
         self.system_instruction = """
-        คุณคือ 'Central Boss' ผู้จัดการระดับสูงสุดและด่านหน้าของระบบ SIRINTHANATTH PRIME
-        
-        จิตวิทยาและพฤติกรรมในการสื่อสาร:
-        1. กล่าวต้อนรับอย่างหรูหรา อบอุ่น เป็นธรรมชาติ และยกระดับความรู้สึกของลูกค้า (Predictive Empathy)
-        2. หากลูกค้าถามคำถามทั่วไป ให้ตอบสั้นๆ ชาญฉลาด และให้คำแนะนำที่เหนือความคาดหมาย
-        3. หากลูกค้ากำลังเผชิญปัญหา ให้ใช้น้ำเสียงเข้าใจและเสนอวิธีแก้ (Solution) ในเชิงบวก
-        4. ใช้คำลงท้ายที่สุภาพและสะท้อนความพรีเมียมของแบรนด์เสมอ (เช่น ครับ/ค่ะ)
+        คุณคือ 'Central Boss' ผู้จัดการระดับสูงสุดของระบบ SIRINTHANATTH PRIME
+        จิตวิทยาในการสื่อสาร: สุภาพ หรูหรา อบอุ่น และเป็นมืออาชีพ (ใช้คำว่า ครับ/ค่ะ เสมอ)
         """
 
     async def _get_user_profile(self, user_id: str) -> dict:
@@ -137,36 +121,59 @@ class CentralBossAgent:
             f"👉 เปิดเมนูจัดการระบบ: {self.liff_url}"
         )
 
-    async def _execute_worker_and_push(self, worker_func, user_id: str, *args):
+    async def _execute_swarm_pipeline_and_push(self, user_id: str, pipeline: list, initial_message: str, file_path: str, user_tier: str, file_type: str):
         """
-        🚀 พนักงานจัดส่งผลลัพธ์ด่วน (Async Pusher): 
-        รอให้ Worker วิเคราะห์เชิงลึกเสร็จ แล้วยิงผลลัพธ์เข้า LINE ของลูกค้าโดยตรง 
-        แก้ปัญหาผลลัพธ์หายเข้ากลีบเมฆ (Vanishing Result Bug) 100%
+        🚀 สถาปัตยกรรม Multi-Agent Swarm (Pipeline Executor):
+        ให้พนักงานหลายแผนกประมวลผลข้อมูลส่งไม้ต่อกัน (Inter-Agent Communication) และ Push ผลลัพธ์สุดท้ายให้ลูกค้า
         """
+        current_message = initial_message
+        current_file = file_path
+        final_result = ""
+
         try:
-            # 1. ให้ Worker ประมวลผล (Worker จะหัก Token และจัดการความปลอดภัยไฟล์เอง)
-            result_text = await worker_func(user_id, *args)
-            if not result_text: return
-            
-            # 2. ผลัก (Push) ข้อมูลตอบกลับหาลูกค้าทาง LINE API
-            if not self.line_token: 
-                logger.warning("⚠️ ขาด LINE_TOKEN ไม่สามารถ Push ข้อความได้")
-                return
-                
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.line_token}"
-            }
-            data = {"to": user_id, "messages": [{"type": "text", "text": str(result_text)}]}
-            res = await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data)
-            res.raise_for_status()
-            logger.info(f"✅ [Worker Delivery]: จัดส่งผลการวิเคราะห์ระดับโลกให้ {user_id} สำเร็จ!")
-            
+            for idx, w_key in enumerate(pipeline):
+                worker_instance = self.workers.get(w_key)
+                if not worker_instance: continue
+
+                logger.info(f"🔄 [Swarm Pipeline]: ส่งไม้ต่อให้ {w_key.upper()} (Step {idx+1}/{len(pipeline)})")
+
+                # การจัดเตรียม kwargs อัตโนมัติให้ตรงกับ Signature ของแต่ละ Worker
+                kwargs = {"file_path": current_file}
+                if w_key == "worker_2": kwargs["package_tier"] = user_tier
+                if w_key == "worker_8": kwargs["file_type"] = file_type
+
+                # หากไม่ใช่คิวแรก ให้นำผลลัพธ์ของแผนกที่แล้วมาเป็นบริบทในการทำงานต่อ
+                if idx > 0 and final_result:
+                    prompt = f"อ้างอิงจากคำสั่งดั้งเดิมของลูกค้า: {initial_message}\n\n[ข้อมูลที่ถูกส่งต่อมาจากแผนกก่อนหน้า]:\n{final_result}\n\nโปรดสานต่องานนี้ในส่วนที่แผนกของคุณรับผิดชอบและสรุปผล"
+                else:
+                    prompt = current_message
+
+                # เรียกทำงาน Worker
+                if hasattr(worker_instance, "process_task"):
+                    final_result = await worker_instance.process_task(user_id, prompt, **kwargs)
+                elif hasattr(worker_instance, "process"):
+                    final_result = await worker_instance.process(user_id, prompt, **kwargs)
+
+                # 🛡️ Zero-Data Sync: เมื่อแผนกแรกประมวลผลและลบไฟล์ไปแล้ว ห้ามส่ง Path ไฟล์เดิมให้แผนกต่อไป
+                current_file = None 
+
+            # Push ข้อมูลกลับหาลูกค้าเมื่อสิ้นสุด Pipeline
+            if final_result and self.line_token:
+                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
+                data = {"to": user_id, "messages": [{"type": "text", "text": str(final_result)}]}
+                res = await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data)
+                res.raise_for_status()
+                logger.info(f"✅ [Swarm Delivery]: จัดส่งผลการทำงานร่วมกันระดับองค์กรให้ {user_id} สำเร็จ!")
+
         except Exception as e:
-            logger.error(f"❌ [Worker Delivery Error]: {e}")
+            logger.error(f"❌ [Swarm Execution Error]: {e}")
+            if self.line_token:
+                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
+                data = {"to": user_id, "messages": [{"type": "text", "text": f"⚠️ ขออภัยครับ เกิดข้อขัดข้องระหว่างการประสานงานของทีมงาน ทีมวิศวกรกำลังตรวจสอบครับ"}]}
+                await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data)
 
     async def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message: str = "", file_path: str = None, file_type: str = None) -> str:
-        """🧠 ระบบคัดกรองเจตนา (Omni-Modal Intent Router) และจ่ายงานอัจฉริยะ"""
+        """🧠 แกนสมอง Router ประเมินเจตนาลูกค้าและสร้างแผนการประชุม Swarm (Pipeline)"""
         
         actual_message = message if message else incoming_message
         if not actual_message and not file_type:
@@ -177,7 +184,7 @@ class CentralBossAgent:
         user_tier = user_profile["tier"]
 
         # ==========================================
-        # 📱 1. LIFF WELCOMING & PACKAGE MANAGEMENT
+        # 📱 1. Fast-Track: LIFF & PACKAGE MANAGEMENT
         # ==========================================
         if any(kw in message_lower for kw in ["เมนู", "menu", "แพ็กเกจ", "สมัคร", "ราคา", "บริการ"]):
             return self._get_liff_welcome_message(user_tier)
@@ -190,107 +197,101 @@ class CentralBossAgent:
             )
 
         # ==========================================
-        # 🎬 2. APPROVAL WORKFLOW (ยืนยันตัดเงินเรนเดอร์สื่อ 4K)
+        # 🎬 2. Fast-Track: APPROVAL WORKFLOW (ยืนยันสร้างสื่อ 4K)
         # ==========================================
-        if "ยืนยันการสร้างคลิป" in message_lower and self.worker_11:
-            # โยนงานให้ Worker 11 ไปทำเบื้องหลัง แล้วจบเทิร์นทันที
-            bg_tasks.add_task(self.worker_11.process_media_production, user_id, "สคริปต์อัตโนมัติ", "video_4k")
-            return (
-                "✅ ได้รับการอนุมัติระดับผู้บริหารเรียบร้อยครับ!\n"
-                "ระบบได้จัดการหัก PRIME CREDITS อย่างถูกต้อง และส่งคำสั่งเข้าสู่คิวซูเปอร์คอมพิวเตอร์เพื่อเรนเดอร์ 4K เรียบร้อยแล้วครับ\n\n"
-                "☕ ระหว่างนี้ท่านประธานสามารถพักผ่อนได้เลยครับ เมื่อผลงานเสร็จสมบูรณ์ ระบบจะนำส่งให้ทันทีครับ"
-            )
+        if "ยืนยันการสร้างคลิป" in message_lower or "ยืนยันสร้างเสียง" in message_lower:
+            if self.worker_11:
+                media_type = "video_4k" if "คลิป" in message_lower else "voice"
+                bg_tasks.add_task(self.worker_11.process_media_production, user_id, "สคริปต์อัตโนมัติ", media_type)
+                return (
+                    "✅ ได้รับการอนุมัติระดับผู้บริหารเรียบร้อยครับ!\n"
+                    "ระบบได้จัดการหัก PRIME CREDITS อย่างถูกต้อง และส่งคำสั่งเข้าสู่คิวสตูดิโอ 4K เรียบร้อยแล้วครับ\n\n"
+                    "☕ ระหว่างนี้ท่านประธานสามารถพักผ่อนได้เลยครับ เมื่อผลงานเสร็จสมบูรณ์ ระบบจะนำส่งให้ทันทีครับ"
+                )
 
         # ==========================================
-        # 🧠 3. INTENT & FILE-TYPE ROUTING (จ่ายงานให้ถูกแผนก)
-        # ==========================================
-        routing_msg = ""
-        
-        # 🛡️ 3.1 ตรวจสอบกฎหมาย (Legal)
-        if any(kw in message_lower for kw in ["กฎหมาย", "สคบ", "อย", "pdpa", "สัญญา", "ฟ้อง"]):
-            if self.legal_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.legal_worker.process_task, user_id, actual_message, file_path, user_tier)
-                routing_msg = "🛡️ รับทราบครับ ทีม Legal & Risk Management กำลังตรวจสอบข้อกฎหมายและสแกนความเสี่ยงให้ท่านอย่างละเอียดครับ"
-                
-        # 🎙️ 3.2 ระบบเสียงและพากย์ (Audio/Voice)
-        elif file_type == 'audio' or any(kw in message_lower for kw in ["เสียง", "พากย์", "tts", "แต่งเพลง", "เพลง"]):
-            if self.audio_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.audio_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "🎙️ ทีม Audio & Music Studio ได้รับไฟล์แล้ว กำลังถอดรหัสคลื่นเสียงและรังสรรค์ผลงานให้ครับ"
-                
-        # 🎬 3.3 ระบบวิดีโอ (Video)
-        elif file_type == 'video' or any(kw in message_lower for kw in ["คลิป", "วิดีโอ", "วีดีโอ", "video", "สตอรี่บอร์ด"]):
-            if self.video_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.video_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "🎬 ทีม Video Director กำลังวิเคราะห์ฉากแบบเฟรมต่อเฟรม และจัดทำ Storyboard ให้ท่านครับ"
-                
-        # 📦 3.4 ระบบ E-Commerce & โลจิสติกส์ (สลิป/ส่งของ)
-        elif any(kw in message_lower for kw in ["สั่งของ", "ออเดอร์", "สลิป", "flash", "ส่งพัสดุ", "สต๊อก"]):
-            if self.ecommerce_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.ecommerce_worker.process_task, user_id, actual_message, file_path, file_type)
-                routing_msg = "📦 ทีม E-commerce & Logistics กำลังประสานงาน ตรวจสอบสลิป และจัดการระบบขนส่งให้ครับ"
-                
-        # 💰 3.5 ระบบการเงินและบัญชี (Finance)
-        elif any(kw in message_lower for kw in ["บัญชี", "การเงิน", "ภาษี", "งบ", "roi"]):
-            if self.finance_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.finance_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "💰 ทีม Financial (CFO) กำลังวิเคราะห์ตัวเลขและโครงสร้างภาษี เพื่อรักษาผลกำไรสูงสุดให้องค์กรครับ"
-                
-        # 📈 3.6 ระบบกลยุทธ์การตลาด (Marketing Strategy)
-        elif any(kw in message_lower for kw in ["กลยุทธ์", "แผนธุรกิจ", "การตลาด", "ยิงแอด"]):
-            if self.strategy_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.strategy_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "📈 ทีม Marketing Strategist กำลังวางแผนกลยุทธ์การตลาดระดับ Global ให้ครับ"
-                
-        # 🏢 3.7 ระบบองค์กรและบิ๊กดาต้า (Enterprise)
-        elif any(kw in message_lower for kw in ["enterprise", "big data", "คลังสินค้า", "องค์กร", "sql"]):
-            if self.enterprise_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.enterprise_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "🏢 ระบบ [ENTERPRISE] Data Mining เริ่มทำงาน กำลังวิเคราะห์ฐานข้อมูลระดับอุตสาหกรรมให้ครับ"
-                
-        # 👑 3.8 ระบบที่ปรึกษาผู้บริหาร (Prime CTO)
-        elif any(kw in message_lower for kw in ["prime", "cto", "it", "ความปลอดภัย", "แฮ็ก", "ไซเบอร์"]):
-            if self.prime_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.prime_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "👑 ระบบ [PRIME Advisor] กำลังตรวจสอบสถาปัตยกรรม IT และความปลอดภัยระดับองค์กรให้ครับ"
-
-        # 🎨 3.9 ระบบกราฟิก (Image Fallback) - รองรับรูปภาพเปล่าๆ
-        elif file_type == 'image' or any(kw in message_lower for kw in ["กราฟิก", "แบนเนอร์", "ออกแบบ", "รูป", "แพ็กเกจจิ้ง", "เกียรติบัตร"]):
-            if self.graphics_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.graphics_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "🎨 ทีม Creative Director กำลังวิเคราะห์ภาพและรังสรรค์ไอเดียงานศิลป์ให้ครับ"
-                
-        # 📊 3.10 ระบบเอกสาร (File Fallback) - รองรับ PDF/Excel เปล่าๆ
-        elif file_type == 'file' or any(kw in message_lower for kw in ["เอกสาร", "ตาราง", "excel", "รายงาน", "สรุป", "pdf"]):
-            if self.report_worker:
-                bg_tasks.add_task(self._execute_worker_and_push, self.report_worker.process_task, user_id, actual_message, file_path)
-                routing_msg = "📊 ทีม Data & Report กำลังสกัดข้อมูลและจัดทำโครงสร้างเอกสารระดับองค์กรให้ครับ"
-
-        # 🚀 หากมีแผนกรับผิดชอบแล้ว ให้บอกลูกค้าและจบเทิร์นตรงนี้เลย
-        if routing_msg:
-            if file_path:
-                routing_msg += "\n\n📂 (ระบบได้รับไฟล์ของท่านแล้ว และกำลังนำเข้าสู่กระบวนการความปลอดภัย Zero-Data Retention ครับ)"
-            return routing_msg
-
-        # ==========================================
-        # 💬 4. โหมดตอบกลับทั่วไปด่านหน้า (Fast Conversation Fallback)
+        # 🤖 3. SWARM INTELLIGENCE ROUTER (AI ประเมินว่าต้องใช้กี่แผนก)
         # ==========================================
         if not self.client:
             return "⚠️ ระบบบัญชาการส่วนกลางออฟไลน์ เนื่องจากไม่พบคีย์เชื่อมต่อ AI ครับ"
-            
+
+        swarm_instruction = """
+        คุณคือ 'Central Boss' ผู้บัญชาการ AI Swarm ของ SIRINTHANATTH PRIME
+        หน้าที่: วิเคราะห์คำสั่งลูกค้าและจัดคิวแผนก (Pipeline) เพื่อทำงานร่วมกัน
+        
+        รายชื่อแผนก:
+        - "worker_1": วิเคราะห์ Data, Excel, สรุปเอกสาร
+        - "worker_2": กฎหมาย, ความเสี่ยง, สัญญา
+        - "worker_3": ไฟล์เสียง, เพลง
+        - "worker_4": ไฟล์วิดีโอ, Storyboard
+        - "worker_5": ไฟล์ภาพ, กราฟิก, โฆษณา, คอนเซปต์
+        - "worker_6": กลยุทธ์การตลาด, แผนธุรกิจ
+        - "worker_7": การเงิน, บัญชี, ภาษี, คุ้มทุน
+        - "worker_8": E-Commerce, สลิปโอนเงิน, ส่งของ Flash
+        - "worker_9": สถาปัตยกรรม IT, Cyber Security
+        - "worker_10": Big Data ระดับองค์กร, Supply Chain
+
+        เงื่อนไข:
+        1. หากเป็นบทสนทนาทั่วไป ถามสารทุกข์สุกดิบ ให้ส่ง pipeline ว่าง: []
+        2. งาน 1 มิติ ให้ใช้ 1 แผนก เช่น ["worker_1"]
+        3. หากงานซับซ้อนข้ามสาย ให้เรียงลำดับแผนก เช่น วิเคราะห์งบการเงินแล้วนำไปเขียนแผนโฆษณา = ["worker_7", "worker_5"]
+        4. หากมีไฟล์ภาพสลิปโอนเงิน ให้ไปที่ "worker_8" 
+        5. ตอบกลับเป็น JSON เท่านั้น
+        """
+
+        prompt = f"""
+        วิเคราะห์การส่งไม้ต่อ (Pipeline) จากคำสั่งลูกค้า:
+        ข้อความ: {actual_message}
+        มีไฟล์แนบหรือไม่: {'มีไฟล์ประเภท ' + str(file_type) if file_type else 'ไม่มีไฟล์แนบ'}
+        รูปแบบ JSON ที่ต้องการ: {{"pipeline": ["worker_...", "worker_..."], "routing_msg": "ข้อความแจ้งให้ลูกค้ารอแบบสุภาพ"}}
+        """
+
         try:
-            prompt = f"ลูกค้า (ID: {user_id} - Tier: {user_tier}) ส่งข้อความมาว่า: {actual_message}"
+            res = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=swarm_instruction,
+                    temperature=0.1,
+                    response_mime_type="application/json"
+                )
+            )
+            
+            res_text = re.sub(r'^```json\s*', '', res.text.strip())
+            res_text = re.sub(r'\s*```$', '', res_text)
+            routing_data = json.loads(res_text)
+            
+            pipeline = routing_data.get("pipeline", [])
+            routing_msg = routing_data.get("routing_msg", "รับทราบครับ ระบบกำลังดำเนินการให้ครับ")
+
+            # หากมี Pipeline ส่งเข้า Swarm Executor ทำงานเบื้องหลัง
+            if pipeline:
+                if file_path:
+                    routing_msg += "\n\n📂 (ระบบได้รับข้อมูลของท่านแล้ว และเข้าสู่กระบวนการรักษาความลับ Zero-Data Retention ครับ)"
+                
+                bg_tasks.add_task(self._execute_swarm_pipeline_and_push, user_id, pipeline, actual_message, file_path, user_tier, file_type)
+                return routing_msg
+
+        except Exception as e:
+            logger.error(f"⚠️ [Swarm Router Error]: {e} -> Fallback to Fast Conversation")
+
+        # ==========================================
+        # 💬 4. โหมดสนทนาด่านหน้า (Fast Conversation Fallback)
+        # ==========================================
+        try:
+            chat_prompt = f"ลูกค้า (ID: {user_id} - Tier: {user_tier}) ส่งข้อความมาว่า: {actual_message}"
             if file_type:
-                prompt += f"\n[หมายเหตุ: ลูกค้าแนบไฟล์ {file_type} มาด้วย โปรดตอบรับอย่างสุภาพและรอการวิเคราะห์]"
+                chat_prompt += f"\n[หมายเหตุ: ลูกค้าแนบไฟล์ {file_type} มาด้วย โปรดตอบรับอย่างสุภาพและรอการวิเคราะห์]"
             
             async def fetch_response():
                 return await asyncio.to_thread(
                     self.client.models.generate_content,
                     model=self.model_name,
-                    contents=prompt,
+                    contents=chat_prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=self.system_instruction,
-                        temperature=0.6 # ปรับอุณหภูมิให้อบอุ่น เป็นธรรมชาติ และมีความเข้าอกเข้าใจ (Empathy)
+                        temperature=0.6 # ปรับอุณหภูมิให้อบอุ่น เป็นธรรมชาติ และมีความเข้าอกเข้าใจ
                     )
                 )
             

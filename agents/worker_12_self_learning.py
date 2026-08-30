@@ -14,8 +14,8 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # อัปเกรดเป็นมาตรฐานวิเคราะห์ข้อมูลล่าสุด
-        CORE_MODEL = "gemini-2.5-flash" # ความเร็วแสงสำหรับอ่านอารมณ์
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # อัปเกรดเป็นมาตรฐานวิเคราะห์ข้อมูลล่าสุด
+        CORE_MODEL = "gemini-3.7-flash" # ความเร็วแสงสำหรับอ่านอารมณ์
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -47,8 +47,8 @@ class SelfLearningEngine:
     def __init__(self):
         # 🚀 โหลด API Client และตั้งค่าโมเดล
         self.client = PrimeAIConfig.get_client()
-        self.executive_model = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
-        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        self.executive_model = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
         
         # 💾 เชื่อมต่อฐานข้อมูล Supabase (ความจำระยะยาว)
         supa_url = os.environ.get("SUPABASE_URL")

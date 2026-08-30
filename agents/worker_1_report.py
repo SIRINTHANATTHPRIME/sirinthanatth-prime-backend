@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับตรรกะข้อมูลและ Excel
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับวิเคราะห์ข้อมูลและ Excel
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -34,18 +34,18 @@ logger = logging.getLogger("Worker1-Report")
 class ReportWorker:
     """
     📊 Worker 1: Chief Data Officer (CDO) & Executive Report Specialist
-    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบสร้างเอกสาร, ตารางคำนวณ, งานวิจัย และ Zero-Data Retention
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบสร้างเอกสาร, ตารางคำนวณ, และ Smart Tokenomics
     """
     def __init__(self):
-        # 🚀 โหลด Client และโมเดลรุ่นท็อป
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # เชื่อมต่อ Supabase สำหรับระบบ Token & Package Tiers
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
+        # ลิงก์ระบบ Smart Wallet อัตโนมัติ
         self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
 
     async def _deduct_token(self, user_id: str, tokens_needed: int) -> dict:
@@ -73,22 +73,20 @@ class ReportWorker:
                     logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Data & Report)")
                     return {"authorized": True, "tier": tier}
                 else:
-                    return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์และสร้างเอกสาร (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตอย่างปลอดภัยได้ที่: {self.topup_link}"}
+                    return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์และสร้างเอกสาร (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้ที่: {self.topup_link}"}
 
             return await asyncio.to_thread(_check_and_deduct)
-            
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
             return {"authorized": True, "tier": "ESSENTIAL"}
 
-    # รองรับการเรียกจาก Router เก่าที่ใช้ชื่อฟังก์ชัน process()
     async def process(self, user_id: str, message: str, file_path: str = None) -> str:
         return await self.process_task(user_id, message, file_path)
 
     async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         """ทำงานเบื้องหลัง: วิเคราะห์ข้อมูล สร้างโครงสร้างเอกสาร Excel/PPT และงานวิจัย"""
         if not self.client:
-            return "⚠️ [Worker 1]: ระบบวิเคราะห์ข้อมูลออฟไลน์ (ไม่พบ API Key ส่วนกลาง)"
+            return "⚠️ [Worker 1]: ระบบวิเคราะห์ข้อมูลออฟไลน์ (ไม่พบ API Key ในระบบส่วนกลาง)"
 
         # 🪙 ตรวจสอบค่าใช้จ่าย: ถาม-ตอบสูตร Excel = 10 Credits, วิเคราะห์ Big Data / PDF = 100 Credits
         tokens_needed = 100 if file_path else 10
@@ -98,7 +96,7 @@ class ReportWorker:
             return auth_status["msg"]
             
         package_tier = auth_status.get("tier", "ESSENTIAL")
-        logger.info(f"📊 [Document Engineering]: เริ่มสร้างรายงานให้ User {user_id} (Tier: {package_tier})")
+        logger.info(f"📊 [Document Engineering]: สร้างรายงานให้ User {user_id} (Tier: {package_tier})")
 
         # 🧠 System Prompt ปรับแต่งระดับโลกและปรับตาม Tier
         system_instruction = f"""
@@ -125,7 +123,7 @@ class ReportWorker:
             # 📂 1. จัดการระบบวิเคราะห์ไฟล์ (Data Parser & File Upload)
             # ==========================================
             if file_path and os.path.exists(file_path):
-                logger.info(f"📊 [Worker 1]: กำลังอัปโหลด Data File สู่ระบบ Secure Cloud เพื่อวิเคราะห์เชิงลึก...")
+                logger.info(f"📊 [Worker 1]: กำลังอัปโหลด Data File สู่ระบบ AI เพื่อวิเคราะห์เชิงลึก...")
                 
                 mime_type, _ = mimetypes.guess_type(file_path)
                 if file_path.lower().endswith('.xlsx'): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -141,12 +139,12 @@ class ReportWorker:
                     logger.error(f"⚠️ [File Upload Error]: {e}")
                     return f"⚠️ [Worker 1]: ไม่สามารถประมวลผลไฟล์นี้ได้โดยตรงครับ รบกวนแปลงเป็น PDF หรือ CSV เพื่อประสิทธิภาพสูงสุดในการวิเคราะห์ครับ"
 
-                # ⏳ Async Sync และระบบ Anti-Freeze (Timeout 60 วินาที)
+                # ⏳ Async Sync รอ Google ย่อยข้อมูล พร้อมระบบ Anti-Freeze (Timeout 60s)
                 timeout = 60
                 start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
                     if time.time() - start_time > timeout:
-                        raise TimeoutError("หมดเวลาการประมวลผลเอกสาร")
+                        raise TimeoutError("หมดเวลาการสแกนและประมวลผลไฟล์เอกสาร")
                     await asyncio.sleep(2)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
@@ -167,15 +165,15 @@ class ReportWorker:
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.2 # ใช้อุณหภูมิ 0.2 เพื่อให้การคำนวณและโครงสร้างตารางมีความแม่นยำทางวิศวกรรมสูงสุด ไม่ผิดเพี้ยน
+                    temperature=0.2 # ใช้อุณหภูมิ 0.2 เพื่อให้การคำนวณและโครงสร้างตารางมีความแม่นยำทางวิศวกรรมสูงสุด
                 )
             )
             
             return response.text.strip() if response.text else "✅ วิเคราะห์และจัดทำโครงร่างเอกสารเสร็จสิ้นครับ"
 
         except TimeoutError:
-            logger.error("❌ [Worker 1 Timeout]: เอกสารมีขนาดใหญ่หรือซับซ้อนเกินไป")
-            return "ขออภัยครับ เอกสารมีขนาดใหญ่ทำให้ใช้เวลาประมวลผลนานกว่าปกติ รบกวนแบ่งไฟล์เพื่อการวิเคราะห์ที่รวดเร็วขึ้นนะครับ"
+            logger.error("❌ [Worker 1 Timeout]: ไฟล์ Data มีขนาดใหญ่หรือซับซ้อนเกินไป")
+            return "ขออภัยครับ ไฟล์ข้อมูลหรือเอกสารมีความซับซ้อนเกินไป รบกวนแยกไฟล์เพื่อการประมวลผลที่รวดเร็วขึ้นครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 1 Error]: {e}")
             return f"⚠️ [Worker 1]: ระบบจัดการเอกสารขัดข้องชั่วคราว ทีมวิศวกรกำลังเข้าตรวจสอบครับ"

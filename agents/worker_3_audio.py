@@ -1,24 +1,28 @@
 import os
+import time
 import logging
 import asyncio
 import mimetypes
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# =========================================================
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล (Vertex AI / Zero Downtime)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # ใช้รุ่น Pro เพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงเพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
         @staticmethod
         def get_client():
-            PrimeAIConfig.self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
             )
-            return PrimeAIConfig.self.client
 
 try:
     from supabase import create_client, Client
@@ -36,11 +40,11 @@ logger = logging.getLogger("Worker3-AudioStudio")
 class AudioWorker:
     """
     🎙️ Worker 3: Chief Audio Producer & Voice Synthesizer
-    อัปเกรด: [Gemini 3.1 Pro + ElevenLabs] ระบบวิเคราะห์เสียง, แต่งเพลง, และผลิตเสียงพากย์ 4K
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro) + ElevenLabs ระบบวิเคราะห์เสียง, แต่งเพลง, และผลิตเสียงพากย์ 4K
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
@@ -49,7 +53,7 @@ class AudioWorker:
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
-        self.topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # เปลี่ยนเป็นลิงก์เติมเงินจริง
+        self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
 
     async def _deduct_token(self, user_id: str, tokens_needed: int) -> dict:
         """💳 ตรวจสอบแพ็กเกจและหัก PRIME CREDITS อัจฉริยะ สำหรับสตูดิโอเสียง"""
@@ -57,29 +61,29 @@ class AudioWorker:
             return {"authorized": True, "tier": "ESSENTIAL"} # Fallback โหมด Offline
         
         try:
-            user_data = await asyncio.to_thread(
-                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
-            )
-            
-            if not user_data.data:
-                return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนผ่านเมนูเพื่อเปิดใช้งานระบบ Audio Studio ครับ"}
+            def _check_and_deduct():
+                user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 
-            balance = float(user_data.data[0].get("token_balance", 0.0))
-            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
-            
-            # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบ Audio ได้เต็มประสิทธิภาพ
-            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {"authorized": True, "tier": tier}
+                if not user_data.data:
+                    return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนผ่านเมนูเพื่อเปิดใช้งานระบบ Audio Studio ครับ"}
+                    
+                balance = float(user_data.data[0].get("token_balance", 0.0))
+                tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-            if balance >= tokens_needed:
-                new_balance = balance - tokens_needed
-                await asyncio.to_thread(
-                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                )
-                logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Audio Production)")
-                return {"authorized": True, "tier": tier}
-            else:
-                return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ไม่เพียงพอสำหรับโปรดักชันเสียง (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้ที่: {self.topup_link}"}
+                # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบ Audio ได้เต็มประสิทธิภาพ
+                if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {"authorized": True, "tier": tier}
+                    
+                if balance >= tokens_needed:
+                    new_balance = balance - tokens_needed
+                    self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Audio Production)")
+                    return {"authorized": True, "tier": tier}
+                else:
+                    return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ไม่เพียงพอสำหรับโปรดักชันเสียง (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้อย่างปลอดภัยที่: {self.topup_link}"}
+
+            return await asyncio.to_thread(_check_and_deduct)
+            
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
             return {"authorized": True, "tier": "ESSENTIAL"}
@@ -87,7 +91,7 @@ class AudioWorker:
     async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         """ทำงานเบื้องหลัง: ถอดรหัสคลื่นเสียง, วิเคราะห์อารมณ์, แต่งเพลง, และสั่งการ ElevenLabs"""
         if not self.client:
-            return "⚠️ [Worker 3]: ระบบประมวลผลเสียงและดนตรีออฟไลน์ (ไม่พบ API Key)"
+            return "⚠️ [Worker 3]: ระบบประมวลผลเสียงและดนตรีออฟไลน์ (ไม่พบ API Key ส่วนกลาง)"
 
         # 🪙 ตรวจสอบค่าใช้จ่าย:
         # - วิเคราะห์ข้อความ/แต่งเพลง/ถอดเสียง = 50 Credits
@@ -133,10 +137,15 @@ class AudioWorker:
                     upload_config = types.UploadFileConfig(mime_type=mime_type)
                     uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 except Exception as e:
+                    logger.error(f"⚠️ [File Upload Error]: {e}")
                     return f"⚠️ [Worker 3]: ระบบไม่รองรับไฟล์เสียงประเภทนี้ครับ กรุณาส่งเป็นไฟล์ .mp3 หรือ .m4a ขนาดไม่เกิน 20MB ครับ"
 
-                # ⏳ Async Sync รอการถอดรหัสเสียง (Crash-Proof)
+                # ⏳ Async Sync รอการถอดรหัสเสียง พร้อมระบบ Anti-Freeze (Timeout 60s)
+                timeout = 60
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("หมดเวลาการสแกนและถอดรหัสคลื่นเสียง")
                     await asyncio.sleep(2)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
@@ -149,7 +158,7 @@ class AudioWorker:
                 content_to_send.append(f"โปรดวิเคราะห์ แต่งเพลง หรือเตรียมสคริปต์สำหรับโปรดักชันเสียง ตามความต้องการนี้: {message}")
 
             # ==========================================
-            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro (Asynchronous)
+            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 3.1 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
@@ -161,7 +170,7 @@ class AudioWorker:
                 )
             )
             
-            reply_text = response.text if response.text else "✅ วิเคราะห์และจัดเตรียมสคริปต์เสียงเสร็จสิ้นครับ"
+            reply_text = response.text.strip() if response.text else "✅ วิเคราะห์และจัดเตรียมสคริปต์เสียงเสร็จสิ้นครับ"
             
             # ==========================================
             # 🎙️ 3. ผสมผสานขุมพลัง ElevenLabs API (สร้างเสียงมนุษย์จริงทันที)
@@ -169,7 +178,7 @@ class AudioWorker:
             if is_voice_generation and generate_voice_from_text:
                 if package_tier in ["ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
                     logger.info("🎙️ [ElevenLabs]: ได้รับคำสั่งให้สร้างเสียงพากย์ 4K กำลังเชื่อมต่อ API...")
-                    # ส่งข้อความไปให้ ElevenLabs สังเคราะห์เสียง
+                    # ส่งข้อความไปให้ ElevenLabs สังเคราะห์เสียงแบบ Asynchronous
                     filename, duration_ms = await asyncio.to_thread(generate_voice_from_text, reply_text)
                     if filename:
                         audio_link = f"{self.base_url}/static/audio/{filename}"
@@ -181,9 +190,12 @@ class AudioWorker:
             
             return reply_text
 
+        except TimeoutError:
+            logger.error("❌ [Worker 3 Timeout]: ไฟล์เสียงมีความยาวหรือซับซ้อนเกินไป")
+            return "ขออภัยครับ ไฟล์เสียงมีความยาวเกินกำหนดทำให้ใช้เวลาถอดรหัสนานกว่าปกติ รบกวนส่งไฟล์เสียงที่สั้นลงเพื่อการประมวลผลที่รวดเร็วขึ้นครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 3 Error]: {e}")
-            return f"⚠️ [Worker 3]: สตูดิโอเสียงขัดข้องชั่วคราว ทีมวิศวกรกำลังเข้าแก้ไขครับ (Error: {str(e)[:50]})"
+            return f"⚠️ [Worker 3]: สตูดิโอเสียงขัดข้องชั่วคราว ทีมวิศวกรกำลังเข้าแก้ไขครับ"
 
         finally:
             # ==========================================
@@ -193,5 +205,5 @@ class AudioWorker:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
                     logger.info("🗑️ [Worker 3]: ทำลายไฟล์เสียงลับของลูกค้าออกจากระบบเซิร์ฟเวอร์คลาวด์เรียบร้อย (Data Privacy Shield)")
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(f"⚠️ [File Deletion Failed]: {e}")

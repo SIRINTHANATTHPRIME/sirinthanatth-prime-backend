@@ -16,7 +16,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับอ่านสลิปและสกัดข้อมูล OCR ขั้นสูง
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับอ่านสลิปและสกัดข้อมูล OCR ขั้นสูง
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -35,7 +35,7 @@ class EcommerceWorker:
     def __init__(self):
         # 🚀 โหลด Client และโมเดลรุ่นท็อป
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # 💾 เชื่อมต่อฐานข้อมูล Supabase สำหรับเช็คยอด Token และ Wallet
         supa_url = os.environ.get("SUPABASE_URL")

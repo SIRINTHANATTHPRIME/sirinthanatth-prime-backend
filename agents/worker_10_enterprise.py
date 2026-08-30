@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -39,7 +39,7 @@ class EnterprisePartnerWorker:
     def __init__(self):
         # 🚀 โหลด Client และโมเดลรุ่นท็อป
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจและ Token
         supa_url = os.getenv("SUPABASE_URL")
