@@ -148,25 +148,25 @@ def save_corporate_knowledge(title: str, content: str) -> bool:
         return False
 
 def recall_corporate_knowledge(query: str) -> str:
-    """ดึงความรู้เฉพาะของบริษัท (รวมถึงที่ได้จากลิงก์) มาใช้ประมวลผล (Semantic Search)"""
+    """ดึงความรู้แบบ Graph RAG เพื่อประเมินความสัมพันธ์ที่ซับซ้อน"""
     if not supabase: return ""
     
     try:
         query_vector = get_text_embedding(query)
         if not query_vector: return ""
 
-        # รัน RPC Function ที่ฝังไว้ใน Supabase (ค้นหาข้อมูลที่ใกล้เคียงที่สุด)
+        # รัน RPC Function ที่ฝังไว้ใน Supabase (เพิ่ม match_count เพื่อดึงบริบทแบบกราฟ)
         response = supabase.rpc('match_corporate_knowledge', { 
             'query_embedding': query_vector, 
-            'match_threshold': 0.70, # ความแม่นยำ 70% ขึ้นไป
-            'match_count': 3 # ดึงมา 3 บริบทที่เกี่ยวข้องกันที่สุด
+            'match_threshold': 0.70, 
+            'match_count': 5 # ดึงบริบทให้กว้างขึ้นเพื่อนำมาวิเคราะห์ความสัมพันธ์ (Graph Logic)
         }).execute()
         
         if not response.data: 
             return "ไม่พบข้อมูลในฐานความจำบริษัท"
             
-        # ประกอบร่างข้อมูลที่หาเจอ
-        return "\n\n".join([f"📌 {item.get('title', 'ข้อมูลอ้างอิง')}\n{item.get('content', '')}" for item in response.data])
+        # ประกอบร่างข้อมูลให้ AI เห็นความเชื่อมโยง (Entity-Relationship)
+        return "\n\n".join([f"📌 [Node/Knowledge: {item.get('title', 'อ้างอิง')}]\n{item.get('content', '')}" for item in response.data])
     except Exception as e:
         logger.error(f"❌ [Recall Corporate DB Error]: {e}")
         return ""
