@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import asyncio
 import logging
 from google import genai
@@ -7,47 +8,47 @@ from google.genai import types
 from supabase import create_client, Client
 
 # =========================================================
-# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลาง (รองรับ Zero Downtime Fallback)
+# 🌐 1. ศูนย์บัญชาการ AI ส่วนกลาง (Vertex AI / Zero Downtime)
 # =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # โมเดลเรือธงอัปเดตล่าสุด
-        CORE_MODEL = "gemini-3.7-flash"
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # อัปเกรดเป็นมาตรฐานวิเคราะห์ข้อมูลล่าสุด
+        CORE_MODEL = "gemini-2.5-flash" # ความเร็วแสงสำหรับอ่านอารมณ์
         @staticmethod
         def get_client():
-            self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key:
+                return genai.Client(api_key=api_key)
+            # รองรับระบบ Vertex AI อัตโนมัติบน Google Cloud
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
-        )
+            )
 
-# พยายามนำเข้าระบบ Embedding จากสมองกลความจำ
+# นำเข้าระบบ Embedding จากสมองกลความจำ
 try:
     from agents.memory_engine import get_text_embedding
 except ImportError:
     def get_text_embedding(text): return []
 
 # ตั้งค่า Logger สำหรับติดตามวิวัฒนาการของระบบ
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Worker12-EvolutionEngine")
 
 class SelfLearningEngine:
     """
     🧠 Worker 12: Autonomous Evolution Engine (ฝ่ายวิวัฒนาการและเรียนรู้ด้วยตนเอง)
-    หน้าที่: วิเคราะห์สภาวะอารมณ์, สกัดความผิดพลาดเป็นกฎเหล็ก (Golden Rules) และอัปเดตระบบความจำ
+    หน้าที่: วิเคราะห์สภาวะอารมณ์, สกัดความผิดพลาดเป็นกฎเหล็ก (Golden Rules) และอัปเดตระบบความจำ RAG
     """
     
     def __init__(self):
-        # 🚀 โหลด API Key และตั้งค่าโมเดล
-        self.client = genai.Client(
-            vertexai=True, 
-            project="swift-area-503915-a1", 
-            location="asia-southeast3"
-    )
-        self.executive_model = PrimeAIConfig.EXECUTIVE_MODEL # ใช้สำหรับคิดวิเคราะห์เชิงลึก (Self-Reflection)
-        self.fast_model = PrimeAIConfig.CORE_MODEL # ใช้สำหรับสแกนอารมณ์รวดเร็ว
+        # 🚀 โหลด API Client และตั้งค่าโมเดล
+        self.client = PrimeAIConfig.get_client()
+        self.executive_model = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
         
         # 💾 เชื่อมต่อฐานข้อมูล Supabase (ความจำระยะยาว)
         supa_url = os.environ.get("SUPABASE_URL")
@@ -58,6 +59,7 @@ class SelfLearningEngine:
         """วิเคราะห์สภาวะอารมณ์ ความต้องการที่ซ่อนอยู่ (Predictive Empathy)"""
         if not self.client:
             return {"sentiment": "neutral", "underlying_need": "general", "recommended_tone": "professional"}
+            
         try:
             prompt = f"""วิเคราะห์ข้อความลูกค้า: '{message}'
             ตอบเป็น JSON เท่านั้นในรูปแบบ:
@@ -67,17 +69,28 @@ class SelfLearningEngine:
                 self.client.models.generate_content,
                 model=self.fast_model,
                 contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.2
+                )
             )
-            return json.loads(response.text)
+            
+            # Sanitizer: กำจัด Markdown Code Blocks ที่ AI อาจส่งมาพร้อม JSON
+            response_text = response.text.strip()
+            response_text = re.sub(r'^```json\s*', '', response_text)
+            response_text = re.sub(r'\s*```$', '', response_text)
+            
+            return json.loads(response_text)
+            
         except Exception as e:
             logger.error(f"⚠️ [Intent Analysis Error]: {e}")
             return {"sentiment": "neutral", "underlying_need": "general", "recommended_tone": "professional"}
+
     async def analyze_and_learn(self, user_query: str, bad_ai_response: str, user_correction: str):
         """สกัดบทเรียนจากความผิดพลาดเป็น Golden Rule บันทึกลง Supabase"""
-        if not self.client: return False, "API Key Missing"
+        if not self.client: 
+            return False, "⚠️ [System]: ระบบ Evolution Offline (ไม่พบ API Key)"
 
-        """1. วิเคราะห์ความผิดพลาดและสกัดบทเรียน (Self-Reflection)"""
         logger.info("🧠 [Evolution Engine]: เริ่มกระบวนการวิเคราะห์ความผิดพลาดและเรียนรู้ด้วยตนเอง...")
         
         system_instruction = """
@@ -99,10 +112,7 @@ class SelfLearningEngine:
         """
         
         try:
-            if not self.client: 
-                return False, "⚠️ [System]: ระบบ Evolution Offline (ไม่พบ API Key)"
-            
-            # ⚡ ใช้ asyncio.to_thread เพื่อไม่ให้บล็อกเซิร์ฟเวอร์ขณะ AI กำลังคิด
+            # ⚡ ใช้ asyncio.to_thread เพื่อไม่ให้บล็อกเซิร์ฟเวอร์ขณะ AI กำลังคิดวิเคราะห์
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.executive_model,
@@ -115,30 +125,24 @@ class SelfLearningEngine:
             
             golden_rule = response.text.strip() if response.text else ""
             
-            if golden_rule and self.supabase:
-                vector_data = get_text_embedding(user_query)
-                data = {
-                    "category": user_query[:100],
-                    "rule_content": golden_rule,
-                    "impact_score": 100,
-                    "status": "active"
-                }
-                if vector_data: data["embedding"] = vector_data
-                self.supabase.table("ai_golden_rules").insert(data).execute()
-                return False, "Failed to extract golden rule."
-            return await asyncio.to_thread(self._save_golden_rule, user_query, golden_rule)
+            if golden_rule:
+                # ส่งต่อให้ฟังก์ชันเก็บบันทึกลงฐานข้อมูล
+                return await asyncio.to_thread(self._save_golden_rule, user_query, golden_rule)
+                
+            return False, "Failed to extract golden rule."
+            
         except Exception as e:
             logger.error(f"⚠️ [Evolution Engine Error]: {e}")
             return False, str(e)
 
     def _save_golden_rule(self, category: str, golden_rule: str):
-        """2. บันทึกกฎเหล็กลงฐานข้อมูลเพื่อปรับปรุงระบบ (Supabase Vector DB)"""
+        """บันทึกกฎเหล็กลงฐานข้อมูล Vector DB เพื่อใช้ปรับปรุงระบบ (RAG)"""
         if not self.supabase:
             logger.warning("⚠️ ไม่ได้เชื่อมต่อ Supabase ข้ามการบันทึก Golden Rule (Database Offline)")
             return False, "Database connection failed"
             
         try:
-            # วิเคราะห์บริบทของคำถามเพื่อแปลงเป็น Vector สำหรับการค้นหาในอนาคต (ถ้าระบบเปิดใช้งาน)
+            # แปลงข้อความเป็น Vector ด้วยโมเดลล่าสุด (Embedding Generation)
             vector_data = get_text_embedding(category)
             
             data_to_insert = {
@@ -148,13 +152,13 @@ class SelfLearningEngine:
                 "status": "active"
             }
             
-            # ถ้ามีระบบ Vector ฝังอยู่
             if vector_data:
                 data_to_insert["embedding"] = vector_data
                 
-            # สมมติฐานว่ามีตาราง 'ai_golden_rules' ใน Supabase
+            # นำเข้าสู่ฐานข้อมูลความจำถาวร
             self.supabase.table("ai_golden_rules").insert(data_to_insert).execute()
             logger.info(f"✅ [SYSTEM EVOLVED]: วิวัฒนาการสำเร็จ! ระบบเรียนรู้กฎใหม่ -> {golden_rule}")
+            
             return True, golden_rule
             
         except Exception as e:
@@ -162,21 +166,21 @@ class SelfLearningEngine:
             return False, str(e)
 
     async def get_rules_for_context(self, current_user_query: str) -> str:
-        """3. ดึงกฎเหล็กมาเตือนสติ AI ก่อนตอบคำถามลูกค้าคนปัจจุบัน (Dynamic RAG)"""
+        """ดึงกฎเหล็กมาเตือนสติ AI (Dynamic RAG) ก่อนตอบคำถามลูกค้าคนปัจจุบัน"""
         if not self.supabase: 
             return ""
             
         try:
-            # ทำงานเบื้องหลังเพื่อดึงข้อมูลกฎ
             def fetch_rules():
                 vector_data = get_text_embedding(current_user_query)
-                # ค้นหาด้วย Vector (RPC) หากมีการตั้งค่าในฐานข้อมูลไว้
                 if vector_data:
+                    # ค้นหากฎเหล็กด้วยเทคโนโลยี Vector Search (RPC)
                     res = self.supabase.rpc('match_golden_rules', {
                         'query_embedding': vector_data, 
-                        'match_threshold': 0.75, 
+                        'match_threshold': 0.75, # ดึงเฉพาะกฎที่มีความเกี่ยวข้องสูงกว่า 75%
                         'match_count': 2
                     }).execute()
+                    
                     if res.data:
                         return " | ".join([item['rule_content'] for item in res.data])
                 return ""
@@ -186,6 +190,7 @@ class SelfLearningEngine:
             if matched_rules:
                 logger.info(f"🛡️ [Guardrail Activated]: ดึงกฎเตือนสติ AI สำเร็จ")
                 return f"\n⚠️ [คำเตือนจากกฎเหล็กและนโยบายบริษัท (Golden Rules)]: {matched_rules}\nให้ยึดถือกฎนี้เป็นความจริงสูงสุดในการตอบคำถาม"
+                
             return ""
             
         except Exception as e:

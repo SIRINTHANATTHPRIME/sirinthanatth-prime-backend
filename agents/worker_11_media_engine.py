@@ -5,7 +5,23 @@ import logging
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI และระบบฐานข้อมูล
+# =========================================================
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และระบบฐานข้อมูล (Vertex AI / Zero Downtime)
+# =========================================================
+try:
+    from core_services.ai_config import PrimeAIConfig
+except ImportError:
+    class PrimeAIConfig:
+        @staticmethod
+        def get_client():
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
+                vertexai=True, 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                location="asia-southeast3"
+            )
+
 try:
     from supabase import create_client, Client
 except ImportError:
@@ -24,7 +40,7 @@ logger = logging.getLogger("Worker11-MediaStudio")
 class Worker11MediaEngine:
     """
     ⚙️ Worker 11: In-house Media & Voice Studio Engine (GPU 4K Studio)
-    อัปเกรด: ประมวลผลภาพ/เสียง 4K คู่ขนาน (Async), Dynamic CPU Allocation และ Smart Wallet Tokenomics
+    อัปเกรด: Vertex AI, ประมวลผลภาพ/เสียง 4K คู่ขนาน (Async), Dynamic CPU Allocation และ Smart Tokenomics
     """
     
     def __init__(self):
@@ -33,11 +49,7 @@ class Worker11MediaEngine:
         os.makedirs(self.output_dir, exist_ok=True)
         
         # 🚀 อัปเกรดการเชื่อมต่อด้วย SDK มาตรฐานใหม่ล่าสุด
-        self.client = genai.Client(
-            vertexai=True, 
-            project="swift-area-503915-a1", 
-                location="asia-southeast3"
-        )
+        self.client = PrimeAIConfig.get_client()
         
         # ประกาศใช้สุดยอดโมเดลผลิตสื่อระดับโลก (Vision & Cinematic Engine)
         self.image_model = "imagen-4.0-ultra-generate-001"
@@ -57,9 +69,8 @@ class Worker11MediaEngine:
         """
         if mode == "MAX_POWER":
             logger.warning("🔥 [Cloud Run Optimization]: สลับเข้าสู่โหมด MAX POWER (จัดสรร CPU 100% สำหรับการเรนเดอร์ 4K)")
-            # (ในอนาคต: สามารถยิง API ไปที่ GCP Cloud Run เพื่อ Scale-up Instance ได้)
         elif mode == "HIBERNATE":
-            logger.info("💤 [Energy Saver]: คืนทรัพยากร CPU เข้าสู่โหมดประหยัดพลังงาน (Hibernation) เพื่อประหยัดค่าใช้จ่าย 100%")
+            logger.info("💤 [Energy Saver]: คืนทรัพยากร CPU เข้าสู่โหมดประหยัดพลังงาน (Hibernation) เพื่อคุมต้นทุนคลาวด์")
 
     async def _deduct_token(self, user_id: str, tokens_needed: int, media_type: str) -> dict:
         """💳 ตรวจสอบแพ็กเกจและหัก PRIME CREDITS อัจฉริยะ สำหรับโรงงานผลิตสื่อ"""
@@ -67,30 +78,30 @@ class Worker11MediaEngine:
             return {"authorized": True, "tier": "ESSENTIAL"} # Fallback โหมด Offline
         
         try:
-            user_data = await asyncio.to_thread(
-                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
-            )
-            
-            if not user_data.data:
-                return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนผ่านเมนูเพื่อใช้งานสตูดิโอ 4K ครับ"}
+            def _check_and_deduct():
+                user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 
-            balance = float(user_data.data[0].get("token_balance", 0.0))
-            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
-            
-            # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบโปรดักชันได้ตามสิทธิพิเศษ
-            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {"authorized": True, "tier": tier}
+                if not user_data.data:
+                    return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนผ่านเมนูเพื่อใช้งานสตูดิโอ 4K ครับ"}
+                    
+                balance = float(user_data.data[0].get("token_balance", 0.0))
+                tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-            if balance >= tokens_needed:
-                new_balance = balance - tokens_needed
-                await asyncio.to_thread(
-                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                )
-                logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (ผลิตสื่อ {media_type})")
-                return {"authorized": True, "tier": tier}
-            else:
-                topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # เปลี่ยนเป็นลิงก์เติมเงินจริง
-                return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ไม่เพียงพอสำหรับการผลิตสื่อ {media_type} (ต้องการ {tokens_needed} Credits)\n👉 โปรดเติมเครดิตที่: {topup_link}"}
+                # 👑 VIP_FOUNDER และ ENTERPRISE ใช้งานระบบโปรดักชันได้ตามสิทธิพิเศษ
+                if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {"authorized": True, "tier": tier}
+                    
+                if balance >= tokens_needed:
+                    new_balance = balance - tokens_needed
+                    self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (ผลิตสื่อ {media_type})")
+                    return {"authorized": True, "tier": tier}
+                else:
+                    topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
+                    return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ไม่เพียงพอสำหรับการผลิตสื่อ {media_type} (ต้องการ {tokens_needed} Credits)\n👉 โปรดเติมเครดิตที่: {topup_link}"}
+
+            return await asyncio.to_thread(_check_and_deduct)
+            
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
             return {"authorized": True, "tier": "ESSENTIAL"}
@@ -99,7 +110,7 @@ class Worker11MediaEngine:
         """ฟังก์ชันหลักที่ถูก Background Task เรียกใช้งานแบบ Async"""
         logger.info(f"🎯 [Worker 11]: ได้รับมอบหมายคิวงาน '{media_type}' สำหรับ User: {user_id}")
         
-        # 🪙 ตรวจสอบค่าใช้จ่ายโปรดักชัน (อ้างอิงจากหน้าเว็บ)
+        # 🪙 ตรวจสอบค่าใช้จ่ายโปรดักชัน (อ้างอิงจาก Master Plan)
         # วิดีโอ 4K = 6,900 Credits, เสียงพากย์/แชท = 150 Credits
         tokens_needed = 6900 if media_type == "video_4k" else 150
         auth_status = await self._deduct_token(user_id, tokens_needed, media_type)
@@ -128,7 +139,7 @@ class Worker11MediaEngine:
             
         return result_message
 
-    async def _generate_voice(self, user_id: str, text: str) -> str:
+    async def _generate_voice(self, user_id: str, script_text: str) -> str:
         """ระบบสังเคราะห์เสียงพากย์พรีเมียม (ElevenLabs Integration)"""
         logger.info(f"🎙️ [Worker 11 - Voice Studio]: กำลังสังเคราะห์เสียงพากย์ระดับมนุษย์...")
         
@@ -138,7 +149,7 @@ class Worker11MediaEngine:
         try:
             if create_voiceover:
                 # ⚡ ใช้ to_thread เพื่อให้งาน Audio ไม่บล็อก Async Loop ของระบบ
-                await asyncio.to_thread(create_voiceover, text, output_path)
+                await asyncio.to_thread(create_voiceover, script_text, output_path)
             else:
                 await asyncio.sleep(2) # จำลองถ้าไม่มีฟังก์ชันจริง
                 
@@ -149,7 +160,7 @@ class Worker11MediaEngine:
             logger.error(f"❌ [Voice Studio Error]: {e}")
             return "⚠️ [System]: เกิดข้อผิดพลาดในการสังเคราะห์เสียงพากย์"
 
-    async def _generate_4k_video(self, user_id: str, text: str) -> str:
+    async def _generate_4k_video(self, user_id: str, script_text: str) -> str:
         """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering) ผสาน Veo 3.1"""
         logger.info(f"🎬 [Worker 11 - 4K Studio]: กำลังเรนเดอร์วิดีโอ 4K ด้วย {self.video_model}...")
         
@@ -158,8 +169,17 @@ class Worker11MediaEngine:
         
         try:
             if create_marketing_video:
-                # ⚡ สั่งรัน MoviePy โดยส่ง client และโมเดลไปยังไฟล์ generate_video.py
-                await asyncio.to_thread(create_marketing_video, user_id, text, script_text, output_filename, output_path, self.client, self.video_model, self.image_model)
+                # ⚡ สั่งรัน MoviePy โดยส่ง client และโมเดลไปยังไฟล์ generate_video.py อย่างแม่นยำ
+                await asyncio.to_thread(
+                    create_marketing_video, 
+                    user_id, 
+                    script_text, 
+                    output_filename, 
+                    output_path, 
+                    self.client, 
+                    self.video_model, 
+                    self.image_model
+                )
             else:
                 await asyncio.sleep(5) # จำลองการเรนเดอร์
                 

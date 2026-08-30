@@ -6,17 +6,21 @@ import mimetypes
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# =========================================================
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล (Vertex AI / Zero Downtime)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงอัจฉริยะที่สุดสำหรับ Big Data
         @staticmethod
         def get_client():
-            PrimeAIConfig.self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
             )
 
@@ -30,19 +34,20 @@ logger = logging.getLogger("Worker10-Enterprise")
 class EnterprisePartnerWorker:
     """
     🏢 Worker 10: Executive Enterprise Partner & Big Data Architect
-    อัปเกรด: [Gemini 3.1 Pro] ระบบจัดการข้อมูลองค์กรระดับมหาภาค, คลังสินค้า และความปลอดภัยสูงสุด
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบจัดการข้อมูลองค์กรระดับมหาภาค, คลังสินค้า และ Zero-Trust Security
     """
     def __init__(self):
+        # 🚀 โหลด Client และโมเดลรุ่นท็อป
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจและ Token
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
-        # 🔗 ลิงก์สำหรับระบบชำระเงิน (อ้างอิงจากแผนแม่บท)
-        self.topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # แทนที่ด้วยลิงก์เติม Token 
+        # 🔗 ลิงก์สำหรับระบบชำระเงิน
+        self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
         self.enterprise_upgrade_m = "https://buy.stripe.com/eVqeVf2Nh1OBaM7eJa6Zy04" # 4,900 / เดือน
         self.enterprise_upgrade_y = "https://buy.stripe.com/bJe9AVfA3ctf2fB0Sk6Zy05" # 39,900 / ปี (ประหยัด 20%)
 
@@ -52,49 +57,48 @@ class EnterprisePartnerWorker:
             return {"authorized": True, "tier": "ENTERPRISE"} # Fallback โหมด Offline
         
         try:
-            user_data = await asyncio.to_thread(
-                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
-            )
-            
-            if not user_data.data:
-                return {"authorized": False, "msg": "⚠️ ขออภัยครับ ไม่พบข้อมูลบัญชีองค์กรของท่านในระบบ กรุณาติดต่อทีมงานครับ"}
+            def _check_and_deduct():
+                user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 
-            balance = float(user_data.data[0].get("token_balance", 0.0))
-            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
-            
-            # 🛡️ ตรวจสอบสิทธิ์: สงวนสิทธิ์เฉพาะ ENTERPRISE, VIP_FOUNDER และ ADMIN
-            if tier not in ["ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
-                # 🧠 จิตวิทยาการ Upsell: ทำให้รู้สึกถึงความเหนือระดับ และเสนอแพ็กเกจที่คุ้มค่า
-                upsell_msg = (
-                    f"🏢 [Enterprise Exclusive]: ท่านผู้บริหารครับ ระบบวิเคราะห์ข้อมูลตลาด Real-time และการจัดการ Big Data/คลังสินค้า "
-                    f"เป็นฟีเจอร์ระดับเอ็กซ์คลูซีฟที่สงวนสิทธิ์เฉพาะแพ็กเกจ **'พันธมิตรองค์กร (ENTERPRISE)'** ขึ้นไปเท่านั้นครับ\n\n"
-                    f"💡 เพื่อปกป้องแบรนด์ของคุณและยกระดับระบบหลังบ้านด้วยทีมวิศวกร AI ของเรา ขออนุญาตเรียนเชิญอัปเกรดแพ็กเกจครับ:\n"
-                    f"🔹 รายเดือน (4,900 ฿): {self.enterprise_upgrade_m}\n"
-                    f"⭐ รายปีสุดคุ้ม (39,900 ฿ - ประหยัด 20%): {self.enterprise_upgrade_y}"
-                )
-                return {"authorized": False, "msg": upsell_msg}
-            
-            # 👑 VIP_FOUNDER และ ADMIN ใช้งานได้ไร้ขีดจำกัด
-            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {"authorized": True, "tier": tier}
+                if not user_data.data:
+                    return {"authorized": False, "msg": "⚠️ ขออภัยครับ ไม่พบข้อมูลบัญชีองค์กรของท่านในระบบ กรุณาติดต่อทีมงานครับ"}
+                    
+                balance = float(user_data.data[0].get("token_balance", 0.0))
+                tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-            if balance >= tokens_needed:
-                new_balance = balance - tokens_needed
-                await asyncio.to_thread(
-                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                )
-                logger.info(f"🪙 [Enterprise Token Engine]: หัก {tokens_needed} Credits จาก {user_id}. คงเหลือ {new_balance}")
-                return {"authorized": True, "tier": tier}
-            else:
-                # 🧠 จิตวิทยาการแจ้งเตือนเติมเงิน (Psychological Top-up) สำหรับระดับองค์กร
-                psychological_topup = (
-                    f"🏢 เรียนท่านผู้บริหาร ระบบตรวจพบว่า 'PRIME CREDITS' ใน Smart Wallet ขององค์กรท่านใกล้หมดแล้วครับ "
-                    f"(ปริมาณ Data ชุดนี้ต้องการ {tokens_needed} เครดิตในการประมวลผล)\n\n"
-                    f"⚡ เพื่อไม่ให้การวิเคราะห์ข้อมูล Real-time และการจัดการคลังสินค้าของท่านหยุดชะงัก "
-                    f"ท่านสามารถให้ฝ่ายบัญชีเติมเครดิตเข้าสู่ระบบองค์กรได้ทันทีผ่านลิงก์นี้ครับ:\n"
-                    f"👉 {self.topup_link}"
-                )
-                return {"authorized": False, "msg": psychological_topup}
+                # 🛡️ ตรวจสอบสิทธิ์: สงวนสิทธิ์เฉพาะ ENTERPRISE, VIP_FOUNDER และ ADMIN
+                if tier not in ["ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
+                    # 🧠 จิตวิทยาการ Upsell: ทำให้รู้สึกถึงความเหนือระดับ และเสนอแพ็กเกจที่คุ้มค่า
+                    upsell_msg = (
+                        f"🏢 [Enterprise Exclusive]: ท่านผู้บริหารครับ ระบบวิเคราะห์ข้อมูลตลาด Real-time และการจัดการ Big Data/คลังสินค้า "
+                        f"เป็นฟีเจอร์ระดับเอ็กซ์คลูซีฟที่สงวนสิทธิ์เฉพาะแพ็กเกจ **'พันธมิตรองค์กร (ENTERPRISE)'** ขึ้นไปเท่านั้นครับ\n\n"
+                        f"💡 เพื่อปกป้องแบรนด์ของคุณและยกระดับระบบหลังบ้านด้วยทีมวิศวกร AI ของเรา ขออนุญาตเรียนเชิญอัปเกรดแพ็กเกจครับ:\n"
+                        f"🔹 รายเดือน (4,900 ฿): {self.enterprise_upgrade_m}\n"
+                        f"⭐ รายปีสุดคุ้ม (39,900 ฿ - ประหยัด 20%): {self.enterprise_upgrade_y}"
+                    )
+                    return {"authorized": False, "msg": upsell_msg}
+                
+                # 👑 VIP_FOUNDER และ ADMIN ใช้งานได้ไร้ขีดจำกัด
+                if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {"authorized": True, "tier": tier}
+                    
+                if balance >= tokens_needed:
+                    new_balance = balance - tokens_needed
+                    self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                    logger.info(f"🪙 [Enterprise Token Engine]: หัก {tokens_needed} Credits จาก {user_id}. คงเหลือ {new_balance}")
+                    return {"authorized": True, "tier": tier}
+                else:
+                    # 🧠 จิตวิทยาการแจ้งเตือนเติมเงิน (Psychological Top-up) สำหรับระดับองค์กร
+                    psychological_topup = (
+                        f"🏢 เรียนท่านผู้บริหาร ระบบตรวจพบว่า 'PRIME CREDITS' ใน Smart Wallet ขององค์กรท่านใกล้หมดแล้วครับ "
+                        f"(ปริมาณ Data ชุดนี้ต้องการ {tokens_needed} เครดิตในการประมวลผล)\n\n"
+                        f"⚡ เพื่อไม่ให้การวิเคราะห์ข้อมูล Real-time และการจัดการคลังสินค้าของท่านหยุดชะงัก "
+                        f"ท่านสามารถให้ฝ่ายบัญชีเติมเครดิตเข้าสู่ระบบองค์กรได้ทันทีผ่านลิงก์นี้ครับ:\n"
+                        f"👉 {self.topup_link}"
+                    )
+                    return {"authorized": False, "msg": psychological_topup}
+
+            return await asyncio.to_thread(_check_and_deduct)
                 
         except Exception as e:
             logger.error(f"❌ [Enterprise Token Error]: {e}")
@@ -153,23 +157,28 @@ class EnterprisePartnerWorker:
                     upload_config = types.UploadFileConfig(mime_type=mime_type)
                     uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 except Exception as e:
+                    logger.error(f"⚠️ [File Upload Error]: {e}")
                     return f"⚠️ [Enterprise Analytics]: โครงสร้าง Database File ซับซ้อนเกินไป รบกวนส่งเป็นไฟล์ .csv, .json หรือ .xlsx ครับ"
 
-                # ⏳ Async Sync รอ Google วิเคราะห์ Big Data (อาจใช้เวลา)
+                # ⏳ Async Sync รอ Google วิเคราะห์ Big Data (ระบบ Anti-Freeze Timeout 60s)
+                timeout = 60
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("หมดเวลาการประมวลผลฐานข้อมูล (Timeout)")
                     await asyncio.sleep(3)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
                 if uploaded_file.state.name == "FAILED":
-                    return "⚠️ [Enterprise Analytics]: เกิดข้อผิดพลาดในการทำ Data Mining ระดับลึกครับ"
+                    return "⚠️ [Enterprise Analytics]: เกิดข้อผิดพลาดในการทำ Data Mining ระดับลึกในไฟล์ครับ"
 
                 content_to_send.append(uploaded_file)
-                content_to_send.append(f"โปรดทำการวิเคราะห์ Big Data / คลังสินค้า จากฐานข้อมูลนี้: {message}")
+                content_to_send.append(f"โปรดทำการวิเคราะห์ Big Data / คลังสินค้า จากฐานข้อมูลนี้:\n{message}")
             else:
-                content_to_send.append(f"โปรดให้คำปรึกษาระดับองค์กร/Supply Chain สำหรับประเด็นนี้: {message}")
+                content_to_send.append(f"โปรดให้คำปรึกษาระดับองค์กร/Supply Chain สำหรับประเด็นนี้:\n{message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Precision Search Grounding)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
@@ -177,15 +186,19 @@ class EnterprisePartnerWorker:
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.1 # ใช้อุณหภูมิต่ำสุด (0.1) เพื่อความถูกต้องของตัวเลข สถิติ และความปลอดภัย 100%
+                    temperature=0.1, # ใช้อุณหภูมิต่ำสุด (0.1) เพื่อความถูกต้องของตัวเลข สถิติ และความปลอดภัย 100%
+                    tools=[{"google_search": {}}] # เปิดใช้งาน Search เพื่อให้ AI ดึงข้อมูลเศรษฐกิจและ Supply Chain ล่าสุด
                 )
             )
             
-            return response.text if response.text else "🏢 การวิเคราะห์ข้อมูลระดับองค์กรและคลังสินค้า เสร็จสมบูรณ์ครับ"
+            return response.text.strip() if response.text else "🏢 การวิเคราะห์ข้อมูลระดับองค์กรและคลังสินค้า เสร็จสมบูรณ์ครับ"
 
+        except TimeoutError:
+            logger.error("❌ [Worker 10 Timeout]: ฐานข้อมูล Big Data มีขนาดใหญ่เกินไป")
+            return "ขออภัยครับท่านผู้บริหาร ฐานข้อมูลมีขนาดใหญ่ทำให้ใช้เวลา Data Mining นานกว่าปกติ รบกวนส่งไฟล์ชุดข้อมูลที่เล็กลงมาใหม่อีกครั้งครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 10 Error]: {e}")
-            return f"⚠️ [Enterprise Analytics]: ระบบฐานข้อมูลองค์กรขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ (Error: {str(e)[:50]})"
+            return f"⚠️ [Enterprise Analytics]: ระบบฐานข้อมูลองค์กรขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ"
 
         finally:
             # ==========================================
@@ -195,5 +208,5 @@ class EnterprisePartnerWorker:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
                     logger.info("🛡️ [Zero-Trust Security]: ทำลายฐานข้อมูลลับขององค์กรลูกค้าออกจากระบบทันที (Data Wiped)")
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(f"⚠️ [File Deletion Failed]: {e}")

@@ -5,28 +5,32 @@ from bs4 import BeautifulSoup
 from google import genai
 from supabase import create_client, Client
 
-# ตั้งค่า Logger
+# ตั้งค่า Logger สำหรับตรวจสอบการทำงานของความจำ
 logger = logging.getLogger("MemoryEngine")
 
 # ==========================================
 # 🌐 1. ศูนย์บัญชาการ AI และฐานข้อมูล
 # ==========================================
-# ดึงการเชื่อมต่อ AI จากส่วนกลาง (รองรับ Zero Downtime Fallback)
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EMBEDDING_MODEL = "gemini-embedding-2-preview" # Fallback ไปใช้สมองกลความจำล่าสุด
+        # อัปเกรดเป็นโมเดล Embedding มาตรฐานสูงสุดของ Google (Generation 4)
+        EMBEDDING_MODEL = "text-embedding-004" 
         @staticmethod
         def get_client():
-            PrimeAIConfig.self.client = genai.Client(
-            vertexai=True, 
-            project="swift-area-503915-a1", 
-            location="asia-southeast3"
-        )
-            return PrimeAIConfig.self.client
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key:
+                return genai.Client(api_key=api_key)
+            return genai.Client(
+                vertexai=True, 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                location="asia-southeast3"
+            )
+
+# ดึงการเชื่อมต่อ AI จากส่วนกลางอย่างปลอดภัย
 client = PrimeAIConfig.get_client()
-EMBEDDING_MODEL_NAME = PrimeAIConfig.EMBEDDING_MODEL
+EMBEDDING_MODEL_NAME = getattr(PrimeAIConfig, "EMBEDDING_MODEL", "text-embedding-004")
 
 # เชื่อมต่อ Supabase (Vector Database)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -39,20 +43,20 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and
 def get_text_embedding(text: str) -> list:
     """
     แปลงข้อความเป็นตัวเลข (Vector) ผ่านโมเดล Embedding ล่าสุดของ Google
-    อัปเกรด: ใช้ gemini-embedding-2-preview เพื่อความแม่นยำสูงระดับ Enterprise
+    อัปเกรด: ใช้ text-embedding-004 เพื่อความแม่นยำสูงระดับ Enterprise
     """
     if not client or not text:
         logger.warning("⚠️ ไม่พบ API Key หรือข้อความว่างเปล่า ข้ามการสร้าง Embedding")
         return []
         
     try:
-        # ใช้โมเดล Embedding มาตรฐานเจเนอเรชันที่ 3
+        # ใช้โมเดล Embedding มาตรฐานใหม่ล่าสุดของ Google GenAI SDK
         result = client.models.embed_content(
             model=EMBEDDING_MODEL_NAME,
             contents=text,
         )
         
-        # ตรวจสอบโครงสร้างข้อมูลที่ส่งกลับมาจาก SDK ใหม่
+        # ตรวจสอบโครงสร้างข้อมูลที่ส่งกลับมาอย่างรัดกุม
         if hasattr(result, 'embeddings') and result.embeddings:
             return result.embeddings[0].values
         else:
@@ -68,7 +72,7 @@ def get_text_embedding(text: str) -> list:
 def extract_text_from_url(url: str) -> str:
     """ดึงข้อมูลเนื้อหาจาก URL ที่ส่งมา พร้อมระบบป้องกัน Anti-Bot ขั้นสูง"""
     try:
-        # อัปเกรด Headers สวมรอยเป็นเบราว์เซอร์ยุคใหม่ล่าสุด
+        # อัปเกรด Headers สวมรอยเป็นเบราว์เซอร์ยุคใหม่ล่าสุดเพื่อเจาะทะลุระบบป้องกัน
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -81,8 +85,8 @@ def extract_text_from_url(url: str) -> str:
         
         soup = BeautifulSoup(response.content, 'html.parser', from_encoding=response.encoding)
         
-        # คลีนข้อมูลขยะ (Script, Style, เมนู, โฆษณา, ฟุตเตอร์)
-        for element in soup(["script", "style", "noscript", "header", "footer", "nav", "aside", "iframe"]):
+        # คลีนข้อมูลขยะ (Script, Style, เมนู, โฆษณา, ฟุตเตอร์) ทิ้งทั้งหมด
+        for element in soup(["script", "style", "noscript", "header", "footer", "nav", "aside", "iframe", "svg"]):
             element.extract()
             
         text = soup.get_text(separator=' ', strip=True)
@@ -90,7 +94,7 @@ def extract_text_from_url(url: str) -> str:
         # คัดกรองเว้นวรรคส่วนเกินและปรับให้เป็นเนื้อหาบริสุทธิ์
         text = ' '.join(text.split())
         
-        # ตัดข้อมูลให้พอดีกับข้อจำกัดของ Vector DB (รักษาแก่นสำคัญไว้)
+        # ตัดข้อมูลให้พอดีกับข้อจำกัดของ Vector DB (รองรับประมาณ 9000 ตัวอักษร)
         return text[:9000] 
         
     except requests.exceptions.RequestException as re_err:

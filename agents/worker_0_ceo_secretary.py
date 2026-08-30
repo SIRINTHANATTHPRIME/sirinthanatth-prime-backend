@@ -14,7 +14,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # รุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุดของโลก
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุดของโลก
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -173,7 +173,7 @@ class CeoSecretaryWorker:
             
             content_to_send.append(message)
 
-            # ⚡ สั่งรัน Gemini 2.5 Pro (โหมดวิเคราะห์ขั้นสูง)
+            # ⚡ สั่งรัน Gemini 3.1 Pro (โหมดวิเคราะห์ขั้นสูง)
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,

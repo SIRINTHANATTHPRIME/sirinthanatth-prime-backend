@@ -6,19 +6,23 @@ import mimetypes
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# =========================================================
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล (Vertex AI / Zero Downtime)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงอัจฉริยะที่สุดสำหรับงานวิเคราะห์และ IT
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงอัจฉริยะที่สุดสำหรับงานวิเคราะห์และ IT
         @staticmethod
         def get_client():
-            PrimeAIConfig.self.client = genai.Client(
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
                 vertexai=True, 
-                project="swift-area-503915-a1", 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
-        )
+            )
 
 try:
     from supabase import create_client, Client
@@ -30,11 +34,11 @@ logger = logging.getLogger("Worker9-PrimeAdvisor")
 class PrimeAdvisorWorker:
     """
     👑 Worker 9: Executive Prime Advisor & Chief Technology Officer (CTO)
-    อัปเกรด: [Gemini 3.1 Pro] ระบบที่ปรึกษาผู้บริหาร, วิเคราะห์ IT/Security และจิตวิทยาการเติม Token
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบที่ปรึกษาผู้บริหาร, วิเคราะห์ IT/Security และระบบ Cyber Shield
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจ PRIME และ Token
         supa_url = os.getenv("SUPABASE_URL")
@@ -42,8 +46,8 @@ class PrimeAdvisorWorker:
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
         
         # ลิงก์สำหรับระบบชำระเงิน (อัปเกรดแพ็กเกจ และ เติม Token)
-        self.topup_link = "https://buy.stripe.com/YOUR_TOPUP_LINK" # แทนที่ด้วยลิงก์เติม Token สตางค์
-        self.prime_upgrade_link = "https://lin.ee/@636pgjnh/SIRINTHANATTH_PRIME" # ลิงก์ไปหน้าเว็บเลือกแพ็กเกจ
+        self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
+        self.prime_upgrade_link = "https://lin.ee/@636pgjnh/SIRINTHANATTH_PRIME"
 
     async def _check_tier_and_deduct_token(self, user_id: str, tokens_needed: int) -> dict:
         """💳 ตรวจสอบสิทธิ์แพ็กเกจ PRIME ขึ้นไป และหักเครดิตด้วยจิตวิทยาการบริการ"""
@@ -51,56 +55,51 @@ class PrimeAdvisorWorker:
             return {"authorized": True, "tier": "PRIME"} # Fallback โหมด Offline
         
         try:
-            user_data = await asyncio.to_thread(
-                lambda: self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
-            )
-            
-            if not user_data.data:
-                return {"authorized": False, "msg": "⚠️ ขออภัยครับ ไม่พบข้อมูลบัญชีของท่านในระบบ กรุณาลงทะเบียนก่อนใช้งานครับ"}
+            def _check_and_deduct():
+                user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 
-            balance = float(user_data.data[0].get("token_balance", 0.0))
-            tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
-            
-            # 🛡️ ตรวจสอบสิทธิ์: ผู้ที่จะใช้ Worker 9 ได้ ต้องเป็นแพ็กเกจ PRIME, ENTERPRISE หรือ VIP เท่านั้น
-            if tier not in ["PRIME", "ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {
-                    "authorized": False, 
-                    "msg": f"👑 [Exclusive Privilege]: ท่านประธานครับ บริการที่ปรึกษาเชิงลึกระดับ CTO นี้ สงวนสิทธิ์พิเศษสำหรับแพ็กเกจ **PRIME (ที่ปรึกษาส่วนตัว)** ขึ้นไปครับ\n\n💡 เพื่อยกระดับการบริหารและปลดล็อกฟีเจอร์ขั้นสูง ขออนุญาตเรียนเชิญอัปเกรดแพ็กเกจได้ที่นี่ครับ: {self.prime_upgrade_link}"
-                }
-            
-            # 👑 VIP_FOUNDER และ ADMIN ใช้งานได้ไร้ขีดจำกัด
-            if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
-                return {"authorized": True, "tier": tier}
+                if not user_data.data:
+                    return {"authorized": False, "msg": "⚠️ ขออภัยครับ ไม่พบข้อมูลบัญชีของท่านในระบบ กรุณาลงทะเบียนก่อนใช้งานครับ"}
+                    
+                balance = float(user_data.data[0].get("token_balance", 0.0))
+                tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-            if balance >= tokens_needed:
-                new_balance = balance - tokens_needed
-                await asyncio.to_thread(
-                    lambda: self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                )
-                logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id}. คงเหลือ {new_balance}")
-                return {"authorized": True, "tier": tier}
-            else:
-                # 🧠 จิตวิทยาการแจ้งเตือนเติมเงิน (Psychological Top-up) ให้ดูสุภาพ พรีเมียม ไม่ยัดเยียด
-                psychological_upsell = (
-                    f"👑 ขออภัยครับท่านประธาน เพื่อให้การประมวลผลข้อมูลเชิงลึกและกลยุทธ์ IT ของท่านดำเนินไปอย่างลื่นไหลไร้รอยต่อ "
-                    f"ตอนนี้ PRIME CREDITS ใน Smart Wallet ของท่านใกล้หมดแล้วครับ (ต้องการ {tokens_needed} เครดิต)\n\n"
-                    f"💎 ผมขออนุญาตแนะนำแพ็กเกจเติมเครดิตสุดคุ้ม เพื่อรับการซัพพอร์ตการตัดสินใจระดับสากลอย่างต่อเนื่องครับ:\n"
-                    f"👉 {self.topup_link}"
-                )
-                return {"authorized": False, "msg": psychological_upsell}
+                # 🛡️ ตรวจสอบสิทธิ์: ผู้ที่จะใช้ Worker 9 ได้ ต้องเป็นแพ็กเกจ PRIME, ENTERPRISE หรือ VIP เท่านั้น
+                if tier not in ["PRIME", "ENTERPRISE", "VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {
+                        "authorized": False, 
+                        "msg": f"👑 [Exclusive Privilege]: ท่านประธานครับ บริการที่ปรึกษาเชิงลึกระดับ CTO นี้ สงวนสิทธิ์พิเศษสำหรับแพ็กเกจ **PRIME (ที่ปรึกษาส่วนตัว)** ขึ้นไปครับ\n\n💡 เพื่อยกระดับการบริหารและปลดล็อกฟีเจอร์ขั้นสูง ขออนุญาตเรียนเชิญอัปเกรดแพ็กเกจได้ที่นี่ครับ: {self.prime_upgrade_link}"
+                    }
+                
+                # 👑 VIP_FOUNDER และ ADMIN ใช้งานได้ไร้ขีดจำกัด
+                if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
+                    return {"authorized": True, "tier": tier}
+                    
+                if balance >= tokens_needed:
+                    new_balance = balance - tokens_needed
+                    self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
+                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id}. คงเหลือ {new_balance}")
+                    return {"authorized": True, "tier": tier}
+                else:
+                    # 🧠 จิตวิทยาการแจ้งเตือนเติมเงิน (Psychological Top-up) ให้ดูสุภาพ พรีเมียม ไม่ยัดเยียด
+                    psychological_upsell = (
+                        f"👑 ขออภัยครับท่านประธาน เพื่อให้การประมวลผลข้อมูลเชิงลึกและกลยุทธ์ IT ของท่านดำเนินไปอย่างลื่นไหลไร้รอยต่อ "
+                        f"ตอนนี้ PRIME CREDITS ใน Smart Wallet ของท่านใกล้หมดแล้วครับ (ต้องการ {tokens_needed} เครดิต)\n\n"
+                        f"💎 ผมขออนุญาตแนะนำให้เติมเครดิต เพื่อรับการซัพพอร์ตการตัดสินใจระดับสากลอย่างต่อเนื่องครับ:\n"
+                        f"👉 {self.topup_link}"
+                    )
+                    return {"authorized": False, "msg": psychological_upsell}
+
+            return await asyncio.to_thread(_check_and_deduct)
                 
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
             return {"authorized": True, "tier": "PRIME"}
 
-    # รองรับการเรียกจาก Router เก่า
-    async def process(self, user_id: str, message: str, file_path: str = None) -> str:
-        return await self.process_task(user_id, message, file_path)
-
     async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         """ทำงานเบื้องหลัง: วิเคราะห์ข้อมูลระดับบริหาร สถาปัตยกรรม IT และ Cybersecurity"""
         if not self.client:
-            return "⚠️ [Worker 9]: ระบบที่ปรึกษาเรือธงออฟไลน์ (ไม่พบ API Key)"
+            return "⚠️ [Worker 9]: ระบบที่ปรึกษาเรือธงออฟไลน์ (ไม่พบ API Key ส่วนกลาง)"
 
         # 🪙 ตรวจสอบค่าใช้จ่าย: ข้อความเชิงลึก = 20 Credits, วิเคราะห์ไฟล์โค้ด/Log/แผน = 150 Credits
         tokens_needed = 150 if file_path else 20
@@ -150,23 +149,28 @@ class PrimeAdvisorWorker:
                     upload_config = types.UploadFileConfig(mime_type=mime_type)
                     uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 except Exception as e:
+                    logger.error(f"⚠️ [File Upload Error]: {e}")
                     return f"⚠️ [PRIME Advisor]: โครงสร้างไฟล์ข้อมูลไม่รองรับครับ รบกวนส่งเป็นไฟล์ .txt, .pdf หรือรูปภาพ เพื่อการวิเคราะห์ครับ"
 
-                # ⏳ Async Sync รอ Google วิเคราะห์ระบบ (Crash-Proof)
+                # ⏳ Async Sync รอ Google วิเคราะห์ระบบ พร้อม Anti-Freeze Timeout 60s
+                timeout = 60
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("หมดเวลาการสแกนระบบและไฟล์โค้ด (Timeout)")
                     await asyncio.sleep(2)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
                 if uploaded_file.state.name == "FAILED":
-                    return "⚠️ [PRIME Advisor]: เกิดข้อผิดพลาดในการสแกนไฟล์เพื่อหาช่องโหว่ครับ"
+                    return "⚠️ [PRIME Advisor]: เกิดข้อผิดพลาดในการสแกนไฟล์เพื่อหาช่องโหว่ความปลอดภัยครับ"
 
                 content_to_send.append(uploaded_file)
-                content_to_send.append(f"โปรดวิเคราะห์ความเสี่ยง โครงสร้างระบบ และสรุปข้อมูลระดับผู้บริหารจากไฟล์นี้: {message}")
+                content_to_send.append(f"โปรดวิเคราะห์ความเสี่ยง โครงสร้างระบบ และสรุปข้อมูลระดับผู้บริหารจากไฟล์นี้:\n{message}")
             else:
-                content_to_send.append(f"โปรดให้คำปรึกษาเชิงลึกระดับผู้บริหาร/CTO ตามคำสั่งนี้: {message}")
+                content_to_send.append(f"โปรดให้คำปรึกษาเชิงลึกระดับผู้บริหาร/CTO ตามคำสั่งนี้:\n{message}")
 
             # ==========================================
-            # 🧠 2. สั่งรัน Gemini 3.1 Pro (Asynchronous)
+            # 🧠 2. สั่งรัน Gemini 2.5 Pro (Precision Search Grounding)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
@@ -174,15 +178,19 @@ class PrimeAdvisorWorker:
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.3 # ใช้อุณหภูมิต่ำ (0.3) เพื่อความสมดุลระหว่างความแม่นยำด้านโค้ด IT และความสละสลวยทางธุรกิจ
+                    temperature=0.3, # ใช้อุณหภูมิต่ำ (0.3) เพื่อความสมดุลระหว่างความแม่นยำด้านโค้ด IT และความสละสลวยทางธุรกิจ
+                    tools=[{"google_search": {}}] # เปิดใช้งาน Search เพื่อให้ CTO เช็กข่าวสาร Cybersecurity และ Tech Trends ล่าสุด
                 )
             )
             
-            return response.text if response.text else "👑 ประมวลผลและวิเคราะห์ข้อมูลระดับผู้บริหารเสร็จสิ้นครับ"
+            return response.text.strip() if response.text else "👑 ประมวลผลและวิเคราะห์ข้อมูลระดับผู้บริหารเสร็จสิ้นครับ"
 
+        except TimeoutError:
+            logger.error("❌ [Worker 9 Timeout]: ไฟล์ Log หรือโค้ดมีขนาดใหญ่เกินไป")
+            return "ขออภัยครับท่านประธาน ข้อมูลโค้ดหรือล็อกไฟล์มีความซับซ้อน ทำให้ใช้เวลาสแกนนานกว่าปกติ รบกวนส่งเฉพาะส่วนที่ต้องการตรวจสอบมาใหม่อีกครั้งครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 9 Error]: {e}")
-            return f"⚠️ [PRIME Advisor]: ระบบประมวลผลเชิงลึกขัดข้องชั่วคราวครับ (Error: {str(e)[:50]})"
+            return f"⚠️ [PRIME Advisor]: ระบบประมวลผลเชิงลึกขัดข้องชั่วคราวครับ ทีมวิศวกรกำลังเข้าตรวจสอบระบบ"
 
         finally:
             # ==========================================
@@ -191,6 +199,6 @@ class PrimeAdvisorWorker:
             if uploaded_file:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
-                    logger.info("🛡️ [Enterprise Security]: ทำลายไฟล์ข้อมูลลับขององค์กรออกจากระบบทันที (Zero-Data Retention)")
-                except:
-                    pass
+                    logger.info("🛡️ [Enterprise Security]: ทำลายไฟล์ข้อมูลลับขององค์กรออกจากระบบทันที (Zero-Data Retention Guard)")
+                except Exception as e:
+                    logger.error(f"⚠️ [File Deletion Failed]: {e}")
