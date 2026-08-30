@@ -22,13 +22,11 @@ load_dotenv()
 # 👑 SIRINTHANATTH PRIME - Enterprise LINE API Gateway
 # =========================================================
 
-# ตั้งค่าระบบ Logging ระดับองค์กร
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Prime-API-Gateway")
 
 router = APIRouter()
 
-# 🔑 โหลดตัวแปรสภาพแวดล้อม (Environment Variables)
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
 BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
@@ -36,11 +34,13 @@ BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-sou
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
 parser = WebhookParser(LINE_SECRET) if LINE_SECRET else None
 
-GEMINI_KEY = self.client = genai.Client(
-                vertexai=True, 
-                project="swift-area-503915-a1", 
-                location="asia-southeast3"
-            )
+# 🚀 เชื่อมต่อสมองกลส่วนกลาง (Cross-Model Supported)
+try:
+    from core_services.ai_config import PrimeAIConfig
+    client = PrimeAIConfig.get_client()
+except ImportError:
+    api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY", "")
+    client = genai.Client(api_key=api_key) if api_key else None
 
 # =========================================================
 # 🧩 Dynamic Imports (ดึงระบบต่างๆ มาประกอบร่าง ไม่พังแม้ไฟล์อื่นอัปเดต)
@@ -65,7 +65,6 @@ except ImportError: ceo_secretary = None
 
 try: from services.elevenlabs_service import generate_voice_from_text
 except ImportError: generate_voice_from_text = None
-
 
 # =========================================================
 # 🛠️ Core Transmission Functions (ระบบสั่งการ LINE ขั้นสูง)
@@ -92,14 +91,13 @@ async def dispatch_line_message(user_id: str, reply_token: str, messages: list):
     except Exception as e:
         logger.error(f"❌ [Dispatch Error]: ไม่สามารถส่งข้อความได้ -> {e}")
 
-
 # =========================================================
 # 🧠 The Ultimate AI Processing Pipeline (ท่อประมวลผลสมองกลหลัก)
 # =========================================================
 async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: str, bg_tasks: BackgroundTasks, file_path: str = None, file_type: str = None):
     try:
         # 👑 1. [GOD MODE]: สิทธิ์ขาดประธานบริษัท (CEO Secretary Check)
-        if ceo_secretary and ceo_secretary.is_ceo(user_id):
+        if ceo_secretary and hasattr(ceo_secretary, 'is_ceo') and ceo_secretary.is_ceo(user_id):
             logger.info("👑 [System]: CEO Identified. Activating God Mode.")
             if inspect.iscoroutinefunction(ceo_secretary.process_ceo_command):
                 reply_payload = await ceo_secretary.process_ceo_command(incoming_message, file_path=file_path, file_type=file_type)
@@ -107,7 +105,10 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
             if isinstance(reply_payload, dict): 
-                await send_line_custom_payload(user_id, reply_payload)
+                if reply_payload.get("type") == "flex":
+                    await send_line_custom_payload(user_id, reply_payload)
+                else:
+                    await dispatch_line_message(user_id, reply_token, [TextSendMessage(text=reply_payload.get("text", ""))])
             else: 
                 await dispatch_line_message(user_id, reply_token, [TextSendMessage(text=str(reply_payload))])
             return
@@ -122,7 +123,6 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         if self_learning and hasattr(self_learning, 'get_rules_for_context'):
             golden_rules = await self_learning.get_rules_for_context(safe_message)
 
-        # ผสมผสานบริบทกฎเหล็กเข้าไปให้ Central Boss อ้างอิง
         enhanced_message = f"{golden_rules}\n{safe_message}" if golden_rules else safe_message
 
         # ⚙️ 4. [CENTRAL ROUTER]: ส่งให้ Boss Agent ประเมินเจตนา ตัด Token และสั่งการ Worker 1-11
@@ -147,7 +147,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบสั้นกระชับ {golden_rules}"
                 response = await asyncio.to_thread(
                     client.models.generate_content,
-                    model='gemini-3.7-flash',
+                    model='gemini-2.5-flash',
                     contents=enhanced_message,
                     config=types.GenerateContentConfig(system_instruction=sys_instruct)
                 )
@@ -188,7 +188,6 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as cleanup_err: 
                 logger.error(f"⚠️ [Cleanup Failed]: {cleanup_err}")
 
-
 # =========================================================
 # 🌐 Webhook Gateway (ด่านหน้ารับข้อความจาก LINE OA)
 # =========================================================
@@ -212,7 +211,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         if isinstance(event, FollowEvent):
             welcome_msg = "พิมพ์คำว่า 'เมนู' หรือ 'แพ็กเกจ' เพื่อดูบริการระดับโลกของเราและเปิด Smart Wallet ได้เลยครับ"
             if boss_agent and hasattr(boss_agent, '_get_liff_welcome_message'):
-                welcome_msg = boss_agent._get_liff_welcome_message()
+                welcome_msg = boss_agent._get_liff_welcome_message(tier="GUEST")
             
             background_tasks.add_task(dispatch_line_message, event.source.user_id, event.reply_token, [TextSendMessage(text=welcome_msg)])
             continue
@@ -264,7 +263,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 # ตอบกลับทันทีว่ากำลังประมวลผล (ใช้ Reply Token ให้หมดไป ป้องกัน LINE ตัดสาย)
                 await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text="ระบบกำลังสแกนและนำไฟล์เข้าสู่ระบบ Cloud ระดับองค์กร กรุณารอสักครู่นะครับ ⏳"))
                 
-                # ดาวน์โหลดไฟล์
+                # ดาวน์โหลดไฟล์โดยใช้ uuid ป้องกันการเขียนทับของเซิร์ฟเวอร์
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ""
                 file_name = f"file_{uuid.uuid4().hex}{ext}"
@@ -278,7 +277,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 
                 incoming_message = f"[System Alert: ลูกค้าอัปโหลดไฟล์ {message_type} สำเร็จ ช่วยวิเคราะห์เอกสาร/สื่อนี้ตามความเหมาะสม]"
                 file_type = message_type
-                reply_token = None # เซ็ตเป็น None เพื่อให้ระบบสลับไปใช้ Push Message ตอนตอบกลับไฟล์สำเร็จ (เพราะ Reply Token ใช้ไปแล้ว)
+                reply_token = None # รีเซ็ต Token เพื่อบังคับใช้ Push Message เมื่อทำงานเสร็จ ป้องกัน Timeout Error
                 
             except Exception as e: 
                 logger.error(f"❌ File download error: {e}")
