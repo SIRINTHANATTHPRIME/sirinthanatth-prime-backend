@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import hashlib
 import logging
 import asyncio
 from typing import Dict, Any
@@ -14,7 +15,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับเป็นตัวสลับราง (Smart Router)
+        CORE_MODEL = "gemini-2.5-flash" # 🚀 อัปเกรดเป็นแกนสมองสายสปีดที่เร็วและฉลาดที่สุดของโลกที่มีอยู่จริง
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -25,18 +26,24 @@ except ImportError:
                 location="asia-southeast3"
             )
 
-# นำเข้าระบบตรวจสอบสิทธิ์และ Wallet
+# 🛡️ 2. นำเข้าระบบตรวจสอบสิทธิ์และ Wallet
 try:
     from services.subscription_manager import SubscriptionManager
 except ImportError:
     SubscriptionManager = None
 
-logger = logging.getLogger("TaskDispatcher")
+# ⚡ 3. นำเข้า Edge Caching (Redis) เพื่อความเร็วดุจสายฟ้า
+try:
+    from upstash_redis.asyncio import Redis
+except ImportError:
+    Redis = None
+
+logger = logging.getLogger("TaskDispatcher-Swarm")
 
 class HybridTaskDispatcher:
     """
     🚦 ระบบจ่ายงานอัจฉริยะ (Hybrid Task Dispatcher & AI Load Balancer)
-    อัปเกรด: ใช้ Vertex AI สแกนปริมาณงาน และแยกประเภทงานเบา (แชท) / งานหนัก (เรนเดอร์สื่อ 4K) อัตโนมัติ
+    อัปเกรดขั้นสุด: ผสาน Edge Caching (Redis) + Gemini 2.5 Flash เพื่อแยกประเภทงานเบา/หนัก อัตโนมัติ (Zero Latency)
     """
     def __init__(self):
         # กำหนดอัตราส่วนน้ำหนัก Token (Weight Multiplier) สำหรับซ่อนเรตหลังบ้าน
@@ -47,13 +54,42 @@ class HybridTaskDispatcher:
         
         # 🚀 Vertex AI Client สำหรับวิเคราะห์โหลดงาน (Smart Load Balancing)
         self.client = PrimeAIConfig.get_client()
-        self.router_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
+        self.router_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+
+        # ⚡ เชื่อมต่อ Redis สำหรับ Semantic Caching (จดจำการจัดคิวงาน ไม่ต้องถาม AI ซ้ำ)
+        redis_url = os.getenv("UPSTASH_REDIS_REST_URL")
+        redis_token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        self.redis = Redis(url=redis_url, token=redis_token) if redis_url and redis_token and Redis else None
 
     async def _ai_classify_task(self, payload: Dict[Any, Any]) -> str:
-        """🧠 ให้ AI สแกน Payload ภายในเสี้ยววินาที เพื่อแยกประเภทงาน (media_render หรือ standard)"""
-        if not self.client or not payload:
-            return "standard" # Fallback ไปงานเบาหาก AI ไม่พร้อม
+        """🧠 ให้ AI สแกน Payload ภายในเสี้ยววินาที พร้อมระบบ Redis Caching ลดภาระ API"""
+        if not payload: return "standard"
 
+        # ตัดเฉพาะข้อมูลสำคัญมาตรวจสอบความรวดเร็ว
+        payload_str = json.dumps(payload, ensure_ascii=False)[:500] 
+        
+        # ==========================================
+        # ⚡ 1. ตรวจสอบจาก Redis Cache ก่อน (Edge Caching) เร็วระดับมิลลิวินาที (0ms)
+        # ==========================================
+        cache_key = None
+        if self.redis:
+            try:
+                # สร้างรหัส Hash จากข้อความ Payload เพื่อเป็นกุญแจค้นหาใน RAM
+                payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+                cache_key = f"task_route:{payload_hash}"
+                
+                cached_route = await self.redis.get(cache_key)
+                if cached_route:
+                    logger.info(f"⚡ [Edge Cache Hit]: ดึงเส้นทางคิวงานจาก RAM อัตโนมัติ -> '{cached_route}'")
+                    return cached_route.decode('utf-8') if isinstance(cached_route, bytes) else cached_route
+            except Exception as e:
+                logger.warning(f"⚠️ [Redis Cache Error]: {e}")
+
+        if not self.client: return "standard"
+
+        # ==========================================
+        # 🧠 2. ถ้าไม่มีใน Cache ให้ Gemini 2.5 Flash คิดและตัดสินใจ
+        # ==========================================
         system_instruction = """
         คุณคือ 'Smart Load Balancer' ของระบบ SIRINTHANATTH PRIME
         หน้าที่: ประเมิน Payload ว่าต้องใช้พลังประมวลผลระดับไหน
@@ -63,7 +99,6 @@ class HybridTaskDispatcher:
         """
         
         try:
-            payload_str = json.dumps(payload, ensure_ascii=False)[:500] # ส่งไปแค่ 500 ตัวอักษรเพื่อความเร็ว
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.router_model,
@@ -78,22 +113,29 @@ class HybridTaskDispatcher:
             res_text = re.sub(r'^```json\s*', '', response.text.strip())
             res_text = re.sub(r'\s*```$', '', res_text)
             decision = json.loads(res_text)
-            
-            return decision.get("task_type", "standard")
+            final_route = decision.get("task_type", "standard")
+
+            # ==========================================
+            # ⚡ 3. บันทึกผลลัพธ์ลง Redis Cache (อายุ 24 ชั่วโมง)
+            # ==========================================
+            if self.redis and cache_key:
+                await self.redis.setex(cache_key, 86400, final_route) # 86400 วินาที = 24 ชม.
+
+            logger.info(f"🧠 [AI Router]: วิเคราะห์ Payload ใหม่สำเร็จ -> จัดลงคิว '{final_route.upper()}'")
+            return final_route
             
         except Exception as e:
             logger.warning(f"⚠️ [AI Router Warning]: ประเมินโหลดงานล้มเหลว ({e}) -> Fallback to Standard")
             return "standard"
 
     async def route_and_execute(self, user_id: str, task_type: str, payload: Dict[Any, Any]) -> Dict[str, Any]:
-        """ฟังก์ชันสลับทิศทางงาน (Hybrid Switching) รองรับ Async I/O 100%"""
+        """ฟังก์ชันสลับทิศทางงาน (Hybrid Switching) รองรับ Async I/O 100% พร้อม Backward Compatibility"""
         try:
             # 1. 🤖 [Autonomous AI Routing]: หากระบบโยนงานมาแบบ 'auto' ให้ AI ตัดสินใจเอง
             if task_type == "auto":
                 task_type = await self._ai_classify_task(payload)
-                logger.info(f"🚦 [AI Load Balancer]: วิเคราะห์ Payload อัตโนมัติและจัดคิวลง '{task_type.upper()}'")
 
-            # 2. 🛡️ เช็กสิทธิ์แพ็กเกจของลูกค้า
+            # 2. 🛡️ เช็กสิทธิ์แพ็กเกจของลูกค้าจาก SubscriptionManager
             if self.sub_manager:
                 def _check_access():
                     return self.sub_manager.check_feature_access(user_id, task_type)

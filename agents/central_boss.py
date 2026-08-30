@@ -14,13 +14,13 @@ from fastapi import BackgroundTasks
 logger = logging.getLogger("CentralBoss-Swarm")
 
 # =========================================================
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล (Vertex AI / Zero Downtime)
 # =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดเป็นแกนสมองสายสปีดที่เร็วและฉลาดที่สุดของโลก
+        CORE_MODEL = "gemini-2.5-flash" # 🚀 อัปเกรดเป็นแกนสมองสายสปีดรุ่นล่าสุดที่ฉลาดและเร็วที่สุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -33,6 +33,7 @@ except ImportError:
 
 # =========================================================
 # 🏢 นำเข้าทีมผู้บริหารทั้ง 11 ฝ่าย (Dynamic Import)
+# (ป้องกันเซิร์ฟเวอร์แครชหากไฟล์อื่นอยู่ระหว่างอัปเดต)
 # =========================================================
 try: from agents.worker_0_ceo_secretary import CeoSecretaryWorker
 except ImportError: CeoSecretaryWorker = None
@@ -67,11 +68,13 @@ class CentralBossAgent:
     จ่ายงานให้พนักงานทำงานแบบส่งไม้ต่อกัน (Inter-Agent Communication) และ Push ผลลัพธ์กลับสู่ LINE อัตโนมัติ
     """
     def __init__(self):
+        # 🚀 เชื่อมต่อขุมพลังสมองกลสายสปีดความเร็วแสง
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
+        self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
         self.liff_url = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
         self.line_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
         
+        # 💾 เชื่อมต่อ Supabase
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
@@ -142,17 +145,20 @@ class CentralBossAgent:
                 if w_key == "worker_2": kwargs["package_tier"] = user_tier
                 if w_key == "worker_8": kwargs["file_type"] = file_type
 
-                # หากไม่ใช่คิวแรก ให้นำผลลัพธ์ของแผนกที่แล้วมาเป็นบริบทในการทำงานต่อ
+                # หากไม่ใช่คิวแรก ให้นำผลลัพธ์ของแผนกที่แล้วมาเป็นบริบทในการทำงานต่อ (Inter-Agent Communication)
                 if idx > 0 and final_result:
                     prompt = f"อ้างอิงจากคำสั่งดั้งเดิมของลูกค้า: {initial_message}\n\n[ข้อมูลที่ถูกส่งต่อมาจากแผนกก่อนหน้า]:\n{final_result}\n\nโปรดสานต่องานนี้ในส่วนที่แผนกของคุณรับผิดชอบและสรุปผล"
                 else:
                     prompt = current_message
 
-                # เรียกทำงาน Worker
+                # เรียกทำงาน Worker (รองรับ Backward Compatibility สำหรับระบบเก่าที่ใช้ process และระบบใหม่ที่ใช้ process_task)
                 if hasattr(worker_instance, "process_task"):
                     final_result = await worker_instance.process_task(user_id, prompt, **kwargs)
                 elif hasattr(worker_instance, "process"):
                     final_result = await worker_instance.process(user_id, prompt, **kwargs)
+                else:
+                    logger.warning(f"⚠️ [Swarm Pipeline]: Worker {w_key} ไม่มีฟังก์ชัน process_task หรือ process")
+                    continue
 
                 # 🛡️ Zero-Data Sync: เมื่อแผนกแรกประมวลผลและลบไฟล์ไปแล้ว ห้ามส่ง Path ไฟล์เดิมให้แผนกต่อไป
                 current_file = None 
@@ -220,11 +226,11 @@ class CentralBossAgent:
         หน้าที่: วิเคราะห์คำสั่งลูกค้าและจัดคิวแผนก (Pipeline) เพื่อทำงานร่วมกัน
         
         รายชื่อแผนก:
-        - "worker_1": วิเคราะห์ Data, Excel, สรุปเอกสาร
+        - "worker_1": วิเคราะห์ Data, Excel, สรุปเอกสาร, ประเมินราคา
         - "worker_2": กฎหมาย, ความเสี่ยง, สัญญา
         - "worker_3": ไฟล์เสียง, เพลง
         - "worker_4": ไฟล์วิดีโอ, Storyboard
-        - "worker_5": ไฟล์ภาพ, กราฟิก, โฆษณา, คอนเซปต์
+        - "worker_5": ไฟล์ภาพ, กราฟิก, โฆษณา, ร่างภาพตัวอย่าง
         - "worker_6": กลยุทธ์การตลาด, แผนธุรกิจ
         - "worker_7": การเงิน, บัญชี, ภาษี, คุ้มทุน
         - "worker_8": E-Commerce, สลิปโอนเงิน, ส่งของ Flash
@@ -234,16 +240,15 @@ class CentralBossAgent:
         เงื่อนไข:
         1. หากเป็นบทสนทนาทั่วไป ถามสารทุกข์สุกดิบ ให้ส่ง pipeline ว่าง: []
         2. งาน 1 มิติ ให้ใช้ 1 แผนก เช่น ["worker_1"]
-        3. หากงานซับซ้อนข้ามสาย ให้เรียงลำดับแผนก เช่น วิเคราะห์งบการเงินแล้วนำไปเขียนแผนโฆษณา = ["worker_7", "worker_5"]
+        3. หากงานซับซ้อนข้ามสาย ให้เรียงลำดับแผนก เช่น ลูกค้าส่งแปลนที่ดินมาให้ประเมินและร่างแบบ = ["worker_1", "worker_7", "worker_5"]
         4. หากมีไฟล์ภาพสลิปโอนเงิน ให้ไปที่ "worker_8" 
-        5. ตอบกลับเป็น JSON เท่านั้น
+        5. ตอบกลับเป็น JSON เท่านั้น รูปแบบ: {"pipeline": [...], "routing_msg": "..."}
         """
 
         prompt = f"""
         วิเคราะห์การส่งไม้ต่อ (Pipeline) จากคำสั่งลูกค้า:
         ข้อความ: {actual_message}
         มีไฟล์แนบหรือไม่: {'มีไฟล์ประเภท ' + str(file_type) if file_type else 'ไม่มีไฟล์แนบ'}
-        รูปแบบ JSON ที่ต้องการ: {{"pipeline": ["worker_...", "worker_..."], "routing_msg": "ข้อความแจ้งให้ลูกค้ารอแบบสุภาพ"}}
         """
 
         try:
