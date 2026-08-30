@@ -9,16 +9,23 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลาง (รองรับ Zero Downtime Fallback)
+# =========================================================
+# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลาง (Vertex AI / Zero Downtime)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # รุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุดของโลก
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            return genai.Client(api_key=api_key) if api_key else None
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
+                vertexai=True, 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                location="asia-southeast3"
+            )
 
 # 🧠 นำเข้าระบบความจำเพื่อบันทึกข้อมูลระดับองค์กร (Corporate RAG)
 try:
@@ -42,18 +49,18 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัวสูงสุด)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรด: Gemini 2.5 Pro, ระบบ Approval Workflow 3 ปุ่ม, การเงิน/ไซเบอร์ 360 องศา และ Document Generator
+    อัปเกรด: Gemini 3.1 Pro, ระบบ Approval Workflow 3 ปุ่ม, การเงิน/ไซเบอร์ 360 องศา และ Document Generator
     """
     
     def __init__(self):
-        # 👑 รับค่า LINE ID ให้อัตโนมัติ (ดึงจากตัวแปร Cloud Run)
+        # 👑 รับค่า LINE ID ให้อัตโนมัติ (ดึงจากตัวแปร Environment)
         self.ceo_line_id = os.getenv("CEO_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
         self.master_admin_id = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
         # 🚀 เชื่อมต่อขุมพลังสมองกลเจเนอเรชันล่าสุด
         self.client = PrimeAIConfig.get_client()
-        self.model_name = PrimeAIConfig.EXECUTIVE_MODEL
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
         
         # 📝 โครงสร้าง System Instruction แบบ Mastermind ระดับโลก
         self.system_instruction = """
@@ -66,7 +73,7 @@ class CeoSecretaryWorker:
         4. การขออนุมัติ 3 ปุ่ม (Smart Approval Workflow):
            - หากคุณนำเสนอแผนยุทธศาสตร์, การปรับแก้โค้ด, แผนการลงทุน หรือเรื่องที่ต้องให้ CEO ตัดสินใจ ให้คุณพิมพ์คำว่า [REQUIRE_APPROVAL] ไว้ที่บรรทัดสุดท้ายของข้อความเสมอ เพื่อทริกเกอร์ระบบ 3 ปุ่ม (ตกลง/แก้ไข/ปฏิเสธ)
         5. การสร้างไฟล์รายงาน (Document Generation): 
-           - หากประธานสั่ง "ทำรายงาน", "สร้าง PDF" ให้ตอบกลับโดยสร้างหน้าเว็บหรูหราผ่านคำสั่ง:
+           - หากประธานสั่ง "ทำรายงาน", "สร้าง PDF" หรือ "เขียนโค้ด" ให้ตอบกลับโดยสร้างหน้าเว็บผ่านคำสั่ง:
              [FILE_OUTPUT: ชื่อไฟล์.html] <h1>...</h1> [/FILE_OUTPUT]
         6. หากประธานสั่ง 'แก้ไข' แผน ให้รับฟังและเขียนโครงสร้าง/โค้ดใหม่ที่สมบูรณ์แบบทันทีโดยไม่อิดออด
         """
@@ -112,7 +119,7 @@ class CeoSecretaryWorker:
         # 2. ระบบสิทธิพิเศษ VVIP (ไม่ต้องผ่าน Token)
         # ==========================================
         check_msg = message.lower().replace(" ", "")
-        if any(keyword in check_msg for keyword in ["สร้างโค้ด", "vvip", "ไม่ต้องผ่านระบบtoken", "รหัสเชิญ"]):
+        if any(keyword in check_msg for keyword in ["สร้างโค้ดvvip", "รหัสเชิญvvip", "invite"]):
             return await self._generate_vvip_invite()
 
         # ==========================================
@@ -161,8 +168,12 @@ class CeoSecretaryWorker:
                 upload_config = types.UploadFileConfig(mime_type=mime_type)
                 uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 
-                # ⏳ Async Sync
+                # ⏳ Async Sync พร้อมระบบ Anti-Freeze (Timeout 60s)
+                timeout = 60
+                start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("หมดเวลาสแกนเอกสารของ CEO")
                     await asyncio.sleep(2)
                     uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     
@@ -258,6 +269,9 @@ class CeoSecretaryWorker:
             
             return {"type": "text", "text": reply_text}
             
+        except TimeoutError:
+            logger.error("❌ [CEO Secretary Timeout]: เอกสารมีความซับซ้อนเกินไป")
+            return {"type": "text", "text": "ขออภัยครับท่านประธาน เอกสารมีความซับซ้อนทำให้ระบบใช้เวลาสแกนนานกว่าปกติ รบกวนท่านประธานสั่งการใหม่อีกครั้งนะครับ"}
         except Exception as e:
             logger.error(f"⚠️ [CEO Secretary Error]: {e}")
             return {"type": "text", "text": f"ขออภัยครับท่านประธาน เกิดข้อผิดพลาดในระบบวิเคราะห์เชิงลึก ({str(e)[:50]}) ผมกำลังสั่งการให้ตรวจสอบระบบจัดการคลาวด์ทันทีครับ"}
@@ -296,8 +310,8 @@ class CeoSecretaryWorker:
                 supabase.table("invite_codes").insert({"code": invite_code, "is_used": False}).execute()
             await asyncio.to_thread(insert_code)
             
-            # ลิงก์ LIFF สำหรับเข้าหน้า Smart Wallet อัตโนมัติ ป้องกัน LINE เด้ง
-            liff_base_url = "https://liff.line.me/2011067128-fnWmOak4"
+            # ลิงก์ LIFF สำหรับเข้าหน้า Smart Wallet อัตโนมัติ
+            liff_base_url = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
             invite_link = f"{liff_base_url}?code={invite_code}"
             
             reply = (

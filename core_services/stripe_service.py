@@ -1,38 +1,53 @@
 import os
 import logging
+import asyncio
 import stripe
 from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 load_dotenv()
 
-# ตั้งค่าระบบบันทึกการทำงาน (Enterprise Logging)
 logger = logging.getLogger("Stripe-Service")
+
+try:
+    from core_services.ai_config import PrimeAIConfig
+except ImportError:
+    class PrimeAIConfig:
+        CORE_MODEL = "gemini-2.5-flash"
+        @staticmethod
+        def get_client():
+            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if api_key: return genai.Client(api_key=api_key)
+            return genai.Client(
+                vertexai=True, 
+                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                location="asia-southeast3"
+            )
 
 class StripeService:
     """
-    💳 ระบบจัดการ Payment Gateway ระดับ Enterprise (Stripe Integration)
-    เชื่อมต่อระบบชำระเงินผ่าน PromptPay และบัตรเครดิต พร้อมระบบ Tracking สากล
+    💳 ระบบจัดการ Payment Gateway ระดับ Enterprise (Stripe & PromptPay)
+    อัปเกรด: Async I/O, Vertex AI Dynamic Copywriting และ Webhook Synchronization
     """
     
     def __init__(self):
-        # 1. ตั้งค่า API Key
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        
-        # 2. [Best Practice] ล็อกเวอร์ชัน API ให้เสถียรที่สุด ป้องกันระบบพังจากการอัปเดตของ Stripe
         stripe.api_version = "2023-10-16" 
         
-        # 3. ดึงลิงก์กลับ LINE OA จากตัวแปรระบบ ป้องกันลิงก์ตาย (Fallback ไปยังลิงก์เดิมของท่านประธาน)
         default_line_url = "https://line.me/R/ti/p/@U5ea62530173fdb932bb85acd9fd8fbd3"
         self.success_url = os.getenv("LINE_OA_URL", default_line_url)
         self.cancel_url = os.getenv("LINE_OA_URL", default_line_url)
+        
+        self.ai_client = PrimeAIConfig.get_client()
+        self.ai_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
 
-    def create_checkout_session(self, user_id: str, package_name: str, agent_code: str = "") -> str:
-        """สร้างลิงก์ชำระเงิน (Checkout URL) พร้อมฝังข้อมูลสำหรับการตลาดและ Webhook"""
+    async def create_checkout_session(self, user_id: str, package_name: str, agent_code: str = "NOAGENT") -> str:
+        """สร้างลิงก์ชำระเงิน (Checkout URL) แบบ Asynchronous พร้อม AI Copywriting"""
         if not stripe.api_key:
             logger.error("❌ [Stripe]: ไม่พบ STRIPE_SECRET_KEY ระบบชำระเงินออฟไลน์")
             return ""
 
-        # โครงสร้างราคาและแพ็กเกจ (หน่วยเป็นสตางค์)
         packages = {
             "ESSENTIAL": {"price": 59000, "name": "แพ็กเกจ ESSENTIAL (เพื่อนคู่คิด)"},
             "PRIME": {"price": 149000, "name": "แพ็กเกจ PRIME (ที่ปรึกษาส่วนตัว)"},
@@ -40,47 +55,64 @@ class StripeService:
             "VIP_FOUNDER": {"price": 449000, "name": "100 VIP Founders (ตลอดชีพ)"}
         }
 
-        # หากระบุแพ็กเกจผิด ให้ใช้ PRIME เป็นค่ามาตรฐาน (Fallback)
         selected_pkg = packages.get(package_name.upper(), packages["PRIME"])
+        
+        dynamic_desc = 'SIRINTHANATTH PRIME - Enterprise AI SaaS'
+        if self.ai_client:
+            try:
+                prompt = f"เขียนคำอธิบายสั้นๆ 1 ประโยค (ไม่เกิน 15 คำ) เพื่อกระตุ้นให้ลูกค้าซื้อแพ็กเกจ '{selected_pkg['name']}' ให้ดูหรูหราและทรงพลัง"
+                
+                async def fetch_ad_copy():
+                    return await asyncio.to_thread(
+                        self.ai_client.models.generate_content,
+                        model=self.ai_model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(temperature=0.7)
+                    )
+                
+                ai_res = await asyncio.wait_for(fetch_ad_copy(), timeout=5.0)
+                if ai_res.text:
+                    dynamic_desc = ai_res.text.strip()
+            except asyncio.TimeoutError:
+                logger.warning("⚠️ [Stripe AI]: AI Copywriting Timeout ใช้ข้อความมาตรฐาน")
+            except Exception as e:
+                logger.warning(f"⚠️ [Stripe AI Warning]: AI Copywriting ขัดข้อง ใช้ข้อความเริ่มต้น ({e})")
 
-        # 🔄 ปรับ Reference ID ให้สอดคล้องกับตัวรับ Webhook ใน main.py เพื่อปลดล็อกสิทธิ์อัตโนมัติ
-        client_ref = f"VIP-{user_id}" if package_name.upper() == "VIP_FOUNDER" else f"sub_{user_id}"
-        if agent_code:
-            client_ref += f"_AGENT_{agent_code}" # ผูกรหัส Agent เข้าไปในบิลเพื่อแบ่งคอมมิชชัน
+        client_ref = f"{package_name.upper()}_AGENT_{agent_code}_LINE_{user_id}"
 
         try:
-            session = stripe.checkout.Session.create(
-                # 💡 ดัน PromptPay ขึ้นก่อนเพื่อช่วยองค์กรเซฟค่าธรรมเนียม
-                payment_method_types=['promptpay', 'card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'thb',
-                        'product_data': {
-                            'name': selected_pkg["name"], 
-                            'description': 'SIRINTHANATTH PRIME - Enterprise AI SaaS'
+            def _create_session():
+                return stripe.checkout.Session.create(
+                    payment_method_types=['promptpay', 'card'],
+                    line_items=[{
+                        'price_data': {
+                            'currency': 'thb',
+                            'product_data': {
+                                'name': selected_pkg["name"], 
+                                'description': dynamic_desc
+                            },
+                            'unit_amount': selected_pkg["price"],
                         },
-                        'unit_amount': selected_pkg["price"],
-                    },
-                    'quantity': 1,
-                }],
-                mode='payment',
-                success_url=self.success_url,
-                cancel_url=self.cancel_url,
-                client_reference_id=client_ref, 
-                
-                # 📊 [Enterprise Feature] ฝังข้อมูล Metadata เข้าบิลใบเสร็จ เพื่อใช้วิเคราะห์การตลาด
-                metadata={
-                    "user_id": user_id,
-                    "package_name": package_name.upper(),
-                    "agent_code": agent_code,
-                    "system_version": "3.0.1"
-                }
-            )
+                        'quantity': 1,
+                    }],
+                    mode='payment',
+                    success_url=self.success_url,
+                    cancel_url=self.cancel_url,
+                    client_reference_id=client_ref, 
+                    metadata={
+                        "user_id": user_id,
+                        "package_name": package_name.upper(),
+                        "agent_code": agent_code,
+                        "system_version": "3.0.1",
+                        "ai_generated_desc": dynamic_desc
+                    }
+                )
+            
+            session = await asyncio.to_thread(_create_session)
             logger.info(f"💳 [Stripe]: สร้างบิลชำระเงิน {package_name} สำเร็จ (Ref: {client_ref})")
             return session.url
             
         except stripe.error.StripeError as e:
-            # ดักจับ Error จากฝั่งระบบของ Stripe โดยเฉพาะ
             logger.error(f"❌ [Stripe API Error]: สร้างลิงก์ล้มเหลว -> {e.user_message or str(e)}")
             return ""
         except Exception as e:
