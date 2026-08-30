@@ -16,7 +16,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # ใช้โมเดลความเร็วสูงพิเศษสำหรับสแกนแบบ Real-time
+        CORE_MODEL = "gemini-2.5-flash" # ใช้โมเดลความเร็วสูงพิเศษสำหรับสแกนแบบ Real-time
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -37,7 +37,7 @@ class ComplianceGuard:
     def __init__(self):
         # 🚀 เตรียม Vertex AI Client สำหรับฟังก์ชัน Advanced Deep Scan
         self.client = PrimeAIConfig.get_client()
-        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
+        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
 
     @staticmethod
     def sanitize_pii(text: str) -> str:

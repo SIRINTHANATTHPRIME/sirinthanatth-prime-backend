@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับวิเคราะห์งบการเงินและตัวเลขที่ซับซ้อน
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับวิเคราะห์งบการเงินและตัวเลขที่ซับซ้อน
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -34,12 +34,12 @@ logger = logging.getLogger("Worker7-CFO")
 class FinancialAndAccountingWorker:
     """
     💰 Worker 7: Chief Financial Officer (CFO) & Risk Management Expert
-    อัปเกรด: Vertex AI (Gemini 3.1 Pro), ระบบวิเคราะห์งบการเงิน, วางแผนภาษี, และรักษาความลับองค์กร (Zero-Data)
+    อัปเกรด: Vertex AI (Gemini 2.5 Pro), ระบบวิเคราะห์งบการเงิน, วางแผนภาษี, และรักษาความลับองค์กร (Zero-Data)
     """
     def __init__(self):
         # 🚀 โหลด Client และโมเดลรุ่นท็อปสำหรับงานตรรกะการเงินที่ซับซ้อน
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         # 💾 เชื่อมต่อฐานข้อมูล Supabase สำหรับระบบ Smart Wallet
         supa_url = os.getenv("SUPABASE_URL")

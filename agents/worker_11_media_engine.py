@@ -53,7 +53,7 @@ class Worker11MediaEngine:
         
         # ประกาศใช้สุดยอดโมเดลผลิตสื่อระดับโลก (Vision & Cinematic Engine)
         self.image_model = "imagen-4.0-ultra-generate-001"
-        self.video_model = "veo-3.1-generate-preview"
+        self.video_model = "veo-2.5-generate-preview"
         
         # เชื่อมต่อ Supabase สำหรับหัก Token ค่าโปรดักชัน
         supa_url = os.getenv("SUPABASE_URL")
@@ -161,7 +161,7 @@ class Worker11MediaEngine:
             return "⚠️ [System]: เกิดข้อผิดพลาดในการสังเคราะห์เสียงพากย์"
 
     async def _generate_4k_video(self, user_id: str, script_text: str) -> str:
-        """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering) ผสาน Veo 3.1"""
+        """ระบบเรนเดอร์วิดีโอความละเอียด 4K (Cinematic Rendering) ผสาน Veo 2.5"""
         logger.info(f"🎬 [Worker 11 - 4K Studio]: กำลังเรนเดอร์วิดีโอ 4K ด้วย {self.video_model}...")
         
         output_filename = f"video_4k_{user_id}_{int(time.time())}.mp4"

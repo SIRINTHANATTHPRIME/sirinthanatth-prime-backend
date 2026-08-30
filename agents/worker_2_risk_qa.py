@@ -11,7 +11,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นโมเดลเรือธงล่าสุดของโลกระดับ Enterprise
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นโมเดลเรือธงล่าสุดของโลกระดับ Enterprise
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -38,7 +38,7 @@ class RiskQAWorker:
     def __init__(self):
         # 🚀 โหลด API Client และตั้งค่าโมเดลจากศูนย์กลาง
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจและตัด Token
         supa_url = os.getenv("SUPABASE_URL")

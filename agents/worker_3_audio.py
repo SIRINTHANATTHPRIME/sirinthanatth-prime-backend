@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงเพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงเพื่อความเข้าใจด้านภาษาศาสตร์และดนตรีที่ลึกซึ้ง
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -44,7 +44,7 @@ class AudioWorker:
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
@@ -158,7 +158,7 @@ class AudioWorker:
                 content_to_send.append(f"โปรดวิเคราะห์ แต่งเพลง หรือเตรียมสคริปต์สำหรับโปรดักชันเสียง ตามความต้องการนี้: {message}")
 
             # ==========================================
-            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 3.1 Pro (Asynchronous)
+            # 🧠 2. ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro (Asynchronous)
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,

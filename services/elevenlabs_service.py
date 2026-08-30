@@ -15,7 +15,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash"
+        CORE_MODEL = "gemini-2.5-flash"
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -33,7 +33,7 @@ DEFAULT_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 async def optimize_tts_script(text: str) -> str:
     """🧠 ใช้ Vertex AI (Gemini) เป็น Voice Director ปรับแต่งสคริปต์ให้พากย์เป็นธรรมชาติที่สุด"""
     client = PrimeAIConfig.get_client()
-    model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
+    model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
     
     if not client:
         return text

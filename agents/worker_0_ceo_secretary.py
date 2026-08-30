@@ -16,7 +16,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุด
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงล่าสุดที่ฉลาดและวิเคราะห์ไฟล์ได้ลึกซึ้งที่สุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -49,7 +49,7 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัวสูงสุด)
     ระบบประมวลผลสูงสุด สงวนสิทธิ์เฉพาะ LINE_ID ของประธานบริษัท
-    อัปเกรด: Gemini 3.1 Pro, ระบบ Approval Workflow 3 ปุ่ม, การเงิน/ไซเบอร์ 360 องศา และ Document Generator
+    อัปเกรด: Gemini 2.5 Pro, ระบบ Approval Workflow 3 ปุ่ม, การเงิน/ไซเบอร์ 360 องศา และ Document Generator
     """
     
     def __init__(self):
@@ -60,7 +60,7 @@ class CeoSecretaryWorker:
         
         # 🚀 เชื่อมต่อขุมพลังสมองกลเจเนอเรชันล่าสุด
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
         
         # 📝 โครงสร้าง System Instruction แบบ Mastermind ระดับโลก
         self.system_instruction = """
@@ -184,7 +184,7 @@ class CeoSecretaryWorker:
             
             content_to_send.append(message)
 
-            # ⚡ สั่งรัน Gemini 3.1 Pro (โหมดวิเคราะห์ขั้นสูง)
+            # ⚡ สั่งรัน Gemini 2.5 Pro (โหมดวิเคราะห์ขั้นสูง)
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,

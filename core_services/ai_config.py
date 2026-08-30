@@ -14,17 +14,17 @@ class PrimeAIConfig:
     # 🧠 กำหนดเวอร์ชันโมเดล AI มาตรฐานล่าสุด (อัปเดตสอดคล้องกับระบบ Swarm)
     # ==========================================
     # 1. CORE_MODEL: ด่านหน้าความเร็วแสง สำหรับ Chat, Routing และงานตอบกลับรวดเร็ว
-    CORE_MODEL = "gemini-3.7-flash"
+    CORE_MODEL = "gemini-2.5-flash"
     
     # 2. EXECUTIVE_MODEL: รุ่นเรือธงสำหรับวิเคราะห์งบการเงิน, เขียนโค้ด, สัญญา และประมวลผลวิดีโอ
-    EXECUTIVE_MODEL = "gemini-3.1-pro"
+    EXECUTIVE_MODEL = "gemini-2.5-pro"
     
     # 3. EMBEDDING_MODEL: รุ่นล่าสุดสำหรับทำ Vector Database และระบบความจำ RAG
     EMBEDDING_MODEL = "gemini-embedding-2-preview"
     
     # 4. MULTIMEDIA_MODELS: โมเดลผลิตสื่อ 4K ระดับสตูดิโอ (Imagen & Veo)
     IMAGE_MODEL = "imagen-4.0-ultra-generate-001"
-    VIDEO_MODEL = "veo-3.1-generate-preview"
+    VIDEO_MODEL = "veo-2.5-generate-preview"
     
     # ตัวแปรสำหรับเก็บ Instance เพื่อทำ Connection Pooling (Singleton)
     _client = None

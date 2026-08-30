@@ -13,7 +13,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 ใช้โมเดล Pro สำหรับสมองกลวิเคราะห์เชิงลึก
+        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 ใช้โมเดล Pro สำหรับสมองกลวิเคราะห์เชิงลึก
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -35,7 +35,7 @@ logger = logging.getLogger("PrimeBrain")
 client = PrimeAIConfig.get_client()
 
 # ดึงชื่อโมเดลระดับ Pro สำหรับงานซับซ้อน (ถ้าไม่มีให้ใช้ default)
-MODEL_NAME = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
+MODEL_NAME = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
 
 # =========================================================
 # 👑 2. SYSTEM PROMPT: กฎเหล็กของสมองกลระดับ VVIP (Predictive Empathy & Graph RAG)
@@ -145,7 +145,7 @@ async def generate_intelligent_response(user_id: str, incoming_message: str, fil
             content_to_send.append(final_prompt)
 
         # ==========================================
-        # 4. สั่งรันโมเดลเรือธง (Gemini 3.1 Pro - Deep Reasoning)
+        # 4. สั่งรันโมเดลเรือธง (Gemini 2.5 Pro - Deep Reasoning)
         # ==========================================
         response = await asyncio.to_thread(
             client.models.generate_content,

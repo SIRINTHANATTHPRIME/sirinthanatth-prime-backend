@@ -1,10 +1,10 @@
 fastapi
 uvicorn
-python_dotenv
-line_bot_sdk
+python-dotenv
+line-bot-sdk
 stripe
-google_generativeai
-google_genai
+google-generativeai
+google-genai
 supabase
 redis
 pydantic
@@ -15,4 +15,4 @@ Pillow
 requests
 elevenlabs
 beautifulsoup4
-upstash_redis
+upstash-redis
