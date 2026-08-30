@@ -14,7 +14,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับเป็นตัวสลับราง (Smart Router)
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับเป็นตัวสลับราง (Smart Router)
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -47,7 +47,7 @@ class HybridTaskDispatcher:
         
         # 🚀 Vertex AI Client สำหรับวิเคราะห์โหลดงาน (Smart Load Balancing)
         self.client = PrimeAIConfig.get_client()
-        self.router_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        self.router_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
 
     async def _ai_classify_task(self, payload: Dict[Any, Any]) -> str:
         """🧠 ให้ AI สแกน Payload ภายในเสี้ยววินาที เพื่อแยกประเภทงาน (media_render หรือ standard)"""

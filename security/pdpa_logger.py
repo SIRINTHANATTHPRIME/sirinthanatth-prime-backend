@@ -18,7 +18,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash" # ใช้โมเดลความเร็วแสงสำหรับสแกน Log
+        CORE_MODEL = "gemini-3.7-flash" # ใช้โมเดลความเร็วแสงสำหรับสแกน Log
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -37,7 +37,7 @@ class PDPA_Logger:
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
-        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        self.fast_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
         
         # เชื่อมต่อ Supabase สำหรับเก็บประวัติ Audit Log แบบเข้ารหัส
         supa_url = os.getenv("SUPABASE_URL")

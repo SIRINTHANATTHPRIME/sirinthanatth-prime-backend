@@ -12,7 +12,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับงาน Creative & Marketing
+        EXECUTIVE_MODEL = "gemini-3.1-pro" # 🚀 อัปเกรดเป็นรุ่นเรือธงสำหรับงาน Creative & Marketing
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -34,7 +34,7 @@ class PromoAutopilotService:
     def __init__(self):
         # 🚀 โหลด Client และโมเดลรุ่นท็อปจากศูนย์กลาง
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro")
 
     async def generate_seasonal_campaign(self, store_name: str, festival_name: str, product_details: str) -> dict:
         """สร้างสรรค์แคมเปญและแคปชันโฆษณา พร้อมสร้าง Flex Message สำหรับพรีวิวแบบเรียลไทม์"""

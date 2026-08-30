@@ -16,7 +16,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับการสร้างข้อความการตลาด
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับการสร้างข้อความการตลาด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -64,7 +64,7 @@ async def get_vip_quota():
         # 2. ใช้ Vertex AI สร้างข้อความกระตุ้นยอดขาย (Psychological FOMO)
         # ==========================================
         ai_client = PrimeAIConfig.get_client()
-        model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
         
         fomo_message = f"เหลือเพียง {remaining} สิทธิ์สุดท้าย ก่อนปรับราคาขึ้น!"
         

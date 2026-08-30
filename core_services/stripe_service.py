@@ -14,7 +14,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash"
+        CORE_MODEL = "gemini-3.7-flash"
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -40,7 +40,7 @@ class StripeService:
         self.cancel_url = os.getenv("LINE_OA_URL", default_line_url)
         
         self.ai_client = PrimeAIConfig.get_client()
-        self.ai_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        self.ai_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
 
     async def create_checkout_session(self, user_id: str, package_name: str, agent_code: str = "NOAGENT") -> str:
         """สร้างลิงก์ชำระเงิน (Checkout URL) แบบ Asynchronous พร้อม AI Copywriting"""
