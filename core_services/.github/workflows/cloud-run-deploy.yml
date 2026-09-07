@@ -1,0 +1,50 @@
+name: Deploy SIRINTHANATTH PRIME to Cloud Run
+
+on:
+  push:
+    branches: [ "main" ] # จุดชนวนอัตโนมัติเมื่อมีการ Push โค้ดเข้าสาขาหลัก
+
+jobs:
+  deploy:
+    name: Build & Deploy Enterprise Core
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # 🛡️ จำเป็นสำหรับการยืนยันตัวตนแบบ OIDC (Keyless)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. ยืนยันตัวตนกับ Google Cloud แบบไร้กุญแจ (Zero-Trust Security)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: 'swift-area-503915-a1'
+          workload_identity_provider: 'projects/601183279633/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-deployer@swift-area-503915-a1.iam.gserviceaccount.com'
+
+      # 2. ติดตั้ง Google Cloud SDK ล่าสุด
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 3. ตรวจสอบชีพจรการเชื่อมต่อ (Health Check)
+      - name: Check GCP Connection
+        run: |
+          gcloud auth list
+          gcloud config get-value project
+
+      # 4. สั่งจุดระเบิดเครื่องยนต์ขึ้นสู่ Cloud Run (Zero Downtime Deployment)
+      - name: Deploy to Cloud Run (Enterprise-Grade)
+        run: |
+          gcloud run deploy prime-core-engine \
+            --source . \
+            --region asia-southeast3 \
+            --project swift-area-503915-a1 \
+            --allow-unauthenticated \
+            --memory 4Gi \
+            --cpu 2 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --timeout 300

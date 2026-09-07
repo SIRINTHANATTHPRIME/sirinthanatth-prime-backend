@@ -1,17 +1,20 @@
 import os
 import time
+import re
 import logging
 import asyncio
 import mimetypes
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลาง (Vertex AI / Zero Downtime Fallback)
+# 🌐 นำเข้าศูนย์บัญชาการ AI และระบบสื่อสารข้ามแผนก (Swarm)
+from core_services.swarm_dispatcher import swarm_hub
+
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-2.5-pro" # 🚀 อัปเกรดเป็นโมเดลเรือธงล่าสุดของโลกระดับ Enterprise
+        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # 🚀 อัปเกรดเป็นรุ่นเรือธงล่าสุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -32,18 +35,20 @@ logger = logging.getLogger("Worker2-RiskQA")
 
 class RiskQAWorker:
     """
-    🛡️ Worker 2: Global Risk Assessment, Legal Shield & QA (Chief Legal Officer)
-    อัปเกรด: เชื่อมต่อ Vertex AI ศูนย์กลาง, ระบบตัด Token อัจฉริยะ, และ Zero-Data Retention
+    🛡️ Worker 2: Global Risk Assessment & Legal Shield (Chief Legal Officer)
+    อัปเกรด: Gemini 3.1 Pro, Real-time Legal Search, Swarm Delegation, และ Zero-Data Retention
     """
     def __init__(self):
         # 🚀 โหลด API Client และตั้งค่าโมเดลจากศูนย์กลาง
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-2.5-pro")
+        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro-preview")
         
         # เชื่อมต่อ Supabase สำหรับตรวจสอบแพ็กเกจและตัด Token
         supa_url = os.getenv("SUPABASE_URL")
         supa_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         self.db: Client = create_client(supa_url, supa_key) if supa_url and supa_key else None
+        
+        self.topup_link = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
 
     async def _deduct_token(self, user_id: str, tokens_needed: int) -> bool:
         """💳 ฟังก์ชันตรวจสอบและหัก Token อัจฉริยะตามแพ็กเกจของลูกค้า"""
@@ -60,7 +65,6 @@ class RiskQAWorker:
                 balance = float(user_data.data[0].get("token_balance", 0.0))
                 tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
                 
-                # VIP_FOUNDER และ ENTERPRISE ใช้งานระบบวิเคราะห์ความเสี่ยงได้ไม่จำกัด หรือตามระดับพิเศษ
                 if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]:
                     return True
                     
@@ -75,29 +79,36 @@ class RiskQAWorker:
             
         except Exception as e:
             logger.error(f"❌ [Token Engine Error]: {e}")
-            return True # Fail-safe: ยอมให้ใช้งานหากระบบ DB ขัดข้อง เพื่อไม่ให้ลูกค้าระดับสูงสะดุด
+            return True 
+
+    async def process_command(self, user_id: str, message: str, file_path: str = None, file_type: str = None) -> str:
+        """รองรับการเรียกใช้งานผ่าน Swarm Dispatcher"""
+        # ดึง Tier ของลูกค้าจาก DB เพื่อปรับความลึกของการสแกน
+        user_tier = "ESSENTIAL"
+        if self.db:
+            try:
+                res = await asyncio.to_thread(self.db.table("prime_clients").select("package_tier").eq("line_user_id", user_id).execute)
+                if res.data: user_tier = res.data[0].get("package_tier", "ESSENTIAL").upper()
+            except: pass
+        return await self.process_task(user_id, message, file_path, package_tier=user_tier)
 
     async def process_task(self, user_id: str, message: str, file_path: str = None, package_tier: str = "ESSENTIAL") -> str:
-        """
-        ทำงานเบื้องหลัง: สแกนความเสี่ยงและเอกสารระดับองค์กรผ่าน Vertex AI
-        ปรับความละเอียดการสแกนตาม Package (ESSENTIAL, PRIME, ENTERPRISE, VIP_FOUNDER)
-        """
+        """ทำงานเบื้องหลัง: สแกนความเสี่ยง ข้อกฎหมาย และเอกสารระดับองค์กร"""
         if not self.client:
             return "⚠️ [Worker 2]: ระบบประเมินความเสี่ยงออฟไลน์ (ไม่พบ API Key ในระบบส่วนกลาง)"
 
-        # 🪙 กำหนด Token ที่ต้องใช้: ตรวจข้อความใช้ 5 Token, ตรวจไฟล์สัญญาใช้ 50 Token
         tokens_needed = 50 if file_path else 5
         has_tokens = await self._deduct_token(user_id, tokens_needed)
         
         if not has_tokens:
-            return "⚠️ [ระบบการเงิน]: PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์ข้อกฎหมายระดับลึก กรุณาเติมเครดิตผ่าน Smart Wallet ครับ"
+            return f"⚠️ [ระบบการเงิน]: PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์ข้อกฎหมายระดับลึก (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้ที่: {self.topup_link}"
 
         # 🧠 ปรับความเข้มข้นของการตรวจสอบตามแพ็กเกจลูกค้า
         tier_instructions = {
             "ESSENTIAL": "ตรวจสอบความเสี่ยงเบื้องต้น (เช่น กฎหมาย อย. และ สคบ. สำหรับโฆษณา)",
-            "PRIME": "ตรวจสอบ อย., สคบ., PDPA และกฎระเบียบของแพลตฟอร์มโซเชียลมีเดียอย่างละเอียด",
-            "ENTERPRISE": "ตรวจสอบทุกข้อกฎหมาย, วิเคราะห์สัญญา, สแกนช่องโหว่ทางธุรกิจ และประเมินผลกระทบทางการเงิน",
-            "VIP_FOUNDER": "ตรวจสอบระดับสูงสุด (Enterprise-grade) วิเคราะห์ข้อสัญญาอย่างละเอียด พร้อมเขียน Mitigation Plan เพื่อป้องกันการถูกฟ้องร้อง 100%"
+            "PRIME": "ตรวจสอบ อย., สคบ., PDPA และข้อกำหนด ก.ล.ต. เบื้องต้นอย่างละเอียด",
+            "ENTERPRISE": "ตรวจสอบข้อกฎหมายทุกมิติ, วิเคราะห์สัญญา, สแกนช่องโหว่ทางธุรกิจ และประเมินผลกระทบทางการเงิน",
+            "VIP_FOUNDER": "ตรวจสอบระดับสูงสุด (Enterprise-grade) วิเคราะห์ข้อสัญญาอย่างละเอียด พร้อมเขียน Mitigation Plan เพื่อป้องกันการฟ้องร้อง 100%"
         }
         active_instruction = tier_instructions.get(package_tier, tier_instructions["ESSENTIAL"])
 
@@ -108,10 +119,14 @@ class RiskQAWorker:
         ความเข้มข้นที่คุณต้องสแกน: {active_instruction}
         
         หน้าที่ของคุณ:
-        1. ค้นหา 'ความเสี่ยง' หรือ 'ช่องโหว่' (Vulnerabilities) ที่อาจทำให้ลูกค้าถูกฟ้องร้อง, ผิด PDPA, หรือโดนแบนโฆษณา
+        1. ค้นหา 'ความเสี่ยง' หรือ 'ช่องโหว่' (Vulnerabilities) ที่อาจทำให้ลูกค้าถูกฟ้องร้อง, ผิด PDPA, หรือผิดกฎหมายแพลตฟอร์ม
         2. ให้คะแนนระดับความปลอดภัย (Safe, Warning, Critical) อย่างชัดเจน
         3. เสนอแนวทางป้องกันและปรับแก้ข้อความ/เอกสารใหม่ให้ถูกต้องตามกฎหมาย 100%
-        4. ใช้ภาษาที่รัดกุม เป็นทางการ ตรงไปตรงมา และแสดงออกถึงความเป็นที่ปรึกษาระดับโลก
+        4. ใช้ภาษาที่รัดกุม เป็นทางการ ตรงไปตรงมา และอ้างอิงข้อกฎหมายที่มีอยู่จริง
+        
+        🚨 กฎการส่งต่องาน (Swarm Delegation):
+        - หากตรวจพบว่างานนี้ต้องให้ผู้เชี่ยวชาญอื่นสานต่อ (เช่น ตรวจสอบความเสี่ยงงบการเงิน, ให้ CTO ตรวจสอบระบบไอที) ให้โยนงานให้แผนกอื่นโดยพิมพ์คำสั่งนี้ที่บรรทัดสุดท้าย:
+          [DELEGATE: WORKER_X_NAME] ข้อความที่ต้องการให้แผนกนั้นทำต่อ
         """
 
         uploaded_file = None
@@ -125,8 +140,7 @@ class RiskQAWorker:
                 logger.info(f"🛡️ [Worker 2]: กำลังอัปโหลดเอกสารสู่ AI Cloud Storage เพื่อวิเคราะห์ความเสี่ยง...")
                 
                 mime_type, _ = mimetypes.guess_type(file_path)
-                if file_path.lower().endswith('.xlsx'): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                elif file_path.lower().endswith('.xls'): mime_type = "application/vnd.ms-excel"
+                if file_path.lower().endswith(('.xlsx', '.xls')): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 elif file_path.lower().endswith('.csv'): mime_type = "text/csv"
                 elif file_path.lower().endswith('.pdf'): mime_type = "application/pdf"
                 if not mime_type: mime_type = "application/octet-stream"
@@ -136,9 +150,8 @@ class RiskQAWorker:
                     uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
                 except Exception as e:
                     logger.warning(f"⚠️ [File Upload Error]: {e}")
-                    return "⚠️ [Worker 2]: โครงสร้างไฟล์ซับซ้อนเกินไป รบกวนแปลงเป็น PDF หรือภาพ เพื่อความแม่นยำในการวิเคราะห์ระดับองค์กรครับ"
+                    return "⚠️ [Worker 2]: โครงสร้างไฟล์ซับซ้อนเกินไป รบกวนแปลงเป็น PDF หรือรูปภาพ เพื่อความแม่นยำในการวิเคราะห์ระดับองค์กรครับ"
 
-                # ⏳ เช็กสถานะการประมวลผลไฟล์ พร้อมตั้งเวลา Timeout ป้องกันคิวค้าง (Anti-Freeze)
                 timeout = 60
                 start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
@@ -156,7 +169,7 @@ class RiskQAWorker:
                 content_to_send.append(f"โปรดตรวจสอบความเสี่ยงจากข้อมูลนี้ ตามเงื่อนไขของแพ็กเกจ {package_tier}:\n{message}")
 
             # ==========================================
-            # ประมวลผลขั้นสูงด้วย Gemini 2.5 Pro (Precision Engine)
+            # ประมวลผลขั้นสูงด้วย Gemini 3.1 Pro + Real-time Search
             # ==========================================
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
@@ -164,14 +177,38 @@ class RiskQAWorker:
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.1 # อุณหภูมิต่ำสุด (0.1) เพื่อความแม่นยำทางกฎหมายระดับทนายความ ห้ามใช้จินตนาการเด็ดขาด
+                    temperature=0.1, # ใช้อุณหภูมิ 0.1 เพื่อความแม่นยำด้านกฎหมาย 100% ห้ามเดาข้อมูล
+                    tools=[{"google_search": {}}] # เปิด Search ให้ AI เช็กกฎหมายล่าสุดจากอินเทอร์เน็ตได้
                 )
             )
-            return response.text.strip() if response.text else "✅ สแกนเสร็จสิ้น ไม่พบความเสี่ยงที่น่ากังวลตามมาตรฐานกฎหมายปัจจุบันครับ"
+            
+            reply_text = response.text.strip() if response.text else "✅ สแกนเสร็จสิ้น ไม่พบความเสี่ยงที่น่ากังวลตามมาตรฐานกฎหมายปัจจุบันครับ"
+
+            # ==========================================
+            # 🔄 ตรวจจับการส่งต่องาน (Swarm Delegation Logic)
+            # ==========================================
+            delegate_match = re.search(r'\[DELEGATE:\s*(.+?)\](.*)', reply_text, re.DOTALL | re.IGNORECASE)
+            if delegate_match:
+                target_worker = delegate_match.group(1).strip()
+                handoff_message = delegate_match.group(2).strip()
+                
+                clean_reply = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.DOTALL | re.IGNORECASE).strip()
+                
+                worker_response = await swarm_hub.delegate_task(
+                    from_worker="WORKER_2_RISK_QA", 
+                    to_worker=target_worker, 
+                    user_id=user_id, 
+                    message=handoff_message, 
+                    file_path=file_path, 
+                    file_type=None
+                )
+                return f"{clean_reply}\n\n🔄 [ฝ่ายกฎหมายส่งต่อให้ {target_worker} ประมวลผลต่อ]:\n{worker_response}"
+
+            return reply_text
 
         except TimeoutError:
             logger.error("❌ [Worker 2 Timeout]: เอกสารการประเมินมีขนาดใหญ่เกินไป")
-            return "ขออภัยครับ เอกสารมีความซับซ้อนและขนาดใหญ่เกินไป รบกวนแบ่งไฟล์เพื่อความรวดเร็วในการประเมินครับ"
+            return "ขออภัยครับ เอกสารมีความซับซ้อนและขนาดใหญ่เกินไป รบกวนแบ่งไฟล์เพื่อความรวดเร็วในการวิเคราะห์กฎหมายครับ"
         except Exception as e:
             logger.error(f"❌ [Worker 2 Error]: {e}")
             return "⚠️ [Worker 2]: ระบบตรวจสอบความเสี่ยงทางกฎหมายขัดข้องชั่วคราว ทีมวิศวกรกำลังตรวจสอบครับ"

@@ -559,7 +559,7 @@
         <div class="video-showcase">
             <div class="video-card">
                 <div class="video-content">
-                    <video autoplay loop muted playsinline>
+                    <video controls preload="metadata" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="https://storage.googleapis.com/www.sirinthanatthprime.com/PR%20SIRINTHANATTH%20PRIME%201.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -572,7 +572,7 @@
 
             <div class="video-card">
                 <div class="video-content">
-                    <video autoplay loop muted playsinline>
+                    <video controls preload="metadata" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="https://storage.googleapis.com/www.sirinthanatthprime.com/PR%20SIRINTHANATTH%20PRIME%202.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -585,7 +585,7 @@
 
             <div class="video-card">
                 <div class="video-content">
-                    <video autoplay loop muted playsinline>
+                    <video controls preload="metadata" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="https://storage.googleapis.com/www.sirinthanatthprime.com/PR%20SIRINTHANATTH%20PRIME%203.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -709,13 +709,13 @@
                 Email: admin@sirinthanatthprime.com | Phone: +66 86 807 4224
             </p>
         </div>
-        <div style="margin-top: 20px;">
-            <a href="#" onclick="alert('ข้อกำหนดการให้บริการ: อยู่ภายใต้กฎหมายพาณิชย์อิเล็กทรอนิกส์ไทย')">Terms of Service</a> | 
-            <a href="#" onclick="alert('นโยบาย PDPA: คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562')">Privacy Policy (PDPA)</a> | 
-            <a href="#" onclick="alert('นโยบายการคืนเงิน: สงวนสิทธิ์การคืนเงินเนื่องจากเป็นบริการดิจิทัลที่เริ่มประมวลผลทันที')">Refund Policy</a>
+        <div>
+            <a href="javascript:void(0)" onclick="openDisclaimer()">ข้อกำหนดการให้บริการ</a> | 
+            <a href="javascript:void(0)" onclick="openDisclaimer()">นโยบายความเป็นส่วนตัว (PDPA)</a> | 
+            <a href="javascript:void(0)" onclick="openDisclaimer()">นโยบายการคืนเงิน</a>
         </div>
         <div style="margin-top: 15px; font-size: 0.8rem;">
-            &copy; 2026 SIRINTHANATTH PRIME by Marketing Spark Combine Co., Ltd. <br>
+            &copy; 2026 SIRINTHANATTH PRIME by Marketing Spark Combine Co., Ltd. All Rights Reserved. จัดทำขึ้นภายใต้มาตรฐานกฎหมายไทยและสากล<br>
             <span style="color: #555;">Proudly powered by Google Cloud Run.</span>
         </div>
     </footer>
