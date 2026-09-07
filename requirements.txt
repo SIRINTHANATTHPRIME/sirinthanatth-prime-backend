@@ -1,13 +1,8 @@
-fastapi
-uvicorn
 python-dotenv
 line-bot-sdk
 stripe
 google-generativeai
-google-genai
-supabase
 redis
-pydantic
 aiohttp
 moviepy
 gTTS
@@ -15,4 +10,11 @@ Pillow
 requests
 elevenlabs
 beautifulsoup4
-upstash-redis
+fastapi>=0.110.0
+uvicorn>=0.28.0
+upstash-redis>=1.0.0
+google-genai>=0.1.1
+google-api-python-client>=2.100.0
+google-auth>=2.25.0
+supabase>=2.3.0
+pydantic>=2.6.0
