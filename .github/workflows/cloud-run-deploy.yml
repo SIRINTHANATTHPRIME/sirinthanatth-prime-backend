@@ -35,11 +35,17 @@ jobs:
           gcloud auth list
           gcloud config get-value project
 
-      # 4. ต่อด้วยคำสั่ง Build / Deploy Cloud Run ตามที่ต้องการ
-      - name: Deploy to Cloud Run
+      -# 4. สั่งจุดระเบิดเครื่องยนต์ขึ้นสู่ Cloud Run
+      - name: Deploy to Cloud Run (Enterprise-Grade)
         run: |
-          gcloud run deploy prime-core-agent `
-            --source . `
-            --region asia-southeast3 `
-            --project swift-area-503915-a1
+          gcloud run deploy prime-core-agent \
+            --source . \
+            --region asia-southeast3 \
+            --project swift-area-503915-a1 \
+            --allow-unauthenticated \
+            --memory 4Gi \
+            --cpu 2 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --timeout 300
 
