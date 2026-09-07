@@ -48,4 +48,3 @@ jobs:
             --min-instances 0 \
             --max-instances 10 \
             --timeout 300
-
