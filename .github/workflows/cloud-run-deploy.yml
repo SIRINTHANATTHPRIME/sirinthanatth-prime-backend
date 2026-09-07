@@ -1,50 +1,60 @@
-name: Deploy to Google Cloud
+name: Supreme Enterprise CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ] # หรือ branch ที่คุณใช้งาน เช่น master
+    branches: [ "main" ]
+  workflow_dispatch: # เพิ่มปุ่มกด Deploy ด้วยมือ (Manual Trigger) ในหน้าเว็บ GitHub
+
+# 🛑 ระบบป้องกันการ Deploy ชนกัน (Concurrency Control)
+# หากมีการ Push โค้ดใหม่เข้าไปซ้ำ ระบบจะยกเลิกคิวเก่าที่ค้างอยู่ และรันตัวล่าสุดทันที
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Build & Deploy to Google Cloud
     runs-on: ubuntu-latest
 
     permissions:
       contents: 'read'
-      id-token: 'write' # สำคัญมาก: จำเป็นสำหรับการยืนยันตัวตนแบบ OIDC (Keyless)
+      id-token: 'write' # สำคัญมาก: ยืนยันตัวตนระดับ Zero-Trust (OIDC)
 
     steps:
-      - name: Checkout Code
+      - name: 📥 Checkout Source Code
         uses: actions/checkout@v4
 
-      # 1. ยืนยันตัวตนกับ Google Cloud แบบ Workload Identity Federation (ไม่ต้องใช้ไฟล์ JSON)
-      - name: Authenticate to Google Cloud
+      - name: 🔐 Authenticate to Google Cloud (Workload Identity)
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           project_id: 'swift-area-503915-a1'
           workload_identity_provider: 'projects/601183279633/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions-deployer@swift-area-503915-a1.iam.gserviceaccount.com'
 
-      # 2. ติดตั้ง Cloud SDK
-      - name: Set up Cloud SDK
+      - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # 3. ทดสอบตรวจสอบสถานะ
-      - name: Check GCP Connection
-        run: |
-          gcloud auth list
-          gcloud config get-value project
+      # 🚀 เปลี่ยนมาใช้ Google Native Action แทนการพิมพ์คำสั่ง Bash
+      # หมดปัญหาเครื่องหมาย \ ผิดพลาด หรือเว้นวรรคเกิน 100%
+      - name: 🚀 Deploy to Cloud Run (God-Mode)
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: prime-core-agent
+          region: asia-southeast3
+          project_id: swift-area-503915-a1
+          source: ./
+          flags: >-
+            --allow-unauthenticated
+            --memory=4Gi
+            --cpu=2
+            --min-instances=0
+            --max-instances=10
+            --timeout=300
+            --cpu-boost
 
-      # 4. สั่งจุดระเบิดเครื่องยนต์ขึ้นสู่ Cloud Run
-      - name: Deploy to Cloud Run (Enterprise-Grade)
+      - name: ✅ Deployment Success Notification
         run: |
-          gcloud run deploy prime-core-agent \
-            --source . \
-            --region asia-southeast3 \
-            --project swift-area-503915-a1 \
-            --allow-unauthenticated \
-            --memory 4Gi \
-            --cpu 2 \
-            --min-instances 0 \
-            --max-instances 10 \
-            --timeout 300
+          echo "✅ SIRINTHANATTH PRIME Architecture Deployed Successfully!"
+          echo "🌐 Live Endpoint URL: ${{ steps.deploy.outputs.url }}"

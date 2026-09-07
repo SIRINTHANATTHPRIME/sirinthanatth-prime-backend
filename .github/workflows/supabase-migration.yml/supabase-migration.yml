@@ -1,25 +1,55 @@
-name: Deploy Supabase Migrations
+name: Supreme Supabase DB Migration
 
 on:
   push:
-    branches:
-      - main # อัปเดตฐานข้อมูลเฉพาะเมื่อ Push โค้ดเข้าสาขาหลัก (main)
+    branches: [ "main" ]
+    # 🎯 Smart Resource Optimization: อัปเดตเฉพาะเมื่อมีการแก้ไขไฟล์ในโฟลเดอร์ฐานข้อมูลเท่านั้น
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/seed.sql'
+  workflow_dispatch: # 🔘 รองรับการกดรันคำสั่งด้วยมือฉุกเฉินผ่านหน้าเว็บ GitHub
+
+# 🛑 Database Lock Prevention (ระบบป้องกันฐานข้อมูลพังจากการทำงานทับซ้อน)
+concurrency:
+  group: supabase-migration-${{ github.ref }}
+  # ⚠️ ข้อควรระวังสูงสุด: สำหรับ Database ห้ามตั้งเป็น true เด็ดขาด 
+  # เพราะถ้ายกเลิกกลางคัน โครงสร้างตาราง (Schema) จะพังทันที
+  cancel-in-progress: false 
 
 jobs:
   deploy_database:
+    name: 🗄️ Enterprise Database Deployment
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    
+    # 🔒 ล็อกสภาพแวดล้อม (Environment) ป้องกันการนำโค้ดทดสอบไปรันบน Production
+    environment: production 
 
-      - name: Set up Supabase CLI
+    steps:
+      - name: 📥 Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Supabase CLI (Enterprise Edition)
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Push Migrations to Supabase Production
+      # 🔗 เพิ่มระบบตรวจสอบและล็อกเป้าหมาย (Zero-Trust Validation) ป้องกันการ Push ผิดโปรเจกต์
+      - name: 🔗 Link to Production Database
+        run: supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # 🚀 จุดระเบิดการเปลี่ยนแปลงโครงสร้างฐานข้อมูล
+      - name: 🚀 Push Migrations (Automated Schema Sync)
         run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: ✅ Database Sync Success Notification
+        run: |
+          echo "✅ Database Schema and Migrations successfully deployed to Production!"
+          echo "🛡️ SIRINTHANATTH PRIME Data Architecture is now up to date."
