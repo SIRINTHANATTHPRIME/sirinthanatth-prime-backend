@@ -1,12 +1,16 @@
 import os
+import time
 import logging
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter
+from pydantic import BaseModel
 from supabase import create_client, Client
 from google import genai
 from google.genai import types
 
-# ตั้งค่า Logger
+# ตั้งค่า Logger ระดับ Enterprise
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("RoutesStats")
 
 # =========================================================
@@ -16,7 +20,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-2.5-flash" # 🚀 ใช้โมเดลความเร็วแสงสำหรับการสร้างข้อความการตลาด
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดเป็นรุ่นความเร็วแสงล่าสุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -27,92 +31,135 @@ except ImportError:
                 location="asia-southeast3"
             )
 
-# สร้าง Router สำหรับแผนกสถิติ
 router = APIRouter()
 
-# เชื่อมต่อ Supabase สำหรับดึงสถิติ
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
+# =========================================================
+# 🛡️ 2. ระบบ Enterprise Caching (ป้องกันเซิร์ฟเวอร์ล่ม)
+# =========================================================
+# หากคนเข้าเว็บ 10,000 คนพร้อมกัน ระบบจะดึง AI และ DB แค่ 1 ครั้ง/นาที 
+# ที่เหลือจะดึงจาก Cache (ความเร็ว 0.001 วินาที)
+class StatsCache:
+    def __init__(self, ttl_seconds=60):
+        self.ttl = ttl_seconds
+        self.data = None
+        self.last_update = 0
+        self.lock = asyncio.Lock()
 
-@router.get("/vip-quota")
-async def get_vip_quota():
-    """
-    📊 Endpoint สำหรับส่งตัวเลขสถิติแบบ Real-Time และสร้างข้อความการตลาด (FOMO)
-    URL: /api/v1/stats/vip-quota
-    """
+    async def get_or_update(self, update_func):
+        now = time.time()
+        # ใช้ Double-checked locking ป้องกัน Race Condition
+        if self.data is None or (now - self.last_update) > self.ttl:
+            async with self.lock:
+                if self.data is None or (time.time() - self.last_update) > self.ttl:
+                    self.data = await update_func()
+                    self.last_update = time.time()
+        return self.data
+
+stats_cache = StatsCache(ttl_seconds=60) # อัปเดตข้อมูลทุกๆ 60 วินาที
+
+# =========================================================
+# 📦 3. Pydantic Response Schema (มาตรฐาน API สากล)
+# =========================================================
+class VIPStatsResponse(BaseModel):
+    status: str
+    paid_count: int
+    max_quota: int
+    remaining: int
+    urgency_level: str # 'HIGH', 'MEDIUM', 'LOW', 'SOLD_OUT'
+    fomo_message: str
+    last_updated: str
+
+# =========================================================
+# 🧠 4. ฟังก์ชันประมวลผลหลัก (Core Logic)
+# =========================================================
+async def generate_live_stats() -> dict:
+    """ฟังก์ชันดึงสถิติและให้ AI สร้างข้อความการตลาด (ทำงานหลังฉาก)"""
     MAX_QUOTA = 100
-    paid_count = 82 # Fallback กรณี Database ขัดข้อง
+    paid_count = 82 # Fallback
     
     try:
-        # ==========================================
-        # 1. ดึงสถิติจริงจากฐานข้อมูล Supabase (นับจำนวน VIP_FOUNDER)
-        # ==========================================
+        # 📊 1. ดึงสถิติจริงจากฐานข้อมูล
         if supabase:
             def fetch_vip_count():
-                # ดึงจำนวนแถวที่มี package_tier เป็น VIP_FOUNDER
                 res = supabase.table("prime_clients").select("id", count="exact").eq("package_tier", "VIP_FOUNDER").execute()
                 return res.count if res.count is not None else 82
-                
             paid_count = await asyncio.to_thread(fetch_vip_count)
             
-        remaining = MAX_QUOTA - paid_count
-        if remaining < 0: remaining = 0
+        remaining = max(0, MAX_QUOTA - paid_count)
         
-        # ==========================================
-        # 2. ใช้ Vertex AI สร้างข้อความกระตุ้นยอดขาย (Psychological FOMO)
-        # ==========================================
+        # 🌡️ 2. ประเมินระดับความเร่งด่วน (Urgency Psychology)
+        urgency_level = "LOW"
+        if remaining == 0: urgency_level = "SOLD_OUT"
+        elif remaining <= 10: urgency_level = "HIGH"
+        elif remaining <= 30: urgency_level = "MEDIUM"
+
+        # 🧠 3. สั่งการ Chief Marketing Officer (AI)
         ai_client = PrimeAIConfig.get_client()
-        model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-2.5-flash")
+        model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
         
         fomo_message = f"เหลือเพียง {remaining} สิทธิ์สุดท้าย ก่อนปรับราคาขึ้น!"
         
         if ai_client and remaining > 0:
             prompt = f"""
-            คุณคือ CMO (Chief Marketing Officer) ของแบรนด์ SIRINTHANATTH PRIME
-            ขณะนี้แพ็กเกจ '100 VIP Founders' (ราคาพิเศษตลอดชีพ) มีนักธุรกิจสมัครแล้ว {paid_count}/{MAX_QUOTA} คน (เหลือเพียง {remaining} สิทธิ์)
+            คุณคือ 'Global Chief Marketing Officer (CMO)' ของแบรนด์ SIRINTHANATTH PRIME
+            ระดับความเร่งด่วนตอนนี้: {urgency_level}
+            โควตาแพ็กเกจ '100 VIP Founders': มีผู้บริหารจองแล้ว {paid_count}/{MAX_QUOTA} คน (เหลือเพียง {remaining} สิทธิ์)
             
-            จงเขียนข้อความสั้นๆ 1 ประโยค (ไม่เกิน 20 คำ) เพื่อกระตุ้นให้คนรีบสมัคร (FOMO) 
-            ให้ดูพรีเมียม หรูหรา สงวนสิทธิ์เฉพาะผู้บริหารระดับสูง ห้ามใช้คำหยาบหรือดูถูก
+            จงเขียนข้อความโฆษณา 1 ประโยค (ไม่เกิน 20 คำ) เพื่อกระตุ้นให้ผู้บริหารระดับสูงรีบสมัคร (Psychological FOMO)
+            กฎ: หรูหรา ทรงพลัง น่าเกรงขาม และเข้าถึงอารมณ์ความกลัวพลาดโอกาส
             """
-            
             try:
                 ai_res = await asyncio.to_thread(
                     ai_client.models.generate_content,
                     model=model_name,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.7 # ใช้อุณหภูมิ 0.7 เพื่อสร้างสรรค์ข้อความการตลาดที่ไม่ซ้ำซาก
-                    )
+                    config=types.GenerateContentConfig(temperature=0.8) # 0.8 ให้ AI คิดข้อความที่สร้างสรรค์และไม่ซ้ำซาก
                 )
                 if ai_res.text:
-                    fomo_message = ai_res.text.strip()
+                    fomo_message = ai_res.text.strip().replace('"', '')
             except Exception as ai_err:
                 logger.warning(f"⚠️ [AI FOMO Warning]: {ai_err}")
                 
         elif remaining == 0:
-            fomo_message = "Sold Out! สิทธิ์ 100 VIP Founders เต็มแล้ว ขอบพระคุณนักลงทุนทุกท่านครับ"
+            fomo_message = "SOLD OUT: สิทธิพิเศษ VIP Founders ครบ 100 ท่านแล้ว ขอบพระคุณท่านประธานและผู้บริหารทุกท่านครับ"
 
-        # ==========================================
-        # 3. จัดส่งข้อมูล JSON สำหรับหน้าเว็บ LIFF (Frontend)
-        # ==========================================
         return {
             "status": "success",
             "paid_count": paid_count,
             "max_quota": MAX_QUOTA,
             "remaining": remaining,
-            "fomo_message": fomo_message
+            "urgency_level": urgency_level,
+            "fomo_message": fomo_message,
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        
+
     except Exception as e:
-        logger.error(f"❌ [Stats API Error]: {e}")
-        # ระบบ Fallback ทำงานเมื่อระบบล่ม เพื่อไม่ให้หน้าเว็บลูกค้าพัง
-        remaining = MAX_QUOTA - paid_count
+        logger.error(f"❌ [Stats Engine Error]: {e}")
+        remaining = max(0, MAX_QUOTA - paid_count)
         return {
             "status": "error", 
             "paid_count": paid_count, 
             "max_quota": MAX_QUOTA,
-            "remaining": remaining if remaining > 0 else 0,
-            "fomo_message": "โอกาสสุดท้าย! สมัคร VIP วันนี้รับสิทธิพิเศษเต็มรูปแบบ"
+            "remaining": remaining,
+            "urgency_level": "HIGH" if remaining <= 10 else "MEDIUM",
+            "fomo_message": "🚨 โอกาสสุดท้ายของปี! สมัคร VIP วันนี้รับสิทธิพิเศษเต็มรูปแบบ ก่อนปิดรับสมัคร",
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+
+# =========================================================
+# 📡 5. API Endpoint (ด่านหน้ารับคำขอจากหน้าเว็บ LIFF)
+# =========================================================
+@router.get("/vip-quota", response_model=VIPStatsResponse)
+async def get_vip_quota():
+    """
+    📊 Endpoint สำหรับส่งตัวเลขสถิติแบบ Real-Time และสร้างข้อความการตลาด
+    ระบบ Caching อัจฉริยะ (ดึง Data/AI สูงสุดแค่ 1 ครั้งต่อนาที ป้องกันระบบล่ม)
+    """
+    # เรียกใช้ Cache อัจฉริยะ 
+    # หากหมดเวลา (TTL) ระบบจะรัน `generate_live_stats` ใหม่โดยอัตโนมัติ
+    data = await stats_cache.get_or_update(generate_live_stats)
+    return data

@@ -31,11 +31,11 @@ try:
 except ImportError:
     Client = None
 
-logger = logging.getLogger("Worker4-VideoDirector")
+logger = logging.getLogger("Worker4-videoDirector")
 
-class VideoProductionWorker:
+class videoProductionWorker:
     """
-    🎬 Worker 4: Executive Video Director & Analyst
+    🎬 Worker 4: Executive video Director & Analyst
     อัปเกรด: Gemini 3.1 Pro, Swarm Delegation, 4K Storyboard Generator และ Zero-Data Shield
     """
     def __init__(self):
@@ -57,7 +57,7 @@ class VideoProductionWorker:
             def _check_and_deduct():
                 user_data = self.db.table("prime_clients").select("package_tier, token_balance").eq("line_user_id", user_id).execute()
                 if not user_data.data:
-                    return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนเพื่อเปิดใช้งานระบบ Video Production ครับ"}
+                    return {"authorized": False, "msg": "⚠️ ไม่พบข้อมูลบัญชี กรุณาลงทะเบียนเพื่อเปิดใช้งานระบบ video Production ครับ"}
                     
                 balance = float(user_data.data[0].get("token_balance", 0.0))
                 tier = user_data.data[0].get("package_tier", "ESSENTIAL").upper()
@@ -67,7 +67,7 @@ class VideoProductionWorker:
                 if balance >= tokens_needed:
                     new_balance = balance - tokens_needed
                     self.db.table("prime_clients").update({"token_balance": new_balance}).eq("line_user_id", user_id).execute()
-                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ Video Production)")
+                    logger.info(f"🪙 [Token Engine]: หัก {tokens_needed} Credits จาก {user_id} (บริการ video Production)")
                     return {"authorized": True, "tier": tier}
                 else:
                     return {"authorized": False, "msg": f"⚠️ PRIME CREDITS ของท่านไม่เพียงพอสำหรับการวิเคราะห์หรือสร้างสคริปต์วิดีโอ (ต้องการ {tokens_needed} Credits)\n👉 เติมเครดิตได้ที่: {self.topup_link}"}
@@ -83,7 +83,7 @@ class VideoProductionWorker:
 
     async def process_task(self, user_id: str, message: str, file_path: str = None) -> str:
         """ทำงานเบื้องหลัง: วิเคราะห์วิดีโอ สร้าง Storyboard และส่งต่อให้แผนกเรนเดอร์ 4K"""
-        if not self.client: return "⚠️ [Worker 4]: ระบบ Video Director ออฟไลน์"
+        if not self.client: return "⚠️ [Worker 4]: ระบบ video Director ออฟไลน์"
 
         # 🪙 ตรวจสอบค่าใช้จ่าย: อัปโหลดวิดีโอ = 100 Credits, คิดบทโฆษณา = 20 Credits
         tokens_needed = 100 if file_path else 20
@@ -91,14 +91,14 @@ class VideoProductionWorker:
         if not auth_status["authorized"]: return auth_status["msg"]
             
         package_tier = auth_status.get("tier", "ESSENTIAL")
-        logger.info(f"🎬 [Video Production]: เริ่มโปรดักชันให้ User {user_id} (Tier: {package_tier})")
+        logger.info(f"🎬 [video Production]: เริ่มโปรดักชันให้ User {user_id} (Tier: {package_tier})")
 
         system_instruction = f"""
-        คุณคือ 'Executive Video Director' ระดับฮอลลีวูด ประจำสตูดิโอ SIRINTHANATTH PRIME
+        คุณคือ 'Executive video Director' ระดับฮอลลีวูด ประจำสตูดิโอ SIRINTHANATTH PRIME
         ลูกค้ารายนี้อยู่ในแพ็กเกจระดับ: {package_tier}
         
         หน้าที่ของคุณ:
-        1. 🎞️ การวิเคราะห์วิดีโอ (Deep Video Parsing): ถอดรหัสองค์ประกอบภาพ เสียง อารมณ์ และชี้จุดปรับปรุงเพื่อเพิ่ม Conversion Rate โฆษณา
+        1. 🎞️ การวิเคราะห์วิดีโอ (Deep video Parsing): ถอดรหัสองค์ประกอบภาพ เสียง อารมณ์ และชี้จุดปรับปรุงเพื่อเพิ่ม Conversion Rate โฆษณา
         2. 📝 การออกแบบ Storyboard (Scene-by-Scene): หากลูกค้าให้คิดคอนเซปต์ ให้แบ่งฉากอย่างเป็นระบบ: [Hook 3วิ], [Pain Point], [Solution], [Call-to-Action]
         3. 🗣️ บทพากย์ (Voiceover Script): เขียนสคริปต์คำพูดแยกไว้ให้ชัดเจน เพื่อส่งให้ระบบ AI พากย์เสียง
         
@@ -211,7 +211,7 @@ class VideoProductionWorker:
                     <div class="container">
                         <div class="header">
                             <h1>CINEMATIC STORYBOARD & SCRIPT</h1>
-                            <p>DIRECTED BY SIRINTHANATTH PRIME VIDEO ENGINE</p>
+                            <p>DIRECTED BY SIRINTHANATTH PRIME video ENGINE</p>
                         </div>
                         <div class="content">
                             {file_content}
@@ -238,7 +238,7 @@ class VideoProductionWorker:
                 clean_reply = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.DOTALL | re.IGNORECASE).strip()
                 
                 worker_response = await swarm_hub.delegate_task(
-                    from_worker="WORKER_4_VIDEO", 
+                    from_worker="WORKER_4_video", 
                     to_worker=target_worker, 
                     user_id=user_id, 
                     message=handoff_message, 

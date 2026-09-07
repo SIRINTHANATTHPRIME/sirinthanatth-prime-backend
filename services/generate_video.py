@@ -7,7 +7,7 @@ from gtts import gTTS
 from moviepy.editor import *
 
 # ตั้งค่า Logger สำหรับตรวจสอบการเรนเดอร์
-logger = logging.getLogger("VideoGenerator")
+logger = logging.getLogger("videoGenerator")
 
 # ==========================================
 # 1. ตั้งค่า ImageMagick สำหรับการสร้าง TextClip
@@ -32,7 +32,7 @@ def create_marketing_video(user_id: str, text: str, script_text: str, output_fil
     🎬 ฟังก์ชันเรนเดอร์วิดีโอ 4K อัตโนมัติ ผสาน Imagen 3.0 และ Veo
     (ถูกเรียกโดย Worker 11 Media Engine แบบ Asynchronous)
     """
-    logger.info(f"🎬 [Video Studio]: กำลังเตรียมทรัพยากรภาพและเสียงระดับ 4K สำหรับ {user_id}")
+    logger.info(f"🎬 [video Studio]: กำลังเตรียมทรัพยากรภาพและเสียงระดับ 4K สำหรับ {user_id}")
     
     bg_clip = None
     temp_img_path = f"temp_bg_{user_id}_{int(time.time())}.png"
@@ -90,7 +90,7 @@ def create_marketing_video(user_id: str, text: str, script_text: str, output_fil
     try:
         txt_clip = TextClip(script_text, fontsize=70, color='gold', font='Impact', size=(1800, None), method='caption')
         txt_clip = txt_clip.set_position('center').set_duration(duration)
-        final_video = CompositeVideoClip([bg_clip, txt_clip]).set_audio(audio_clip)
+        final_video = CompositevideoClip([bg_clip, txt_clip]).set_audio(audio_clip)
     except Exception as txt_err:
         logger.warning(f"⚠️ [MoviePy Warning]: TextClip สร้างไม่ได้ ({txt_err}) เรนเดอร์เฉพาะภาพและเสียง")
         final_video = bg_clip.set_audio(audio_clip)
@@ -100,7 +100,7 @@ def create_marketing_video(user_id: str, text: str, script_text: str, output_fil
     # ==========================================
     # ⚙️ 4. เรนเดอร์ไฟล์ออกสู่ระบบ (Hardware Optimization)
     # ==========================================
-    logger.info("⚙️ [Video Studio]: เริ่มกระบวนการ Export (H.264/AAC)...")
+    logger.info("⚙️ [video Studio]: เริ่มกระบวนการ Export (H.264/AAC)...")
     final_video.write_videofile(
         output_path, 
         codec="libx264", 
@@ -127,5 +127,5 @@ def create_marketing_video(user_id: str, text: str, script_text: str, output_fil
             except Exception:
                 pass
                 
-    logger.info(f"✅ [Video Engine]: เรนเดอร์วิดีโอเสร็จสมบูรณ์! ส่งมอบไปยัง: {output_path}")
+    logger.info(f"✅ [video Engine]: เรนเดอร์วิดีโอเสร็จสมบูรณ์! ส่งมอบไปยัง: {output_path}")
     return output_filename

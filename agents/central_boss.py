@@ -186,7 +186,7 @@ class CentralBossAgent:
         - "WORKER_1_REPORT": วิเคราะห์ Data, Excel, สรุปเอกสาร, ประเมินราคา
         - "WORKER_2_RISK_QA": กฎหมาย, ความเสี่ยง, สัญญา
         - "WORKER_3_AUDIO": ไฟล์เสียง, สังเคราะห์เสียง
-        - "WORKER_4_VIDEO": ไฟล์วิดีโอ, Storyboard
+        - "WORKER_4_video": ไฟล์วิดีโอ, Storyboard
         - "WORKER_5_GRAPHICS": ไฟล์ภาพ, กราฟิก, โฆษณา
         - "WORKER_6_STRATEGY": กลยุทธ์การตลาด, แผนธุรกิจ
         - "WORKER_7_FINANCE": การเงิน, บัญชี, ภาษี, จุดคุ้มทุน

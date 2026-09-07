@@ -111,7 +111,7 @@ class GraphicsAdsWorker:
         🚨 กฎการส่งต่องาน (Swarm Delegation):
         - หากลูกค้าต้องการ 'ให้เรนเดอร์ภาพประกอบจริงๆ' หรือ 'สร้างภาพ 4K' ตาม Prompt ที่คุณร่างไว้ ให้โยนงานให้แผนก Media Engine โดยพิมพ์:
           [DELEGATE: WORKER_11_MEDIA] ช่วยนำ Prompt วาดภาพต่อไปนี้ไปเรนเดอร์ภาพ 4K: (ใส่ Prompt ภาษาอังกฤษ)
-        - หากลูกค้าต้องการสคริปต์วิดีโอ (Storyboard) หรือพากย์เสียง ให้โยนให้ WORKER_4_VIDEO หรือ WORKER_3_AUDIO
+        - หากลูกค้าต้องการสคริปต์วิดีโอ (Storyboard) หรือพากย์เสียง ให้โยนให้ WORKER_4_video หรือ WORKER_3_AUDIO
         """
 
         uploaded_file = None
