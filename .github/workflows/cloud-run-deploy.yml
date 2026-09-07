@@ -35,7 +35,7 @@ jobs:
           gcloud auth list
           gcloud config get-value project
 
-      -# 4. สั่งจุดระเบิดเครื่องยนต์ขึ้นสู่ Cloud Run
+      # 4. สั่งจุดระเบิดเครื่องยนต์ขึ้นสู่ Cloud Run
       - name: Deploy to Cloud Run (Enterprise-Grade)
         run: |
           gcloud run deploy prime-core-agent \
