@@ -1,0 +1,45 @@
+name: Deploy to Google Cloud
+
+on:
+  push:
+    branches: [ "main" ] # หรือ branch ที่คุณใช้งาน เช่น master
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # สำคัญมาก: จำเป็นสำหรับการยืนยันตัวตนแบบ OIDC (Keyless)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. ยืนยันตัวตนกับ Google Cloud แบบ Workload Identity Federation (ไม่ต้องใช้ไฟล์ JSON)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: 'swift-area-503915-a1'
+          workload_identity_provider: 'projects/601183279633/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-deployer@swift-area-503915-a1.iam.gserviceaccount.com'
+
+      # 2. ติดตั้ง Cloud SDK
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 3. ทดสอบตรวจสอบสถานะ
+      - name: Check GCP Connection
+        run: |
+          gcloud auth list
+          gcloud config get-value project
+
+      # 4. ต่อด้วยคำสั่ง Build / Deploy Cloud Run ตามที่ต้องการ
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy prime-core-agent `
+            --source . `
+            --region asia-southeast3 `
+            --project swift-area-503915-a1
+
