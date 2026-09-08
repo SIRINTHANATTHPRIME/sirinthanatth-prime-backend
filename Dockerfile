@@ -37,6 +37,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=Asia/Bangkok \
     PATH="/opt/venv/bin:$PATH"
 
+# กำหนดโฟลเดอร์ทำงานหลัก
 WORKDIR /app
 
 # 2. ติดตั้งเฉพาะสิ่งที่จำเป็นตอนรัน (tzdata) และตั้งค่าเวลาไทย (GMT+7)
@@ -47,13 +48,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. สร้าง User ทั่วไป (Non-Root) เพื่อความปลอดภัยสูงสุด ปิดประตูแฮกเกอร์ 100%
+# 3. สร้าง User ทั่วไป (Non-Root) เพื่อความปลอดภัยสูงสุด
 RUN useradd -m -s /bin/bash primeuser
 
-# 4. คัดลอกเฉพาะ Library ที่ Build เสร็จแล้วจาก STAGE 1 (ทิ้งขยะ Compiler ไว้ข้างหลัง)
+# [แก้ไขบั๊กสิทธิ์ที่นี่] มอบสิทธิ์การเป็นเจ้าของโฟลเดอร์ /app ให้กับ primeuser
+RUN chown primeuser:primeuser /app
+
+# 4. คัดลอกเฉพาะ Library ที่ Build เสร็จแล้วจาก STAGE 1
 COPY --from=builder /opt/venv /opt/venv
 
-# 5. คัดลอก Source Code และมอบสิทธิ์ให้ primeuser ในคำสั่งเดียว (Zero-Layer Bloat)
+# 5. คัดลอก Source Code และมอบสิทธิ์ให้ primeuser
 COPY --chown=primeuser:primeuser . .
 
 # 6. สลับไปใช้ User ที่ปลอดภัย
@@ -62,7 +66,5 @@ USER primeuser
 # 7. Document Port
 EXPOSE 8080
 
-# 8. 🚀 คำสั่งจุดระเบิดเซิร์ฟเวอร์ (Uvicorn) สำหรับ Google Cloud Run
-# - เพิ่ม --timeout-keep-alive 75 เพื่อซิงค์กับ Load Balancer ของ Google ป้องกันปัญหา 502 Bad Gateway
-# - เพิ่ม --workers 1 (Cloud Run จัดการ Scale ให้แล้ว ให้ 1 Container โฟกัสงานตัวเองเต็มที่)
+# 8. 🚀 คำสั่งรันเซิร์ฟเวอร์
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
