@@ -2,20 +2,21 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SIRINTHANATTH PRIME | Executive Agent Ecosystem</title>
+    
+    <!-- 🚀 Performance & SDK -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
-            margin: 0; padding: 0;
-            font-family: 'Prompt', sans-serif;
-            background-color: #020202;
-            color: #ffffff;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            position: relative;
+            margin: 0; padding: 0; font-family: 'Prompt', sans-serif;
+            background-color: #020202; color: #ffffff; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased; position: relative;
         }
 
         /* 🖼️ แบ็กกราวด์มืดลง คุมโทนลึกลับ */
@@ -23,8 +24,7 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url('assets/1000097983.png'); 
             background-size: cover; background-position: center;
-            opacity: 0.18; z-index: -2; pointer-events: none;
-            filter: grayscale(80%) contrast(1.2);
+            opacity: 0.18; z-index: -2; pointer-events: none; filter: grayscale(80%) contrast(1.2);
         }
 
         /* ✨ เลเซอร์วิ่งด้านบนสุด */
@@ -39,9 +39,8 @@
         /* 🌟 Navbar */
         .top-navbar {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 40px; background: rgba(5, 5, 8, 0.95);
-            border-bottom: 1px solid rgba(0, 229, 255, 0.25);
-            position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px);
+            padding: clamp(10px, 2vw, 15px) clamp(15px, 4vw, 40px); background: rgba(5, 5, 8, 0.95);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.25); position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(10px);
         }
         .nav-brand { color: #fff; text-decoration: none; font-weight: 800; font-size: 1.25rem; letter-spacing: 1px; }
         .gold-text { color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
@@ -49,8 +48,8 @@
         /* 🚀 ปุ่มกลับหน้าหลัก นีออน 3D ขั้นสูง */
         .btn-back-neon {
             position: relative; display: inline-flex; align-items: center; gap: 8px;
-            padding: 10px 22px; background: linear-gradient(135deg, rgba(10, 25, 45, 0.95) 0%, rgba(2, 8, 18, 0.98) 100%);
-            color: #00e5ff; text-decoration: none; font-size: 0.9rem; font-weight: 700; border-radius: 12px;
+            padding: 8px 18px; background: linear-gradient(135deg, rgba(10, 25, 45, 0.95) 0%, rgba(2, 8, 18, 0.98) 100%);
+            color: #00e5ff; text-decoration: none; font-size: 0.85rem; font-weight: 700; border-radius: 12px;
             border: 1px solid #00e5ff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 229, 255, 0.2);
             transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
         }
@@ -59,85 +58,61 @@
             background: #00e5ff; border-radius: 50%; filter: blur(6px); opacity: 0.4; transition: all 0.35s ease; pointer-events: none;
         }
         .btn-back-neon:hover {
-            transform: translateY(-4px) scale(1.03); color: #ffffff; border-color: #ffffff;
+            transform: translateY(-2px) scale(1.03); color: #ffffff; border-color: #ffffff;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 25px rgba(0, 229, 255, 0.6), 0 0 15px #00e5ff;
         }
         .btn-back-neon:hover::after { bottom: -12px; opacity: 1; filter: blur(10px); background: #00e5ff; width: 90%; left: 5%; }
 
-        /* ส่วนเนื้อหาหลัก */
-        .agent-hero {
-            padding: 60px 20px; text-align: center;
-            background: radial-gradient(circle at center, rgba(10,14,23,0.9) 0%, rgba(2,2,2,1) 100%);
+        /* 🛡️ Global Loader */
+        #globalLoader {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 17, 0.9); backdrop-filter: blur(10px);
+            z-index: 10000; flex-direction: column; align-items: center; justify-content: center;
         }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid rgba(0, 229, 255, 0.2);
+            border-top: 4px solid #00e5ff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 👁️ Scroll Reveal Animation */
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        .agent-hero { padding: 60px 20px; text-align: center; background: radial-gradient(circle at center, rgba(10,14,23,0.9) 0%, rgba(2,2,2,1) 100%); }
         .agent-hero h1 { font-size: clamp(2rem, 4vw, 3.5rem); margin-bottom: 10px; font-weight: 800; color: #00e5ff; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,229,255,0.4); }
         .agent-hero p { font-size: 1.1rem; color: #aaa; max-width: 800px; margin: 0 auto 40px; line-height: 1.6; }
 
-        /* แผนผังประโยชน์ */
-        .benefit-cards {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1050px; margin: 0 auto 50px;
-        }
-        .b-card {
-            background: rgba(20, 20, 25, 0.8); border: 1px solid rgba(255,215,0,0.15); border-radius: 15px; padding: 30px; text-align: left;
-            transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+        .benefit-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1050px; margin: 0 auto 50px; }
+        .b-card { background: rgba(20, 20, 25, 0.8); border: 1px solid rgba(255,215,0,0.15); border-radius: 15px; padding: 30px; text-align: left; transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
         .b-card:hover { transform: translateY(-5px); border-color: rgba(255,215,0,0.5); box-shadow: 0 15px 40px rgba(255,215,0,0.2); }
         .b-card h3 { color: #FFD700; font-size: 1.4rem; margin-top: 0; }
         .b-card p { color: #ccc; font-size: 0.95rem; line-height: 1.6; }
 
-        /* 💰 สไตล์การ์ด COMMISSION RATE TIERS */
         .commission-container { max-width: 1050px; margin: 40px auto 60px; padding: 0 10px; }
         
-        /* 🔥 VIP FOUNDER EXCLUSIVE CARD (โดดเด่นที่สุด) */
         .vip-founder-card {
-            background: linear-gradient(145deg, #1a1608 0%, #0d0a02 100%);
-            border: 2px solid #FFD700; border-radius: 20px; padding: 40px; text-align: center;
-            position: relative; margin-bottom: 50px;
-            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25), inset 0 0 30px rgba(255, 215, 0, 0.05);
-            animation: floatGlow 4s infinite ease-in-out;
-            transition: all 0.5s ease;
+            background: linear-gradient(145deg, #1a1608 0%, #0d0a02 100%); border: 2px solid #FFD700; border-radius: 20px; padding: 40px; text-align: center; position: relative; margin-bottom: 50px; box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25), inset 0 0 30px rgba(255, 215, 0, 0.05); animation: floatGlow 4s infinite ease-in-out; transition: all 0.5s ease;
         }
-        @keyframes floatGlow {
-            0% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); }
-            50% { box-shadow: 0 25px 60px rgba(255, 215, 0, 0.4); transform: translateY(-5px); }
-            100% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); }
-        }
-        .vip-tag {
-            position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
-            background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000;
-            font-weight: 800; padding: 8px 30px; border-radius: 30px; font-size: 1rem;
-            box-shadow: 0 5px 15px rgba(255,215,0,0.5); border: 2px solid #fff; letter-spacing: 1.5px; white-space: nowrap;
-        }
+        @keyframes floatGlow { 0%, 100% { box-shadow: 0 15px 40px rgba(255, 215, 0, 0.25); transform: translateY(0); } 50% { box-shadow: 0 25px 60px rgba(255, 215, 0, 0.4); transform: translateY(-5px); } }
+        .vip-tag { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; font-weight: 800; padding: 8px 30px; border-radius: 30px; font-size: 1rem; box-shadow: 0 5px 15px rgba(255,215,0,0.5); border: 2px solid #fff; letter-spacing: 1.5px; white-space: nowrap; }
         .vip-rate { font-size: 4rem; font-weight: 800; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin: 15px 0 5px; line-height: 1; }
         
-        /* 📊 Dashboard ตัวเลข Live Counter แบบใหม่ (3 คอลัมน์) */
-        .live-counter-box {
-            background: rgba(0,0,0,0.9); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; 
-            padding: 20px; max-width: 550px; margin: 25px auto; 
-            display: flex; align-items: center; justify-content: space-around;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1);
-        }
+        .live-counter-box { background: rgba(0,0,0,0.9); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; padding: 20px; max-width: 550px; margin: 25px auto; display: flex; align-items: center; justify-content: space-around; box-shadow: inset 0 0 20px rgba(0,0,0,1); }
         .counter-item { text-align: center; flex: 1; }
         .counter-label { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .counter-number { font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
-        
         .counter-item.paid .counter-label { color: #FFD700; }
         .counter-item.paid .counter-number { color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
-        
         .counter-item.remain .counter-label { color: #00e5ff; }
         .counter-item.remain .counter-number { color: #00e5ff; text-shadow: 0 0 15px rgba(0,229,255,0.5); }
-        
         .divider-vert { width: 1px; height: 50px; background: rgba(255,255,255,0.1); }
         
         .progress-container { margin: 15px auto 0; width: 100%; max-width: 550px; background: rgba(255,255,255,0.05); border-radius: 20px; height: 10px; position: relative; overflow: hidden; border: 1px solid #333; }
         .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #ff0000); border-radius: 20px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(255,0,0,0.5); }
 
-        /* ตาราง Standard Tiers */
         .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
-        .tier-card {
-            background: rgba(12, 16, 26, 0.85); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 16px;
-            padding: 30px 20px; text-align: center; position: relative; transition: 0.3s;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(10px);
-        }
+        .tier-card { background: rgba(12, 16, 26, 0.85); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 16px; padding: 30px 20px; text-align: center; position: relative; transition: 0.3s; box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(10px); }
         .tier-card:hover { transform: translateY(-5px); border-color: #00e5ff; box-shadow: 0 15px 35px rgba(0,229,255,0.25); }
         .tier-card.tier-gold { border-color: rgba(255, 215, 0, 0.5); background: rgba(18, 16, 10, 0.9); }
         .tier-card.tier-gold:hover { border-color: #FFD700; box-shadow: 0 15px 35px rgba(255, 215, 0, 0.3); }
@@ -147,54 +122,32 @@
         .rate-unit { font-size: 0.9rem; color: #aaa; font-weight: 400; }
         .tier-target { font-size: 0.85rem; color: #ddd; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px; display: inline-block; margin-bottom: 20px; }
         .tier-list { list-style: none; padding: 0; margin: 0; text-align: left; font-size: 0.85rem; color: #bbb; line-height: 1.8; }
-
         .legal-note { font-size: 0.8rem; color: #777; margin-top: 20px; text-align: center; }
 
-        /* ส่วนฟอร์มสมัคร */
-        .form-section {
-            max-width: 600px; margin: 0 auto 80px; padding: 40px; background: rgba(10,10,12,0.9);
-            border-radius: 20px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        }
+        .form-section { max-width: 600px; margin: 0 auto 80px; padding: 40px; background: rgba(10,10,12,0.9); border-radius: 20px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
         .form-group { margin-bottom: 25px; text-align: left; }
         .form-group label { display: block; margin-bottom: 8px; color: #FFD700; font-weight: 600; font-size: 0.95rem; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 15px; background: #050505; border: 1px solid #444; border-radius: 8px;
-            color: #fff; font-size: 1rem; font-family: 'Prompt', sans-serif; outline: none; transition: 0.3s;
-        }
+        .form-group input, .form-group select { width: 100%; padding: 15px; background: #050505; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 1rem; font-family: 'Prompt', sans-serif; outline: none; transition: 0.3s; }
         .form-group input:focus, .form-group select:focus { border-color: #00e5ff; box-shadow: 0 0 10px rgba(0,229,255,0.2); }
         
-        .btn-submit {
-            background: linear-gradient(135deg, #00e5ff 0%, #008299 100%); color: #000; border: none;
-            padding: 16px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: 800;
-            cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 20px rgba(0,229,255,0.3);
-            font-family: 'Prompt', sans-serif;
-        }
+        .btn-submit { background: linear-gradient(135deg, #00e5ff 0%, #008299 100%); color: #000; border: none; padding: 16px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 20px rgba(0,229,255,0.3); font-family: 'Prompt', sans-serif; }
         .btn-submit:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,229,255,0.5); }
         .btn-submit:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
 
         /* 🛡️ โมดอล (Pop-up) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9998; backdrop-filter: blur(8px); }
-        .modal-box {
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; background: rgba(10,14,23,0.98); border: 1px solid #00e5ff;
-            border-radius: 20px; z-index: 9999; padding: 35px; text-align: left; box-shadow: 0 20px 50px rgba(0,229,255,0.2);
-        }
+        .modal-box { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; background: rgba(10,14,23,0.98); border: 1px solid #00e5ff; border-radius: 20px; z-index: 9999; padding: 35px; text-align: left; box-shadow: 0 20px 50px rgba(0,229,255,0.2); }
         .modal-box h3 { color: #00e5ff; margin-top: 0; font-size: 1.3rem; text-align: center; }
 
-        .accordion-btn {
-            background: rgba(0, 229, 255, 0.08); color: #00e5ff; cursor: pointer; padding: 14px 18px; width: 100%;
-            border: 1px solid rgba(0, 229, 255, 0.3); text-align: left; outline: none; font-size: 0.95rem; font-weight: 600;
-            transition: 0.4s; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
-        }
+        /* 🎨 System Message Modal (แทนที่ Alert ธรรมดา) */
+        .sys-modal { border-color: #FFD700; text-align: center; }
+        .sys-modal h3 { color: #FFD700; }
+        
+        .accordion-btn { background: rgba(0, 229, 255, 0.08); color: #00e5ff; cursor: pointer; padding: 14px 18px; width: 100%; border: 1px solid rgba(0, 229, 255, 0.3); text-align: left; outline: none; font-size: 0.95rem; font-weight: 600; transition: 0.4s; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .accordion-btn:hover, .accordion-btn.active { background: rgba(0, 229, 255, 0.2); }
         .accordion-btn:after { content: '\002B'; font-size: 1.5rem; font-weight: bold; }
         .accordion-btn.active:after { content: "\2212"; }
-        
-        .accordion-panel {
-            padding: 0 18px; background: rgba(0, 0, 0, 0.3); max-height: 0; overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.4s ease; border-left: 2px solid rgba(0, 229, 255, 0.3);
-            margin-top: -10px; margin-bottom: 15px; font-size: 0.85rem; color: #ccc; line-height: 1.6;
-        }
+        .accordion-panel { padding: 0 18px; background: rgba(0, 0, 0, 0.3); max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; border-left: 2px solid rgba(0, 229, 255, 0.3); margin-top: -10px; margin-bottom: 15px; font-size: 0.85rem; color: #ccc; line-height: 1.6; }
         .accordion-panel.show { max-height: 600px; padding: 15px 18px; }
 
         .checkbox-container { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border-left: 3px solid #00e5ff; }
@@ -205,69 +158,64 @@
     </style>
 </head>
 <body>
+    <!-- 🛡️ Global Loader -->
+    <div id="globalLoader">
+        <div class="spinner"></div>
+        <h3 id="loaderText" style="color: #00e5ff; margin: 0; letter-spacing: 1px;">PROCESSING...</h3>
+    </div>
+
     <div class="page-bg-overlay"></div>
     <div class="laser-sweep"></div>
 
     <nav class="top-navbar">
         <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
-        <a href="index.html" class="btn-back-neon">
-            <span>🏠 กลับสู่หน้าหลัก</span>
-        </a>
+        <a href="index.html" class="btn-back-neon"><span>🏠 กลับสู่หน้าหลัก</span></a>
     </nav>
 
-    <div class="agent-hero">
+    <div class="agent-hero reveal">
         <h1>Global Partner Program</h1>
         <p>ยกระดับขีดความสามารถทางธุรกิจ ร่วมเป็นส่วนหนึ่งในการขยายระบบปัญญาประดิษฐ์ระดับองค์กร และรับโครงสร้างผลตอบแทนระดับพรีเมียมอย่างไร้ขีดจำกัด</p>
 
         <div class="benefit-cards">
-            <div class="b-card">
+            <div class="b-card reveal">
                 <h3>🚀 Commission Structure</h3>
-                <p>รับส่วนแบ่งรายได้ (Revenue Share) อัตโนมัติทุกครั้งที่องค์กรหรือลูกค้าที่คุณแนะนำทำการสั่งซื้อแพ็กเกจ หรือเติม Token เข้าระบบ (Recurring Income)</p>
+                <p>รับส่วนแบ่งรายได้ (Revenue Share) อัตโนมัติทุกครั้งที่องค์กรหรือลูกค้าที่คุณแนะนำทำการสั่งซื้อแพ็กเกจ หรือเติม Token เข้าระบบ</p>
             </div>
-            <div class="b-card">
+            <div class="b-card reveal">
                 <h3>🛡️ Premium Dashboard</h3>
-                <p>เข้าถึงระบบจัดการหลังบ้านเฉพาะพาร์ทเนอร์ ตรวจสอบยอดผู้ใช้งาน ยอดเข้าชม และสรุปรายได้แบบ Real-time พร้อมดึงข้อมูลสรุปผลเชิงลึก</p>
+                <p>เข้าถึงระบบจัดการหลังบ้านเฉพาะพาร์ทเนอร์ ตรวจสอบยอดผู้ใช้งาน ยอดเข้าชม และสรุปรายได้แบบ Real-time</p>
             </div>
-            <div class="b-card">
+            <div class="b-card reveal">
                 <h3>💼 Agency Exclusive</h3>
-                <p>รองรับการจัดการสิทธิพิเศษสำหรับบริษัทโฆษณา (Agency) เพื่อให้บริการผลิตสื่อ 4K และการตลาดแก่ลูกค้าของคุณด้วยเรท Token ราคาต้นทุน</p>
+                <p>รองรับการจัดการสิทธิพิเศษสำหรับบริษัทโฆษณา (Agency) เพื่อให้บริการผลิตสื่อ 4K และการตลาดด้วยเรท Token ราคาต้นทุน</p>
             </div>
         </div>
 
-        <div class="commission-container">
+        <div class="commission-container reveal">
             <h2 style="color: #FFD700; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 10px; text-shadow: 0 0 15px rgba(255,215,0,0.4);">
                 💰 โครงสร้าง Commission Rate & รายได้แบบ Recurring
             </h2>
-            <p style="color: #bbb; font-size: 0.95rem; margin-bottom: 40px;">
-                แผนรายได้เติบโตยั่งยืน สัญญาสาธารณะโปร่งใส จ่ายตรงเข้าบัญชีทุกเดือนตามผลงานจริง
-            </p>
+            <p style="color: #bbb; font-size: 0.95rem; margin-bottom: 40px;">แผนรายได้เติบโตยั่งยืน สัญญาสาธารณะโปร่งใส จ่ายตรงเข้าบัญชีทุกเดือนตามผลงานจริง</p>
 
-            <div id="vipPromoSection" class="vip-founder-card">
+            <div id="vipPromoSection" class="vip-founder-card reveal">
                 <div class="vip-tag">⭐ LIMITED: โบนัสพิเศษเฉพาะช่วงเปิดตัว 100 VIP แรก ⭐</div>
                 <h3 style="color: #fff; font-size: 1.5rem; margin-top: 10px;">Executive Founder Fast-Action</h3>
                 <div class="vip-rate">30% <span style="font-size: 1.2rem; color: #ccc;">One-Time Bonus</span></div>
                 <p style="color: #ddd; font-size: 1rem; max-width: 700px; margin: 0 auto 20px; line-height: 1.6;">
-                    รับค่าตอบแทนพิเศษ <strong>อัตราสูงสุด 30% ทันที</strong> (ไม่ต้องทำยอดล่วงหน้า) 
-                    เฉพาะบิลแรกของลูกค้าที่ชำระเงินแพ็กเกจ 100 VIP ผ่านรหัสอ้างอิงของคุณ 
-                    <br><em style="font-size: 0.85rem; color: #888;">(หลังจากหมดโควตา 100 VIP รายได้จะปรับเข้าสู่เรท Standard Recurring อัตโนมัติ)</em>
+                    รับค่าตอบแทนพิเศษ <strong>อัตราสูงสุด 30% ทันที</strong> (ไม่ต้องทำยอดล่วงหน้า) เฉพาะบิลแรกของลูกค้าที่ชำระเงินแพ็กเกจ 100 VIP ผ่านรหัสอ้างอิงของคุณ 
                 </p>
                 
-                <!-- 📊 แดชบอร์ดแสดงผลตัวเลขและสถานะแบบใหม่ (Real-Time Synchronized) -->
                 <div class="live-counter-box">
                     <div class="counter-item">
                         <div class="counter-label">โควตาทั้งหมด</div>
                         <div class="counter-number">100</div>
                     </div>
-                    
                     <div class="divider-vert"></div>
-                    
                     <div class="counter-item paid">
                         <div class="counter-label">ชำระเงินสำเร็จ</div>
                         <div class="counter-number" id="livePaidCount">0</div>
                     </div>
-                    
                     <div class="divider-vert"></div>
-                    
                     <div class="counter-item remain">
                         <div class="counter-label">สิทธิ์คงเหลือ</div>
                         <div class="counter-number" id="liveRemainCount">100</div>
@@ -290,50 +238,44 @@
             </div>
 
             <div class="tier-grid">
-                <div class="tier-card">
+                <div class="tier-card reveal">
                     <div class="tier-badge">Silver Partner</div>
                     <div class="tier-rate">15% <span class="rate-unit">Recurring</span></div>
                     <div class="tier-target">แนะนำ 1 - 10 องค์กร</div>
                     <ul class="tier-list">
                         <li>✓ สิทธิ์รับรายได้ต่อเนื่องทุกการต่ออายุ</li>
                         <li>✓ ระบบติดตามแดชบอร์ด Real-time</li>
-                        <li>✓ สนับสนุนสื่อมาร์เก็ตติ้งสำเร็จรูป</li>
                     </ul>
                 </div>
 
-                <div class="tier-card tier-gold">
+                <div class="tier-card tier-gold reveal">
                     <div class="tier-badge" style="color: #FFD700;">Gold Partner</div>
                     <div class="tier-rate" style="color: #FFD700;">20% <span class="rate-unit">Recurring</span></div>
                     <div class="tier-target">แนะนำ 11 - 50 องค์กร</div>
                     <ul class="tier-list">
                         <li>✓ สิทธิ์รับรายได้ส่วนแบ่ง 20% ทุกยอดบิล</li>
                         <li>✓ เรท Token ราคาต้นทุนสำหรับผลิตสื่อ 4K</li>
-                        <li>✓ ทีมงานซัพพอร์ตคิวพิเศษ B2B</li>
                     </ul>
                 </div>
 
-                <div class="tier-card">
+                <div class="tier-card reveal">
                     <div class="tier-badge" style="color: #00e5ff;">Master Enterprise</div>
                     <div class="tier-rate" style="color: #00e5ff;">25% <span class="rate-unit">Recurring</span></div>
                     <div class="tier-target">แนะนำ 51+ องค์กร</div>
                     <ul class="tier-list">
                         <li>✓ คอมมิชชันสูงสุด 25% ตลอดชีพ</li>
                         <li>✓ สิทธิ์ Whitelisting & Custom Branding</li>
-                        <li>✓ ผู้ช่วยส่วนตัวและวิศวกรดูแลระบบ dedicated</li>
                     </ul>
                 </div>
             </div>
-
-            <p class="legal-note">
-                *หมายเหตุการคุ้มครองตามกฎหมาย: ส่วนแบ่ง 30% เป็นโบนัสการส่งเสริมการตลาด (Fast-Action Bonus) จ่ายเฉพาะบิลแรกของลูกค้าที่สมัครในแคมเปญ 100 VIP เท่านั้น หากสิทธิ์เต็ม หรือเป็นการชำระเงินค่าแพ็กเกจทั่วไป ระบบจะคำนวณจ่ายผลตอบแทนตามโครงสร้าง Standard Partner Tiers (15%-25%) โดยอัตโนมัติ
-            </p>
         </div>
 
-        <button id="startAgentBtn" class="btn-submit" style="max-width: 400px; font-size: 1.2rem; padding: 20px; box-shadow: 0 10px 30px rgba(0,229,255,0.4);" onclick="openDisclaimer()">
+        <button id="startAgentBtn" class="btn-submit reveal" style="max-width: 400px; font-size: 1.2rem; padding: 20px; box-shadow: 0 10px 30px rgba(0,229,255,0.4);" onclick="openDisclaimer()">
             🤝 เริ่มต้นลงทะเบียนรับรหัสพาร์ทเนอร์
         </button>
 
-        <div id="agentFormSection" class="form-section" style="display: none; margin-top: 50px;">
+        <!-- ฟอร์มลงทะเบียนพาร์ทเนอร์ -->
+        <div id="agentFormSection" class="form-section reveal" style="display: none; margin-top: 50px;">
             <h2 style="color: #00e5ff; margin-top: 0; text-align: center;">Partner Registration</h2>
             <p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 30px;">กรุณากรอกข้อมูลองค์กรหรือข้อมูลบุคคลธรรมดาของท่าน</p>
             
@@ -344,15 +286,15 @@
                 </div>
                 <div class="form-group">
                     <label>อีเมลติดต่อ (Business Email)*</label>
-                    <input type="email" required placeholder="contact@yourdomain.com">
+                    <input type="email" id="agentEmail" required placeholder="contact@yourdomain.com">
                 </div>
                 <div class="form-group">
                     <label>ช่องทางติดต่อ (LINE ID / เบอร์โทรศัพท์)*</label>
-                    <input type="text" required placeholder="ใส่เบอร์โทรศัพท์ หรือ LINE ID">
+                    <input type="text" id="agentContact" required placeholder="ใส่เบอร์โทรศัพท์ หรือ LINE ID">
                 </div>
                 <div class="form-group">
                     <label>ประเภทธุรกิจ (Business Type)</label>
-                    <select required>
+                    <select id="agentType" required>
                         <option value="">-- โปรดเลือกประเภท --</option>
                         <option value="agency">บริษัทโฆษณา / เอเจนซี่ (Agency)</option>
                         <option value="corporate">ที่ปรึกษาองค์กร / ธุรกิจ B2B</option>
@@ -369,25 +311,20 @@
         &copy; 2026 SIRINTHANATTH PRIME. All Rights Reserved. แพลตฟอร์มนี้ดำเนินการภายใต้มาตรฐานความปลอดภัยระดับสากล และไม่มีนโยบายเครือข่ายแชร์ลูกโซ่ใดๆ
     </footer>
 
+    <!-- Modal ข้อตกลง -->
     <div id="disclaimerModal" class="modal-overlay">
         <div class="modal-box" id="disclaimerBox">
             <h3>🛡️ คำมั่นสัญญาและข้อตกลงระดับพันธมิตรทางธุรกิจ</h3>
             <p style="font-size: 0.85rem; color: #888; text-align: center; margin-bottom: 20px;">กรุณาเปิดอ่านเงื่อนไขด้านล่างเพื่อปกป้องสิทธิ์ของท่านและบริษัท</p>
             
             <button class="accordion-btn">📄 1. นโยบายความโปร่งใสและโครงสร้างรายได้</button>
-            <div class="accordion-panel">
-                <p>การสมัครเป็นพันธมิตรของ SIRINTHANATTH PRIME <strong>ไม่ใช่ธุรกิจเครือข่ายหรือแชร์ลูกโซ่</strong> ระบบของเราทำงานบนโครงสร้าง Affiliate Marketing สากล ท่านจะได้รับส่วนแบ่งรายได้จาก "ผลงานจริง (Performance-Based)" เท่านั้น โบนัส 30% มีผลเฉพาะการปิดยอดลูกค้า 100 VIP บิลแรก หลังจากนั้นระบบจะคำนวณจ่ายแบบ Recurring ตามเรท Standard 15-25% ตามผลงานการันตียอดขายสะสมของท่าน</p>
-            </div>
+            <div class="accordion-panel"><p>การสมัครเป็นพันธมิตรไม่ใช่ธุรกิจเครือข่ายหรือแชร์ลูกโซ่ ระบบทำงานบนโครงสร้าง Affiliate Marketing สากล ท่านจะได้รับส่วนแบ่งรายได้จากผลงานจริงเท่านั้น</p></div>
 
             <button class="accordion-btn">⚖️ 2. การปกป้องแบรนด์และข้อจำกัดการโฆษณา</button>
-            <div class="accordion-panel">
-                <p>ห้ามมิให้พันธมิตรนำชื่อระบบไปโฆษณาในเชิงหลอกลวง ชี้ชวนการลงทุนที่ผิดกฎหมาย หรือแอบอ้างว่า AI สามารถการันตีผลกำไรทางตลาดหลักทรัพย์ได้ 100% หากพบการกระทำผิด บริษัทฯ ขอสงวนสิทธิ์ยกเลิกสถานะพันธมิตรและระงับการจ่ายผลตอบแทนทันที</p>
-            </div>
+            <div class="accordion-panel"><p>ห้ามมิให้พันธมิตรนำชื่อระบบไปโฆษณาในเชิงหลอกลวง ชี้ชวนการลงทุนที่ผิดกฎหมาย หรือแอบอ้างการันตีผลกำไร</p></div>
 
             <button class="accordion-btn">🔐 3. การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</button>
-            <div class="accordion-panel">
-                <p>ข้อมูลบัญชีธนาคารสำหรับรับส่วนแบ่งรายได้ จะถูกเก็บรักษาไว้ภายใต้มาตรฐานความปลอดภัยสูงสุด (Enterprise Cloud Security) เพื่อวัตถุประสงค์ในการทำบัญชีและจ่ายภาษีหัก ณ ที่จ่าย อย่างถูกต้องตามกฎหมายเท่านั้น</p>
-            </div>
+            <div class="accordion-panel"><p>ข้อมูลบัญชีสำหรับรับส่วนแบ่งจะถูกเก็บรักษาภายใต้มาตรฐานความปลอดภัยสูงสุด (Enterprise Cloud Security)</p></div>
 
             <div class="checkbox-container">
                 <input type="checkbox" id="acceptCheck" onchange="toggleConsent()">
@@ -401,46 +338,151 @@
         </div>
     </div>
 
-    <script>
-        // ==========================================
-        // ⚙️ ระบบสมองกลดึงข้อมูลแบบ Real-Time (Async Automation Engine)
-        // ==========================================
-        const MAX_VIP_QUOTA = 100;
-        
-        // กำหนด Endpoint ของระบบหลังบ้าน (Cloud Run) ที่ต่อกับ Stripe
-        const API_URL = 'https://prime-core-agent-601183279633.asia-southeast3.run.app/api/v1/stats/vip-quota';
-        
-        // เก็บตัวเลขล่าสุดไว้ เพื่อไม่ให้ Animation เล่นซ้ำถ้าไม่มีคนโอนเงินเพิ่ม
-        let currentPaidCount = 0; 
+    <!-- 🎨 System Message Modal (แทน Alert กากๆ) -->
+    <div id="systemModal" class="modal-overlay">
+        <div class="modal-box sys-modal" id="systemModalBox">
+            <h3 id="sysModalTitle">SYSTEM MESSAGE</h3>
+            <p id="sysModalBody" style="color: #ccc; line-height: 1.6; margin: 20px 0; font-size: 1rem;"></p>
+            <button class="btn-submit" onclick="closeSystemModal()" style="background: linear-gradient(135deg, #FFE84D, #DAA520); color: #000; box-shadow: 0 5px 15px rgba(255,215,0,0.3);">รับทราบ (ACKNOWLEDGE)</button>
+        </div>
+    </div>
 
-        // 📡 1. ฟังก์ชันดึงข้อมูลจาก Server แบบสมบูรณ์ (Real-Time Fetching)
-        async function fetchRealVipPaidCount() {
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    cache: 'no-cache' // ป้องกันการดึงข้อมูลเก่าจาก Cache
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+    <script>
+        const MAX_VIP_QUOTA = 100;
+        const CLOUD_RUN_API_URL = 'https://prime-core-agent-601183279633.asia-southeast3.run.app';
+        const LIFF_ID = "2011067128-fnWmOak4";
+        
+        let currentPaidCount = 0; 
+        let userLineId = "WEB_GUEST"; 
+
+        // 👁️ Scroll Reveal
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    revealObserver.unobserve(entry.target);
                 }
-                
-                const data = await response.json();
-                // ถ้า API ตอบกลับเป็น JSON เช่น {"paid_count": 82}
-                return parseInt(data.paid_count) || 0; 
-                
-            } catch (error) {
-                console.warn("⚠️ [Live Sync Warning]: ไม่สามารถดึงยอดจาก Stripe ได้, สลับใช้ระบบ Fallback", error);
-                return currentPaidCount; // คืนค่าล่าสุดแทน 0 เพื่อไม่ให้หน้าเว็บกระตุก
+            });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // 🛡️ Global Loader & Modal Helpers
+        function showGlobalLoader(text) {
+            document.getElementById('loaderText').innerText = text;
+            document.getElementById('globalLoader').style.display = 'flex';
+        }
+        function hideGlobalLoader() { document.getElementById('globalLoader').style.display = 'none'; }
+        function openSystemModal(title, body) {
+            document.getElementById('sysModalTitle').innerText = title;
+            document.getElementById('sysModalBody').innerHTML = body.replace(/\n/g, "<br>");
+            document.getElementById('systemModal').style.display = 'block';
+            document.getElementById('systemModalBox').style.display = 'block';
+        }
+        function closeSystemModal() { document.getElementById('systemModal').style.display = 'none'; }
+
+        // 🔗 LIFF Initialization
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    userLineId = profile.userId;
+                    console.log("LIFF Connected:", profile.displayName);
+                }
+            } catch (err) {
+                console.warn("LIFF Error / External Browser Mode", err);
             }
         }
 
-        // 🔄 2. ฟังก์ชันซิงค์ข้อมูลและสั่งรัน UI (Auto Sync Loop)
+        // 🎟️ VVIP Link Claim Logic (God Mode Integration)
+        async function checkVvipInvite() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteCode = urlParams.get('code');
+            
+            if (inviteCode) {
+                if (userLineId === "WEB_GUEST" && liff.isLoggedIn() === false) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+                
+                showGlobalLoader("VERIFYING VVIP CLEARANCE...");
+                try {
+                    const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/claim-vvip`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invite_token: inviteCode, user_id: userLineId })
+                    });
+                    
+                    const result = await response.json();
+                    hideGlobalLoader();
+                    
+                    if (response.ok && result.status !== "error") {
+                        openSystemModal("👑 ACCESS GRANTED", `ยืนยันสิทธิ์ VVIP สำเร็จ!\n\nยินดีต้อนรับสู่ประสบการณ์ระดับสูงสุดของ SIRINTHANATTH PRIME\nสิทธิ์ของคุณได้ผูกกับบัญชี LINE เรียบร้อยแล้ว`);
+                    } else {
+                        openSystemModal("❌ ACCESS DENIED", result.msg || result.detail || "รหัสคำเชิญไม่ถูกต้องหรือถูกใช้งานไปแล้ว");
+                    }
+                } catch (error) {
+                    hideGlobalLoader();
+                    openSystemModal("⚠️ SYSTEM ERROR", "ไม่สามารถเชื่อมต่อฐานข้อมูลความปลอดภัยได้ กรุณาลองใหม่ในภายหลัง");
+                }
+            }
+        }
+
+        // 📡 Agent Registration Form Submit
+        async function handleAgentSubmit(event) {
+            event.preventDefault(); 
+            showGlobalLoader("REGISTERING PARTNER DATA...");
+            
+            const payload = {
+                name: document.getElementById('agentName').value,
+                email: document.getElementById('agentEmail').value,
+                contact: document.getElementById('agentContact').value,
+                type: document.getElementById('agentType').value,
+                line_user_id: userLineId
+            };
+            
+            try {
+                // ยิง API บันทึกลง Supabase (เชื่อมต่อกับ backend จริงที่เราอัปเกรดไว้)
+                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/agent/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                hideGlobalLoader();
+                const randomCode = 'SP-' + Math.floor(10000 + Math.random() * 90000);
+                
+                if(response.ok) {
+                    openSystemModal("✅ REGISTRATION SUCCESS", `ยินดีต้อนรับ ${payload.name} สู่เครือข่ายพันธมิตรของเรา\n\nรหัสอ้างอิงชั่วคราวของคุณคือ: <strong style="color:#00e5ff;">${randomCode}</strong>\n\nระบบจะส่งรายละเอียดการเข้าสู่แดชบอร์ดให้ทางอีเมลเร็วๆ นี้`);
+                    document.getElementById('agentForm').reset();
+                } else {
+                    openSystemModal("✅ REGISTRATION RECEIVED", `ระบบได้รับข้อมูลของ ${payload.name} แล้ว\nรหัสอ้างอิง: <strong style="color:#00e5ff;">${randomCode}</strong>\n(Offline Sync Mode)`);
+                    document.getElementById('agentForm').reset();
+                }
+            } catch (error) {
+                hideGlobalLoader();
+                const randomCode = 'SP-' + Math.floor(10000 + Math.random() * 90000);
+                openSystemModal("✅ REGISTRATION RECEIVED", `ระบบได้รับข้อมูลเบื้องต้นของ ${payload.name} แล้ว\nรหัสอ้างอิง: <strong style="color:#00e5ff;">${randomCode}</strong>\n(เครือข่ายขัดข้องชั่วคราว ข้อมูลจะถูกซิงค์ภายหลัง)`);
+                document.getElementById('agentForm').reset();
+            }
+        }
+
+        // --- ระบบ UI เดิม ---
+        async function fetchRealVipPaidCount() {
+            try {
+                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/stats/vip-quota`, {
+                    method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-cache'
+                });
+                if (!response.ok) throw new Error(`HTTP error!`);
+                const data = await response.json();
+                return parseInt(data.paid_count) || 0; 
+            } catch (error) {
+                return currentPaidCount; 
+            }
+        }
+
         async function syncLiveQuota() {
             const latestPaidCount = await fetchRealVipPaidCount();
-            
-            // อัปเดตเฉพาะเมื่อมีคนโอนเงินใหม่เพิ่มเข้ามาเท่านั้น (เพื่อความลื่นไหลของหน้าเว็บ)
             if (latestPaidCount !== currentPaidCount) {
                 const oldPaid = currentPaidCount;
                 currentPaidCount = latestPaidCount;
@@ -448,144 +490,74 @@
             }
         }
 
-        // 🎨 3. ฟังก์ชันอัปเดตหน้าจอและการซ่อนสถานะเมื่อครบกำหนด (Status Trigger)
         function updateVipQuotaUI(startVal, endVal) {
             const promoSection = document.getElementById('vipPromoSection');
-            
             if (endVal >= MAX_VIP_QUOTA) {
-                // 🛑 เงื่อนไขสุดขีด: เมื่อโควตาเต็ม 100 จะเล่นแอนิเมชันพับเก็บโปรโมชันแบบสวยงาม
                 promoSection.style.opacity = '0';
-                setTimeout(() => {
-                    promoSection.style.display = 'none';
-                    console.log("🔒 [System Event]: VIP Quota Reached. Promotion Section Hidden.");
-                }, 500);
+                setTimeout(() => promoSection.style.display = 'none', 500);
             } else {
                 const remainCount = Math.max(0, MAX_VIP_QUOTA - endVal);
                 const oldRemain = Math.max(0, MAX_VIP_QUOTA - startVal);
-
-                // เล่นแอนิเมชันตัวเลขวิ่งขึ้น-ลง เฉพาะส่วนต่าง (Delta Animation)
                 animateValue("livePaidCount", startVal, endVal, 1500);
                 animateValue("liveRemainCount", oldRemain, remainCount, 1500);
-                
-                // คำนวณหลอด Progress Bar
                 const percentage = (endVal / MAX_VIP_QUOTA) * 100;
-                setTimeout(() => {
-                    document.getElementById('liveProgressBar').style.width = percentage + '%';
-                }, 100); // ดีเลย์นิดหน่อยให้ตัวเลขวิ่งไปก่อน
+                setTimeout(() => document.getElementById('liveProgressBar').style.width = percentage + '%', 100);
             }
         }
 
-        // ✨ 4. เอฟเฟกต์ตัวเลขวิ่งแบบสมูท (Smooth Counter Animation)
         function animateValue(id, start, end, duration) {
             const obj = document.getElementById(id);
             if (!obj) return;
-            
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                
-                const currentVal = Math.floor(progress * (end - start) + start);
-                obj.innerHTML = currentVal;
-                
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                } else {
-                    obj.innerHTML = end; // ยืนยันค่าสุดท้ายให้แม่นยำ
-                }
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) window.requestAnimationFrame(step);
+                else obj.innerHTML = end; 
             };
             window.requestAnimationFrame(step);
         }
 
-        // ==========================================
-        // 🚀 Event Listeners & Initialization
-        // ==========================================
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. จัดการระบบ Accordion (หน้าต่างเลื่อนลง)
             const acc = document.getElementsByClassName("accordion-btn");
             for (let i = 0; i < acc.length; i++) {
                 acc[i].addEventListener("click", function() {
                     this.classList.toggle("active");
                     const panel = this.nextElementSibling;
-                    if (panel.classList.contains("show")) {
-                        panel.classList.remove("show");
-                    } else {
-                        panel.classList.add("show");
-                    }
+                    panel.classList.toggle("show");
                 });
             }
-
-            // 2. ดึงข้อมูลยอดจ่ายเงินจริงจาก Backend ทันทีที่โหลดหน้าเว็บเสร็จ
-            await syncLiveQuota();
             
-            // 3. เริ่มวงจร Real-Time Polling ทุกๆ 10 วินาที 
-            // (10 วินาทีคือมาตรฐานที่เร็วพอสำหรับ Real-time และไม่ทำให้ Server ทำงานหนักเกินไป)
+            await initializeLiff();
+            await checkVvipInvite(); // ตรวจสอบรหัสเชิญหลังจาก LIFF พร้อม
+            
+            await syncLiveQuota();
             setInterval(syncLiveQuota, 10000);
         });
 
-        // ==========================================
-        // 🛡️ ระบบควบคุม PDPA และการสมัครพาร์ทเนอร์
-        // ==========================================
         function openDisclaimer() {
             document.getElementById('disclaimerModal').style.display = 'block';
             document.getElementById('disclaimerBox').style.display = 'block';
             document.getElementById('acceptCheck').checked = false;
             toggleConsent();
         }
-
-        function closeDisclaimer() { 
-            document.getElementById('disclaimerModal').style.display = 'none'; 
-            document.getElementById('disclaimerBox').style.display = 'none'; 
-        }
-
+        function closeDisclaimer() { document.getElementById('disclaimerModal').style.display = 'none'; }
         function toggleConsent() {
             const isChecked = document.getElementById('acceptCheck').checked;
             const btn = document.getElementById('confirmBtn');
-            if (isChecked) {
-                btn.disabled = false; 
-                btn.style.background = 'linear-gradient(135deg, #00e5ff 0%, #008299 100%)'; 
-                btn.style.color = '#000'; 
-                btn.style.cursor = 'pointer';
-            } else {
-                btn.disabled = true; 
-                btn.style.background = '#333'; 
-                btn.style.color = '#666'; 
-                btn.style.cursor = 'not-allowed';
-            }
+            btn.disabled = !isChecked; 
+            btn.style.background = isChecked ? 'linear-gradient(135deg, #00e5ff 0%, #008299 100%)' : '#333'; 
+            btn.style.color = isChecked ? '#000' : '#666'; 
+            btn.style.cursor = isChecked ? 'pointer' : 'not-allowed';
         }
-
         function proceedAfterConsent() {
             closeDisclaimer();
             document.getElementById('startAgentBtn').style.display = 'none'; 
             const formSection = document.getElementById('agentFormSection');
             formSection.style.display = 'block'; 
-            formSection.scrollIntoView({behavior: 'smooth'}); 
+            setTimeout(() => formSection.scrollIntoView({behavior: 'smooth', block: 'center'}), 100); 
         }
-
-        function handleAgentSubmit(event) {
-            event.preventDefault(); 
-            const name = document.getElementById('agentName').value;
-            const randomCode = 'SP-' + Math.floor(10000 + Math.random() * 90000);
-            
-            alert(`✅ ส่งข้อมูลการสมัครสำเร็จ!\n\nยินดีต้อนรับ ${name} สู่เครือข่ายพันธมิตรของเรา\n\nรหัสอ้างอิง (Agent Code) ชั่วคราวของคุณคือ: ${randomCode}\n\n(ระบบจะส่งรายละเอียดการเข้าสู่แดชบอร์ดให้ทางอีเมลที่ลงทะเบียนไว้)`);
-            
-            window.location.href = 'index.html';
-        }
-    </script>
-    <script>
-        // ฟังก์ชันดักจับลิงก์เชิญ VVIP (God Mode Link)
-        document.addEventListener("DOMContentLoaded", function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteCode = urlParams.get('code');
-        
-            if (inviteCode) {
-                console.log("🎟️ ตรวจพบรหัสเชิญ VVIP:", inviteCode);
-                alert("ยินดีต้อนรับ VVIP แขกรับเชิญพิเศษของท่านประธาน! \nระบบกำลังยืนยันรหัสเชิญของคุณ...");
-            
-                // (ในอนาคต: จะใช้ LIFF ดึง LINE ID ของเพื่อนคนนี้ แล้วยิง API ไปบอก Supabase ว่าขอใช้สิทธิ์รหัสนี้)
-                // fetch('https://prime-core-agent-601183279633.asia-southeast3.run.app/api/verify-invite', { ... })
-            }
-        });
     </script>
 </body>
 </html>

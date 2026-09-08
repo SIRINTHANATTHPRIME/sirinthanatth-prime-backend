@@ -16,7 +16,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดโมเดลให้ตรงกับศูนย์บัญชาการ
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 โมเดลเรือธงความเร็วแสง
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -30,7 +30,7 @@ except ImportError:
 class StripeService:
     """
     💳 ระบบจัดการ Payment Gateway ระดับ Enterprise (Stripe & PromptPay)
-    อัปเกรด: Idempotency Key, Satang Precision, Auto-Expiration, และ AI Copywriting 3.7
+    อัปเกรด: SHA-256 Idempotency, Smart 1-Hour Lock, AI System Instruction 3.7
     """
     
     def __init__(self):
@@ -60,31 +60,43 @@ class StripeService:
 
         selected_pkg = packages.get(package_name.upper(), packages["PRIME"])
         
-        dynamic_desc = 'SIRINTHANATTH PRIME - Enterprise AI SaaS'
+        # 👑 Default Copywriting ระดับพรีเมียม (เผื่อ AI Timeout)
+        dynamic_desc = f'ยกระดับธุรกิจของคุณด้วย {selected_pkg["name"]} สู่มาตรฐานระดับโลก'
+        
         if self.ai_client:
             try:
-                prompt = f"เขียนคำอธิบาย 1 ประโยค (15-20 คำ) กระตุ้นให้ลูกค้าโอนเงินซื้อ '{selected_pkg['name']}' ให้ดูพรีเมียมและคุ้มค่าที่สุด ห้ามใช้เครื่องหมายคำพูด"
+                system_instruction = """
+                คุณคือ 'Chief Marketing Officer (CMO)' ระดับโลก
+                หน้าที่ของคุณคือ: เขียนคำอธิบายสั้นๆ 1 ประโยค (15-20 คำ) กระตุ้นให้ลูกค้าระดับ VIP โอนเงินซื้อแพ็กเกจนี้ทันที
+                กฎเหล็ก: ห้ามใช้เครื่องหมายคำพูด (") และห้ามใช้ Markdown (เช่น **) เด็ดขาด ให้ใช้ข้อความล้วนที่ดูหรูหราทรงพลัง
+                """
                 
                 async def fetch_ad_copy():
                     return await asyncio.to_thread(
                         self.ai_client.models.generate_content,
                         model=self.ai_model,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(temperature=0.7)
+                        contents=f"เขียนคำอธิบายสำหรับ: {selected_pkg['name']}",
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.7
+                        )
                     )
                 
                 ai_res = await asyncio.wait_for(fetch_ad_copy(), timeout=5.0)
                 if ai_res.text:
-                    # ทำความสะอาดตัวอักษรพิเศษก่อนส่งขึ้นหน้าเว็บ Stripe
-                    dynamic_desc = ai_res.text.strip().replace('"', '').replace('**', '')
+                    # คลีนอักขระแปลกปลอมอีกชั้นเพื่อความปลอดภัย 100%
+                    dynamic_desc = ai_res.text.strip().replace('"', '').replace('**', '').replace('*', '')
+            except asyncio.TimeoutError:
+                logger.warning("⚠️ [Stripe AI]: AI Copywriting Timeout ใช้ข้อความมาตรฐานแทน")
             except Exception as e:
                 logger.warning(f"⚠️ [Stripe AI Warning]: ข้ามการใช้ AI Copywriting ({e})")
 
         client_ref = f"{package_name.upper()}_AGENT_{agent_code}_LINE_{user_id}"
         
-        # 🛡️ Idempotency Key ป้องกันการตัดเงินลูกค้าซ้ำซ้อน (Double Billing)
-        hash_str = f"{client_ref}_{int(time.time() // 86400)}"
-        idempotency_key = hashlib.md5(hash_str.encode()).hexdigest()
+        # 🛡️ Bank-Grade Idempotency Key (SHA-256) + 1-Hour Smart Lock
+        # ล็อกบิลซ้ำซ้อนภายใน 1 ชั่วโมง เพื่อไม่ปิดกั้นลูกค้ารายเดิมที่ต้องการซื้อแพ็กเกจที่ 2 ในวันเดียวกัน
+        hash_str = f"{client_ref}_{int(time.time() // 3600)}"
+        idempotency_key = hashlib.sha256(hash_str.encode()).hexdigest()
 
         try:
             def _create_session():
@@ -97,8 +109,8 @@ class StripeService:
                                 'name': selected_pkg["name"], 
                                 'description': dynamic_desc
                             },
-                            # ⚠️ แก้บั๊กการเงิน: สกุลเงิน THB ใน Stripe ต้องส่งค่าเป็น 'สตางค์' (คูณ 100)
-                            'unit_amount': selected_pkg["price"] * 100,
+                            # ⚠️ Future-Proof: ใช้ int(round(...)) ป้องกันบั๊ก Float Precision หักเงินลูกค้าไม่ตรงเศษสตางค์
+                            'unit_amount': int(round(selected_pkg["price"] * 100)),
                         },
                         'quantity': 1,
                     }],
@@ -111,7 +123,7 @@ class StripeService:
                         "user_id": user_id,
                         "package_name": package_name.upper(),
                         "agent_code": agent_code,
-                        "system_version": "3.1.0",
+                        "system_version": "4.0.0-ENTERPRISE",
                         "ai_generated_desc": dynamic_desc
                     }
                 , idempotency_key=idempotency_key)
@@ -124,5 +136,5 @@ class StripeService:
             logger.error(f"❌ [Stripe API Error]: สร้างลิงก์ล้มเหลว -> {e.user_message or str(e)}")
             return ""
         except Exception as e:
-            logger.error(f"❌ [Stripe System Error]: {str(e)}")
+            logger.error(f"❌ [Stripe System Error]: {str(e)}", exc_info=True)
             return ""

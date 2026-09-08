@@ -2,134 +2,131 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SIRINTHANATTH PRIME | Executive Smart Wallet</title>
+    
+    <!-- 🚀 Performance Optimization -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            --primary-gold: #D4AF37;
+            --primary-dark: #070c18;
+            --secure-green: #00E676;
+            --text-main: #ffffff;
+            --text-sub: #8a99ad;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body {
             font-family: 'Prompt', sans-serif;
-            background: linear-gradient(135deg, #020611 0%, #0a1128 100%); /* โทนสีกรมท่าเข้มสุด พรีเมียม */
-            margin: 0; 
-            padding: 20px; 
-            display: flex; 
-            justify-content: center;
-            align-items: flex-start; 
-            min-height: 100vh; 
-            color: #ffffff;
+            background: linear-gradient(135deg, #020611 0%, #0a1128 100%); 
+            margin: 0; padding: 20px; 
+            display: flex; justify-content: center; align-items: flex-start; 
+            min-height: 100vh; color: var(--text-main); overflow-x: hidden;
         }
 
         /* 💳 บัตร VIP Card */
         .wallet-card {
-            background: linear-gradient(145deg, #0b1325 0%, #070c18 100%);
-            border: 1px solid rgba(212, 175, 55, 0.4); /* ขอบสีทอง */
-            border-radius: 24px; 
-            padding: 35px 30px;
-            width: 100%;
-            max-width: 480px;
+            background: linear-gradient(145deg, #0b1325 0%, var(--primary-dark) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.4); 
+            border-radius: 24px; padding: 35px 30px; width: 100%; max-width: 480px;
             box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.08);
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
         }
-        /* แสงสะท้อนบนบัตร */
         .wallet-card::before {
             content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 60%);
-            pointer-events: none;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 60%); pointer-events: none;
         }
 
         /* ส่วนโปรไฟล์ผู้ใช้ */
         .profile-section {
-            display: flex;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            display: flex; align-items: center; margin-bottom: 25px;
+            padding-bottom: 20px; border-bottom: 1px solid rgba(212, 175, 55, 0.2);
         }
         .profile-img {
             width: 70px; height: 70px; border-radius: 50%;
-            border: 2px solid #D4AF37; padding: 3px;
-            background-color: #000; margin-right: 18px;
-            object-fit: cover;
+            border: 2px solid var(--primary-gold); padding: 3px;
+            background-color: #000; margin-right: 18px; object-fit: cover;
             box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
         }
         .profile-info h3 { margin: 0; font-size: 1.3rem; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
-        .profile-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: #D4AF37; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; }
+        .profile-info p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--primary-gold); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
 
         /* ส่วนแสดงจำนวน Token (PRIME CREDITS) */
-        .balance-section { text-align: center; margin-bottom: 30px; }
-        .balance-title { font-size: 0.9rem; color: #8a99ad; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; font-weight: 300;}
+        .balance-section { text-align: center; margin-bottom: 30px; position: relative; }
+        .balance-title { font-size: 0.9rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; font-weight: 300;}
         .balance-amount { 
-            font-size: 3.5rem; font-weight: 800; color: #D4AF37; 
+            font-size: 3.5rem; font-weight: 800; color: var(--primary-gold); 
             text-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); margin: 0;
-            display: flex; justify-content: center; align-items: baseline; gap: 10px;
-            line-height: 1;
+            display: flex; justify-content: center; align-items: baseline; gap: 10px; line-height: 1; font-variant-numeric: tabular-nums;
         }
+        .balance-amount.unlimited {
+            font-size: 2.8rem; letter-spacing: 3px; 
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.8); animation: glow 2s infinite alternate;
+        }
+        @keyframes glow { 0% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); } 100% { text-shadow: 0 0 30px rgba(212, 175, 55, 1); } }
         .balance-unit { font-size: 1.2rem; color: #e0e0e0; font-weight: 400; letter-spacing: 1px;}
 
-        /* อัตราแลกเปลี่ยนและเงื่อนไข (Service Transparency Matrix) */
+        /* อัตราแลกเปลี่ยนและเงื่อนไข */
         .tokenomics-box {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 30px;
-            font-size: 0.85rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.02); border-radius: 16px; padding: 18px;
+            margin-bottom: 30px; font-size: 0.85rem; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
         }
         .tokenomics-box h4 { 
-            color: #fff; margin: 0 0 15px 0; font-size: 0.95rem; 
-            display: flex; justify-content: space-between; 
-            border-bottom: 1px dashed rgba(212, 175, 55, 0.4); 
-            padding-bottom: 12px; font-weight: 400;
+            color: #fff; margin: 0 0 15px 0; font-size: 0.95rem; display: flex; justify-content: space-between; 
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.4); padding-bottom: 12px; font-weight: 400;
         }
         
         .tokenomics-list { list-style: none; padding: 0; margin: 0; }
         .tokenomics-list li {
-            padding: 14px 16px; margin-bottom: 12px; 
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 3px solid #D4AF37; 
-            border-radius: 10px; font-size: 0.9rem; color: #eee;
-            border-top: 1px solid rgba(255,255,255,0.03);
-            border-right: 1px solid rgba(255,255,255,0.03);
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding: 14px 16px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--primary-gold); border-radius: 10px; font-size: 0.9rem; color: #eee;
+            border-top: 1px solid rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.03);
             transition: all 0.3s ease;
         }
-        .tokenomics-list li:hover {
-            background: rgba(212, 175, 55, 0.05);
-            transform: translateX(4px);
-        }
+        .tokenomics-list li:hover { background: rgba(212, 175, 55, 0.05); transform: translateX(4px); }
         .token-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
         .token-title { font-weight: 600; letter-spacing: 0.3px;}
         .token-rate { font-weight: 800; white-space: nowrap; margin-left: 10px; }
-        .token-desc { display: block; font-size: 0.75rem; color: #8a99ad; line-height: 1.6; font-weight: 300; }
+        .token-desc { display: block; font-size: 0.75rem; color: var(--text-sub); line-height: 1.6; font-weight: 300; }
 
         /* ปุ่มกด */
         .btn-topup {
             background: linear-gradient(135deg, #FFE84D 0%, #D4AF37 50%, #B8860B 100%);
             color: #050a15; border: none; padding: 18px; width: 100%;
             border-radius: 14px; font-size: 1.1rem; font-weight: 800;
-            cursor: pointer; transition: 0.3s;
-            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
-            font-family: 'Prompt', sans-serif;
-            margin-bottom: 15px;
-            letter-spacing: 0.5px;
+            cursor: pointer; transition: 0.3s; box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
+            font-family: 'Prompt', sans-serif; margin-bottom: 15px; letter-spacing: 0.5px;
         }
         .btn-topup:active { transform: scale(0.98); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2); }
 
         .btn-history {
-            background: transparent; color: #8a99ad;
-            border: 1px solid rgba(138, 153, 173, 0.2);
-            padding: 14px; width: 100%; border-radius: 14px;
-            font-size: 0.95rem; font-weight: 400;
-            cursor: pointer; transition: 0.3s;
-            font-family: 'Prompt', sans-serif;
-            letter-spacing: 0.5px;
+            background: transparent; color: var(--text-sub); border: 1px solid rgba(138, 153, 173, 0.2);
+            padding: 14px; width: 100%; border-radius: 14px; font-size: 0.95rem; font-weight: 400;
+            cursor: pointer; transition: 0.3s; font-family: 'Prompt', sans-serif; letter-spacing: 0.5px;
         }
         .btn-history:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: rgba(212, 175, 55, 0.5);}
 
-        .loading-text { text-align: center; color: #D4AF37; font-size: 0.85rem; margin-top: 20px; font-weight: 300; letter-spacing: 1px; }
+        /* 🛡️ Loading & Custom Modal */
+        .loading-text { text-align: center; color: var(--primary-gold); font-size: 0.85rem; margin-top: 20px; font-weight: 300; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 8px;}
+        .spinner-mini { width: 14px; height: 14px; border: 2px solid rgba(212,175,55,0.3); border-top: 2px solid var(--primary-gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9998; backdrop-filter: blur(5px); }
+        .modal-box {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; max-width: 400px; background: rgba(10,14,23,0.98); border: 1px solid var(--primary-gold);
+            border-radius: 20px; z-index: 9999; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(212,175,55,0.2);
+        }
+        .modal-box h3 { color: var(--primary-gold); margin-top: 0; font-size: 1.2rem; }
+        .modal-box p { color: #ccc; font-size: 0.9rem; line-height: 1.6; margin-bottom: 25px; }
+        .btn-modal { background: transparent; color: #fff; border: 1px solid var(--primary-gold); padding: 10px 30px; border-radius: 8px; font-family: 'Prompt'; cursor: pointer; transition: 0.3s; }
+        .btn-modal:hover { background: rgba(212,175,55,0.2); }
     </style>
 </head>
 <body>
@@ -139,20 +136,20 @@
             <img id="userPicture" src="https://profile.line-scdn.net/0hQK4kC1NwaFtsC0xLMB99aRdoZTQmIipJVi4jSxo-Nmh2MSRLUSogFhlhZDp-MHFHBCl_HkphY2wj" alt="Profile" class="profile-img">
             <div class="profile-info">
                 <h3 id="userName">กำลังตรวจสอบข้อมูล...</h3>
-                <p>EXECUTIVE MEMBER</p>
+                <p id="userTier">EXECUTIVE MEMBER</p>
             </div>
         </div>
 
         <div class="balance-section">
             <div class="balance-title">ทรัพยากรคงเหลือ (Available)</div>
-            <div class="balance-amount" id="tokenBalance">0 <span class="balance-unit">PRIME CREDITS</span></div>
+            <div class="balance-amount" id="tokenBalance">
+                <span id="counterValue">0</span> <span class="balance-unit" id="unitText">PRIME CREDITS</span>
+            </div>
         </div>
 
         <div class="tokenomics-box">
             <h4>อัตราแลกเปลี่ยนคลาวด์ <span style="color: #D4AF37; font-weight: 600;">1 ฿ = 10 Credits</span></h4>
             <ul class="tokenomics-list">
-                
-                <!-- แชท (Unlimited Fair Use) -->
                 <li style="border-left-color: #00E676;">
                     <div class="token-item-header">
                         <span class="token-title">💬 Smart Chat & Strategy</span>
@@ -160,8 +157,6 @@
                     </div>
                     <span class="token-desc">จดจำบริบทลึกระดับองค์กร ไม่จำกัดตัวอักษร ภายใต้ Fair Use Policy</span>
                 </li>
-
-                <!-- คุยสด Voice AI (ใหม่) -->
                 <li style="border-left-color: #9C27B0;">
                     <div class="token-item-header">
                         <span class="token-title">📞 Live Voice Call (AI Advisor)</span>
@@ -169,8 +164,6 @@
                     </div>
                     <span class="token-desc">คุยสดแบบ Real-time กับคุณธนัตถ์ หรือ คุณสิรินทร์ (เศษนาทีปัดขึ้น)</span>
                 </li>
-
-                <!-- วิเคราะห์ภาพ -->
                 <li style="border-left-color: #42A5F5;">
                     <div class="token-item-header">
                         <span class="token-title">📊 AI Vision & Graph Analysis</span>
@@ -178,8 +171,6 @@
                     </div>
                     <span class="token-desc">สแกนความละเอียดสูงระดับ OCR (รองรับ JPG/PNG สูงสุด 20 MB/ภาพ)</span>
                 </li>
-
-                <!-- วิเคราะห์เอกสาร -->
                 <li style="border-left-color: #FF7043;">
                     <div class="token-item-header">
                         <span class="token-title">📄 Executive Document Audit</span>
@@ -187,8 +178,6 @@
                     </div>
                     <span class="token-desc">วิเคราะห์เชิงลึก PDF/Excel (ความยาวสูงสุด 20 หน้า, ไม่เกิน 25 MB/ไฟล์)</span>
                 </li>
-
-                <!-- เรียกขนส่ง -->
                 <li style="border-left-color: #FFA726;">
                     <div class="token-item-header">
                         <span class="token-title">🚚 ระบบเรียกขนส่ง Flash Express</span>
@@ -196,8 +185,6 @@
                     </div>
                     <span class="token-desc">AI ดึงที่อยู่จัดส่งอัตโนมัติสูงสุด 10 ออเดอร์/ครั้ง (*ไม่รวมค่าขนส่งจริง)</span>
                 </li>
-
-                <!-- วิดีโอ 4K -->
                 <li style="border-left-color: #FFD700; background: linear-gradient(90deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.3) 100%);">
                     <div class="token-item-header">
                         <strong class="token-title" style="color: #FFD700;">🎬 Cinematic 4K video Production</strong>
@@ -209,14 +196,84 @@
         </div>
 
         <button class="btn-topup" onclick="sendTopupMessage()">💳 อัปเกรดแพ็กเกจ / เติม PRIME CREDITS</button>
-        <button class="btn-history" onclick="alert('ระบบรักษาความปลอดภัย: กำลังเตรียมดึงข้อมูลประวัติการเบิกจ่ายคลาวด์ย้อนหลัง (Audit Trail)...')">📊 ประวัติการใช้งาน (Audit Trail)</button>
+        <button class="btn-history" onclick="showSystemModal('📊 Audit Trail System', 'กำลังประมวลผลฐานข้อมูลเชิงลึก...<br><br>ฟีเจอร์รายงานประวัติการเบิกจ่ายและ Audit Trail จะพร้อมให้ใช้งานในอัปเดตถัดไปของ SIRINTHANATTH PRIME ครับ')">📊 ประวัติการใช้งาน (Audit Trail)</button>
 
-        <div id="loadingStatus" class="loading-text">Connecting to Secure Server...</div>
+        <div id="loadingStatus" class="loading-text"><div class="spinner-mini"></div> Synchronizing with Ledger...</div>
+    </div>
+
+    <!-- 🛡️ Custom System Modal (แทนที่ Alert ธรรมดา) -->
+    <div id="systemModal" class="modal-overlay">
+        <div class="modal-box" id="systemModalBox">
+            <h3 id="modalTitle">SYSTEM MESSAGE</h3>
+            <p id="modalBody">Description goes here</p>
+            <button class="btn-modal" onclick="closeSystemModal()">รับทราบ (Acknowledge)</button>
+        </div>
     </div>
 
     <script>
-        // ⚠️ รหัส LIFF ID ของคุณ (คงไว้ตามเดิม)
         const LIFF_ID = "2011067128-fnWmOak4"; 
+        const CLOUD_RUN_API_URL = "https://prime-core-agent-601183279633.asia-southeast3.run.app";
+
+        // 🛡️ Custom Modal Helpers
+        function showSystemModal(title, body) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('systemModal').style.display = 'block';
+            document.getElementById('systemModalBox').style.display = 'block';
+        }
+        function closeSystemModal() {
+            document.getElementById('systemModal').style.display = 'none';
+        }
+
+        // 🎢 แอนิเมชันตัวเลขวิ่งแบบนุ่มนวล
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentVal = Math.floor(progress * (end - start) + start);
+                // จัด Format ตัวเลขให้มีลูกน้ำ (Commas)
+                obj.innerHTML = currentVal.toLocaleString('en-US');
+                if (progress < 1) window.requestAnimationFrame(step);
+                else obj.innerHTML = end.toLocaleString('en-US'); 
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // 📡 ดึงข้อมูล Wallet จากฐานข้อมูลจริง
+        async function fetchWalletBalance(userId) {
+            try {
+                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/wallet/check?user_id=${userId}`);
+                if (!response.ok) throw new Error("API Error");
+                const data = await response.json();
+
+                // อัปเดต Tier (แพ็กเกจปัจจุบัน)
+                if (data.tier) {
+                    document.getElementById("userTier").innerText = data.tier.replace('_', ' ');
+                }
+
+                const balanceElement = document.getElementById("tokenBalance");
+                if (data.is_exempt) {
+                    // 👑 โหมดพระเจ้า (Unlimited VVIP)
+                    balanceElement.innerHTML = "UNLIMITED";
+                    balanceElement.classList.add("unlimited");
+                } else {
+                    // วิ่งแอนิเมชันจาก 0 ถึงยอดเงินจริง
+                    const finalBalance = parseFloat(data.balance) || 0;
+                    animateValue("counterValue", 0, finalBalance, 1500);
+                }
+
+                document.getElementById("loadingStatus").innerHTML = '<span style="color:#00E676;">✓ Synchronized</span>';
+                setTimeout(() => { document.getElementById("loadingStatus").style.display = 'none'; }, 2000);
+
+            } catch (error) {
+                console.error("Wallet Fetch Error:", error);
+                document.getElementById("loadingStatus").innerHTML = '<span style="color:#FF5252;">⚠️ Sync Failed - Offline Mode</span>';
+                document.getElementById("counterValue").innerText = "0";
+            }
+        }
 
         async function initializeLiff() {
             try {
@@ -224,14 +281,13 @@
                 
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
-                    
                     document.getElementById("userName").innerText = profile.displayName;
                     if(profile.pictureUrl) {
                         document.getElementById("userPicture").src = profile.pictureUrl;
                     }
                     
-                    document.getElementById("loadingStatus").innerText = "Secure Connection Established.";
-                    setTimeout(() => { document.getElementById("loadingStatus").style.display = 'none'; }, 2000);
+                    // เรียกฐานข้อมูลจริง
+                    await fetchWalletBalance(profile.userId);
 
                 } else {
                     document.getElementById("userName").innerText = "ผู้เยี่ยมชม (Guest)";
@@ -239,12 +295,11 @@
                 }
             } catch (err) {
                 console.error("LIFF Init failed: ", err);
-                document.getElementById("loadingStatus").innerText = "Connection Error.";
-                document.getElementById("loadingStatus").style.color = "red";
+                document.getElementById("loadingStatus").innerHTML = '<span style="color:#FF5252;">Connection Error.</span>';
             }
         }
 
-        // ฟังก์ชันสั่งให้บอทคายลิงก์เติมเงินออกมาในช่องแชท (UX ไร้รอยต่อ)
+        // ฟังก์ชันสั่งให้บอทคายลิงก์เติมเงินออกมาในช่องแชท
         function sendTopupMessage() {
             if (liff.isLoggedIn() && liff.isInClient()) {
                 liff.sendMessages([
@@ -256,10 +311,10 @@
                     liff.closeWindow();
                 }).catch((err) => {
                     console.error("Send message error", err);
-                    alert("เกิดข้อผิดพลาดในระบบเครือข่าย กรุณาลองใหม่อีกครั้ง");
+                    showSystemModal("⚠️ Network Error", "เกิดข้อผิดพลาดในการส่งคำสั่งเข้า LINE กรุณาลองใหม่อีกครั้งครับ");
                 });
             } else {
-                alert("เพื่อให้บัญชีปลอดภัยและเชื่อมต่อถูกต้อง กรุณากดปุ่มทำรายการผ่านแอปพลิเคชัน LINE ของท่านโดยตรงครับ");
+                showSystemModal("🔒 Security Notice", "เพื่อความปลอดภัยของบัญชีและการทำธุรกรรม<br><br>กรุณากดปุ่มทำรายการผ่านแอปพลิเคชัน LINE ของท่านโดยตรงครับ");
             }
         }
 

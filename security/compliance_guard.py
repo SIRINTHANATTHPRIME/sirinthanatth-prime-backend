@@ -9,14 +9,20 @@ from google.genai import types
 logger = logging.getLogger("ComplianceGuard")
 
 # =========================================================
-# ⚡ Pre-compiled Regex (เพื่อความเร็วระดับ Zero-Latency)
+# ⚡ Pre-compiled Regex (ความเร็วระดับ Zero-Latency)
 # =========================================================
 ID_CARD_PATTERN = re.compile(r'\b\d{13}\b')
-PHONE_PATTERN = re.compile(r'\b(0[689]\d{1}[-\s]?\d{3}[-\s]?\d{4})\b')
+# อัปเกรด: รองรับเบอร์มือถือ (06,08,09) และเบอร์บ้าน/ออฟฟิศ (02,03,04,05,07)
+PHONE_PATTERN = re.compile(r'\b(0[2-9]\d{1,2}[-\s]?\d{3}[-\s]?\d{3,4})\b')
 CREDIT_CARD_PATTERN = re.compile(r'\b(?:\d[ -]*?){13,16}\b')
 EMAIL_PATTERN = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+# อัปเกรด: ครอบคลุมพาสปอร์ต (ตัวอักษร 1-2 ตัว ตามด้วยตัวเลข 6-7 ตัว)
+PASSPORT_PATTERN = re.compile(r'\b[A-Z]{1,2}\d{6,7}\b', re.IGNORECASE)
+
+# 🛡️ Military-Grade Prompt Injection Shield
 PROMPT_INJECTION_PATTERN = re.compile(
-    r'(ignore all|disregard previous|system prompt|bypass|jailbreak|override|forget everything)', 
+    r'(ignore all|disregard previous|system prompt|bypass|jailbreak|override|forget everything|'
+    r'developer mode|do anything now|dan prompt|you are now|print instructions)', 
     re.IGNORECASE
 )
 
@@ -27,7 +33,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดเป็นรุ่นล่าสุดของระบบ
+        CORE_MODEL = "gemini-3.7-flash" 
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -42,7 +48,7 @@ except ImportError:
 class ComplianceGuard:
     """
     🛡️ ระบบคัดกรองความปลอดภัยระดับโครงสร้าง (Zero-Risk Compliance Shield)
-    อัปเกรด: Pre-compiled Regex, Anti-Prompt Injection, AI 3.7 Deep Scan
+    อัปเกรด: Circuit Breaker, Expanded PII, Advanced Anti-Injection
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
@@ -50,9 +56,7 @@ class ComplianceGuard:
 
     @staticmethod
     def sanitize_pii(text: str) -> str:
-        """
-        กำจัดข้อมูล PII และทำลายความพยายามเจาะระบบ (Prompt Injection) ก่อนส่งต่อให้ AI
-        """
+        """กำจัดข้อมูล PII และทำลายความพยายามเจาะระบบ (Prompt Injection)"""
         if not text: 
             return ""
             
@@ -64,14 +68,13 @@ class ComplianceGuard:
         text = PHONE_PATTERN.sub('[PHONE_REDACTED]', text)
         text = CREDIT_CARD_PATTERN.sub('[CREDIT_CARD_REDACTED]', text)
         text = EMAIL_PATTERN.sub('[EMAIL_REDACTED]', text)
+        text = PASSPORT_PATTERN.sub('[PASSPORT_REDACTED]', text)
         
         return text
 
     @staticmethod
     def attach_financial_disclaimer(response_text: str) -> str:
-        """
-        แนบคำเตือนจำกัดความรับผิดชอบ (Disclaimer) ตามมาตรฐานองค์กรกำกับดูแลของไทย
-        """
+        """แนบคำเตือนจำกัดความรับผิดชอบ (Disclaimer) ตามมาตรฐานองค์กรกำกับดูแลของไทย"""
         if not response_text: 
             return ""
             
@@ -83,7 +86,7 @@ class ComplianceGuard:
                 response_text += disclaimer_sec
 
         # 2. 🛡️ หมวด อย. / สคบ. (สุขภาพ / โฆษณาพาณิชย์)
-        health_keywords = {"รักษาหายขาด", "รับประกันผล 100%", "ลดน้ำหนัก", "ขาวทันที", "ไม่มีผลข้างเคียง", "มหัศจรรย์", "ดีที่สุดในโลก", "เห็นผลทันที", "หยุดยาได้เลย"}
+        health_keywords = {"รักษาหายขาด", "รับประกันผล 100%", "ลดน้ำหนัก", "ขาวทันที", "ไม่มีผลข้างเคียง", "มหัศจรรย์", "ดีที่สุดในโลก", "เห็นผลทันที", "หยุดยาได้เลย", "ปลอดภัย 100%"}
         if any(keyword in response_text.lower() for keyword in health_keywords):
             disclaimer_ocpb = "\n\n⚠️ คำเตือน (สคบ./อย.): ข้อความนี้อาจมีคีย์เวิร์ดที่เข้าข่ายโฆษณาเกินจริง (Overclaim) โปรดปรับปรุงเนื้อหาให้สอดคล้องกับระเบียบการโฆษณาทางพาณิชย์ก่อนนำไปเผยแพร่จริง"
             if "⚠️ คำเตือน (สคบ./อย.)" not in response_text:
@@ -92,31 +95,37 @@ class ComplianceGuard:
         return response_text
 
     async def ai_compliance_deep_scan(self, text: str) -> str:
-        """
-        ใช้ Vertex AI สแกนเนื้อหาและ Rewrite ข้อความที่ละเมิดกฎหมายให้ปลอดภัย 100% อัตโนมัติ
-        """
+        """ใช้ Vertex AI สแกนเนื้อหาและ Rewrite ข้อความที่ละเมิดกฎหมายให้ปลอดภัย 100%"""
         if not self.client or not text: 
             return text
             
         try:
             system_instruction = """
             คุณคือ 'Chief Compliance Officer' ระดับโลกของ SIRINTHANATTH PRIME
-            หน้าที่ของคุณคือ: สแกนข้อความนี้ว่าละเมิดกฎหมาย สคบ., อย., พ.ร.บ. คอมพิวเตอร์ หรือ ก.ล.ต. ของประเทศไทยหรือไม่
-            - หากมี "คำโฆษณาเกินจริง (Overclaim)" หรือการการันตีผลตอบแทนผิดกฎหมาย ให้ทำการรีไรท์ (Rewrite) ข้อความนั้นให้ปลอดภัย แต่ยังคงความน่าสนใจในเชิงการตลาดไว้
-            - หากปลอดภัยอยู่แล้ว ให้ตอบกลับด้วยข้อความเดิม 100% ห้ามเพิ่มข้อความอื่นอธิบายเด็ดขาด
+            หน้าที่: สแกนข้อความนี้ว่าละเมิดกฎหมาย สคบ., อย., หรือ ก.ล.ต. ของประเทศไทยหรือไม่
+            - หากมี "คำโฆษณาเกินจริง (Overclaim)" ให้รีไรท์ (Rewrite) ให้ปลอดภัยแต่ยังคงน่าสนใจ
+            - หากปลอดภัยอยู่แล้ว ให้ตอบกลับด้วยข้อความเดิม 100%
+            - กฎเหล็ก: ตอบเฉพาะข้อความผลลัพธ์เท่านั้น ห้ามมีคำเกริ่นนำ (เช่น "นี่คือข้อความ...") หรืออธิบายเหตุผลเด็ดขาด
             """
             
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.fast_model,
-                contents=f"ข้อความที่ต้องสแกนและรีไรท์: {text}",
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.0 # 🔒 ล็อก Temperature ที่ 0.0 เพื่อความแม่นยำทางกฎหมายระดับสูงสุด (Zero-Hallucination)
+            async def _execute_scan():
+                return await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.fast_model,
+                    contents=f"ข้อความที่ต้องสแกน: {text}",
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.0 # 🔒 ล็อก Temperature ที่ 0.0 เพื่อความแม่นยำสูงสุด
+                    )
                 )
-            )
+            
+            # ⏱️ Circuit Breaker: ป้องกัน AI API ค้างเกิน 8 วินาที (รักษาสเถียรภาพระบบหลัก)
+            response = await asyncio.wait_for(_execute_scan(), timeout=8.0)
             return response.text.strip() if response.text else text
             
+        except asyncio.TimeoutError:
+            logger.warning("⚠️ [AI Compliance Timeout]: ระบบตรวจสอบทำงานล่าช้า ใช้ข้อความต้นฉบับแทน")
+            return text
         except Exception as e:
             logger.error(f"❌ [AI Compliance Deep Scan Error]: {e}", exc_info=True)
             return text
