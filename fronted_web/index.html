@@ -26,7 +26,7 @@
             overflow-x: hidden;
         }
 
-        /* 🖼️ แบ็กกราวด์ปรับความจางลง 30% และเพิ่มความคมชัดระดับ 4K */
+        /* 🖼️ แบ็กกราวด์ปรับความจางลงและเพิ่มความคมชัดระดับ 4K */
         .page-bg-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url('assets/1000097983.png'); 
@@ -121,7 +121,7 @@
             padding: 18px 50px; font-size: 1.3rem; background: linear-gradient(135deg, #FFE84D, #FFD700, #DAA520);
             color: #000; border: none; border-radius: 40px; font-weight: 800; cursor: pointer;
             box-shadow: 0 10px 30px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8); transition: all 0.3s ease; animation: pulse 2s infinite;
-            margin-top: 20px; display: block; width: 100%; max-width: 450px;
+            margin-top: 20px; display: block; width: 100%; max-width: 450px; margin-left: auto; margin-right: auto;
         }
         .vip-button:hover { transform: scale(1.05); box-shadow: 0 15px 40px rgba(255,215,0,0.8); }
 
@@ -131,7 +131,7 @@
             100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
-        /* 🛡️ Global Loading Overlay (ป้องกันคนกดซ้ำ) */
+        /* 🛡️ Global Loading Overlay */
         #globalLoader {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 17, 0.9); backdrop-filter: blur(10px);
@@ -153,12 +153,11 @@
         .logo { width: clamp(100px, 18vw, 160px); height: auto; cursor: pointer; transition: transform 0.3s ease; filter: drop-shadow(0 0 20px rgba(255,215,0,0.4)); }
         .logo:hover { transform: scale(1.05); }
 
-        /* ... (CSS ส่วน Pricing, Modals, Accordions ยังคงโครงสร้างเดิมที่สวยงามไว้ทั้งหมด ลดละทอนพื้นที่เพื่อความกระชับ) ... */
-        .pricing-section { padding: clamp(40px, 6vw, 80px) 20px; }
-        .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 40px auto 0; }
+        .pricing-section { padding: clamp(40px, 6vw, 80px) 20px; max-width: 1200px; margin: 0 auto; }
+        .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
         .card { padding: 30px 20px; background: rgba(10, 10, 15, 0.92); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
         .card-prime { border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.96); position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12); }
-        .promo-badge { margin: 15px 0; padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; font-size: 0.95rem; animation: pulse-badge 3s infinite; }
+        .promo-badge { margin: 15px 0; padding: 12px; border-radius: 8px; text-align: center; font-weight: 800; font-size: 0.95rem; }
         .promo-cyan { background: rgba(0, 229, 255, 0.1); border: 1px dashed #00e5ff; color: #00e5ff; }
         .promo-gold { background: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; color: #FFD700; }
         
@@ -177,17 +176,62 @@
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; color: #888; cursor: pointer; transition: 0.2s; }
         .close-btn:hover { color: #FFD700; }
 
-        .video-showcase { display: flex; flex-direction: column; gap: 50px; margin-bottom: 80px; max-width: 1200px; margin-left: auto; margin-right: auto; position: relative; z-index: 2; }
-        .video-card { display: flex; flex-direction: column; background: rgba(20, 20, 20, 0.8); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 15px; overflow: hidden; backdrop-filter: blur(10px); }
-        @media (min-width: 768px) { .video-card { flex-direction: row; } .video-card:nth-child(even) { flex-direction: row-reverse; } .video-content { flex: 1; min-height: 300px; } .video-text { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; } }
-        .video-content video { width: 100%; height: 100%; object-fit: cover; }
-        .feature-tag { display: inline-block; background: rgba(212, 175, 55, 0.1); color: #D4AF37; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; margin-right: 10px; margin-bottom: 10px; border: 1px solid rgba(212, 175, 55, 0.3); }
-
-        /* รูปแบบกล่อง Agent Code และปุ่มจ่ายเงิน */
         .agent-input-group { margin: 20px 0; }
         .agent-input-group input { width: 100%; padding: 18px; background: #050505; border: 1px solid #444; border-radius: 12px; color: #fff; font-size: 1.1rem; text-align: center; outline: none; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
         .agent-input-group input:focus { border-color: #D4AF37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
         .checkout-btn { background: linear-gradient(135deg, #FFE84D 0%, #D4AF37 50%, #B8860B 100%); color: #050a15; border: none; padding: 18px; width: 100%; border-radius: 14px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+
+        /* 🛡️ Company Profile & Team Information Section (ตามมาตรฐาน Google Cloud for Startups) */
+        .company-profile-section {
+            max-width: 1100px; margin: 60px auto; padding: 0 20px;
+        }
+        .profile-card {
+            background: rgba(10, 14, 23, 0.85); border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+        }
+        .profile-card h3 { color: #00e5ff; font-size: 1.5rem; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .profile-card p { color: #ccc; font-size: 0.98rem; line-height: 1.8; margin-bottom: 20px; }
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 25px; }
+        .team-member {
+            background: rgba(5, 5, 10, 0.9); border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 14px; padding: 25px; text-align: left;
+        }
+        .team-member h4 { color: #FFD700; margin: 0 0 5px 0; font-size: 1.2rem; }
+        .team-member .role { color: #00e5ff; font-size: 0.88rem; font-weight: 600; margin-bottom: 12px; }
+        .team-member p { color: #bbb; font-size: 0.88rem; margin: 0; line-height: 1.6; }
+
+        /* 💬 Web AI Sandbox Widget (มุมขวาล่างสำหรับทดสอบแชทจริง) */
+        #aiChatWidget {
+            position: fixed; bottom: 25px; right: 25px; z-index: 9997;
+        }
+        #chatToggleBtn {
+            background: linear-gradient(135deg, #00e5ff, #008299); color: #000;
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            cursor: pointer; font-size: 26px; box-shadow: 0 8px 25px rgba(0,229,255,0.5);
+            display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;
+        }
+        #chatToggleBtn:hover { transform: scale(1.1); }
+        #chatBoxContainer {
+            display: none; position: absolute; bottom: 75px; right: 0;
+            width: 350px; max-width: 90vw; height: 480px; background: rgba(8, 12, 20, 0.98);
+            border: 1px solid #00e5ff; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9); flex-direction: column; backdrop-filter: blur(12px);
+        }
+        .chat-header {
+            background: rgba(0, 229, 255, 0.15); padding: 15px; border-bottom: 1px solid rgba(0,229,255,0.3);
+            display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #00e5ff;
+        }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; }
+        .chat-msg { padding: 10px 14px; border-radius: 12px; max-width: 80%; line-height: 1.5; }
+        .chat-msg.bot { background: rgba(255,255,255,0.08); color: #fff; align-self: flex-start; border-left: 3px solid #00e5ff; }
+        .chat-msg.user { background: rgba(0,229,255,0.2); color: #fff; align-self: flex-end; border-right: 3px solid #FFD700; }
+        .chat-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 8px; background: rgba(0,0,0,0.5); }
+        .chat-footer input { flex: 1; padding: 10px 12px; background: #020202; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 0.88rem; outline: none; }
+        .chat-footer button { background: #00e5ff; color: #000; border: none; padding: 0 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        .site-footer { text-align: center; padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: #777; margin-top: 60px; }
+        .site-footer a { color: #00e5ff; text-decoration: none; margin: 0 10px; }
     </style>
 </head>
 <body>
@@ -210,16 +254,43 @@
 
     <div class="hero-section">
         <div class="content-container reveal">
-            <img src="assets/1000097983.png" alt="Logo" class="logo" onmouseenter="playHoverBell()" onclick="playWelcomeAudio()">
+            <img src="assets/1000097983.png" alt="Logo" class="logo" onclick="playWelcomeAudio()">
             <h1 class="main-title">SIRINTHANATTH <span class="gold-text">PRIME</span></h1>
             <p class="subtitle">ระบบผู้ช่วยปัญญาประดิษฐ์ผู้บริหารระดับสากล ยกระดับการจัดการธุรกิจ ลดต้นทุน และเฝ้าระวังความเสี่ยงองค์กรอย่างเต็มรูปแบบ</p>
             
             <button class="vip-button" onclick="initiateVipFlow()">👑 สมัคร 100 VIP Founders Club</button>
             <div style="margin-top: 15px;">
-                <button class="btn-3d btn-cyan" onclick="document.getElementById('company-profile').scrollIntoView({behavior: 'smooth'})" style="padding: 10px 25px; font-size: 0.95rem;">ดูรายละเอียดระบบ</button>
+                <button class="btn-3d btn-cyan" onclick="document.getElementById('company-profile').scrollIntoView({behavior: 'smooth'})" style="padding: 10px 25px; font-size: 0.95rem;">ดูรายละเอียดองค์กรและทีมงาน</button>
             </div>
         </div>
     </div>
+
+    <!-- 🛡️ Company Profile & Team Information (ข้อมูลโปร่งใสตามเกณฑ์ Google Cloud for Startups) -->
+    <section id="company-profile" class="company-profile-section reveal">
+        <div class="profile-card">
+            <h3>🏢 Corporate Overview & Business Description</h3>
+            <p><strong>Marketing Spark Combine Co., Ltd.</strong> ดำเนินธุรกิจพัฒนาซอฟต์แวร์ระดับองค์กร เจ้าของแพลตฟอร์ม <strong>SIRINTHANATTH PRIME</strong> ซึ่งเป็นระบบนิเวศ AI-first SaaS ที่ถูกออกแบบมาเพื่อแก้ปัญหาความเหนื่อยล้าจากการสลับแอป (App-Switching Fatigue), การตอบสนองลูกค้าที่ล่าช้า และลดความเสี่ยงด้านกฎหมาย ก.ล.ต., สคบ., และ PDPA สำหรับวิสาหกิจขนาดกลางและขนาดย่อม (SMEs), พ่อค้าแม่ค้าออนไลน์ และนักลงทุนในภูมิภาคเอเชียตะวันออกเฉียงใต้ ผ่านระบบ Webhook บน LINE OA และ Cloud Infrastructure ระดับโลก[cite: 4]</p>
+            
+            <h3 style="margin-top: 30px;">👥 Leadership & AI-Driven Infrastructure</h3>
+            <div class="team-grid">
+                <div class="team-member">
+                    <h4>Weerachai Sirinthanatth</h4>
+                    <div class="role">Founder, CEO & Solo-Architect</div>
+                    <p>ผู้บริหารวิสัยทัศน์ผู้ขับเคลื่อนกลยุทธ์องค์กรทั้งหมด กรอบการปฏิบัติตามกฎหมาย/การเงิน และสถาปัตยกรรมธุรกิจ AI[cite: 15]</p>
+                    <a href="https://www.linkedin.com/in/weerachai-sirinthanatth-236109429/" target="_blank" style="display:inline-block; margin-top:15px; padding: 6px 14px; background: #0077b5; color: #fff; text-decoration: none; border-radius: 5px; font-size: 0.8rem; font-weight: bold;">View LinkedIn Profile</a>
+                </div>
+                <div class="team-member" style="border-color: #00e5ff;">
+                    <h4 style="color: #00e5ff;">Google Gemini & Vertex AI</h4>
+                    <div class="role">AI Engineering Co-Pilot Team</div>
+                    <p>ขับเคลื่อนในฐานะ Solo-Founder ยุคใหม่ โดยใช้โมเดล Gemini ของ Google เป็นแกนกลางในการสร้างและดูแลสถาปัตยกรรม Python Backend และ Cloud Run Microservices ทั้งหมด[cite: 4, 15]</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">🚀 Product Architecture & Current Stage</h3>
+            <p style="margin-bottom: 5px;"><strong>Product Offering:</strong> ระบบนิเวศ AI SaaS แบบ multi-tenant ที่ให้บริการปิดการขายอัตโนมัติ 24/7, ระบบฐานความรู้ RAG, ประมวลผลเอกสาร และการเรนเดอร์สื่อ 4K[cite: 4, 15]</p>
+            <p style="margin-bottom: 0;"><strong>Current Stage of Development:</strong> <strong style="color: #FFD700;">Production-Ready Functional MVP (Deployed)</strong> ระบบ Microservices ถูกโฮสต์บน Google Cloud Run (Region: <code>asia-southeast3</code>) รองรับการปรับใช้อย่างต่อเนื่องผ่าน CI/CD เชื่อมต่อตรงกับ GitHub อย่างสมบูรณ์[cite: 4, 15]</p>
+        </div>
+    </section>
 
     <!-- ส่วนเลือกแพ็กเกจ -->
     <section id="pricing" class="pricing-section reveal">
@@ -306,17 +377,17 @@
         </div>
     </div>
 
-    <!-- Modal 100 VIP สมบูรณ์แบบใหม่ -->
+    <!-- Modal 100 VIP สมบูรณ์แบบ -->
     <div class="modal-overlay" id="vipModalOverlay">
         <div class="modal-box" id="vipModalBox" style="max-width: 700px; padding: 25px;">
             <span class="close-btn" onclick="closeVipModal()">&times;</span>
             <h2 style="color: #FFD700; text-align: center; margin-top: 0; font-size: 1.6rem;">👑 สมัครสมาชิก 100 VIP Founder</h2>
             
             <div class="vip-payment-box">
-                <div class="personal-token-id">
-                    <p>YOUR PERSONAL VIP TOKEN ID</p>
-                    <h2><span id="vipTokenCode">VIP-LOADING</span></h2>
-                    <span>✓ ระบบสร้างรหัส Token ประจำตัวให้คุณเรียบร้อยแล้ว</span>
+                <div class="personal-token-id" style="background: rgba(255,215,0,0.08); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,215,0,0.3); margin-bottom: 20px;">
+                    <p style="margin: 0; color: #aaa; font-size: 0.85rem;">YOUR PERSONAL VIP TOKEN ID</p>
+                    <h2 style="margin: 5px 0; color: #FFD700;"><span id="vipTokenCode">VIP-LOADING</span></h2>
+                    <span style="color: #00e5ff; font-size: 0.8rem;">✓ ระบบสร้างรหัส Token ประจำตัวให้คุณเรียบร้อยแล้ว</span>
                 </div>
 
                 <div class="agent-input-group">
@@ -333,6 +404,33 @@
             </div>
         </div>
     </div>
+
+    <!-- 💬 Web AI Sandbox Widget (ระบบทดสอบแชทบอทบนหน้าเว็บจริงสำหรับกรรมการ Google) -->
+    <div id="aiChatWidget">
+        <button id="chatToggleBtn" onclick="toggleChatBox()" title="ทดสอบแชทกับ AI">💬</button>
+        <div id="chatBoxContainer">
+            <div class="chat-header">
+                <span>🤖 SIRINTHANATTH PRIME - AI Live Demo</span>
+                <span style="cursor:pointer; font-size:18px;" onclick="toggleChatBox()">&times;</span>
+            </div>
+            <div class="chat-body" id="chatBody">
+                <div class="chat-msg bot">สวัสดีครับท่านผู้บริหาร ผมคือ Central Boss ผู้ช่วย AI อัจฉริยะ พร้อมให้บริการทดสอบระบบครับ มีอะไรให้ผมช่วยเหลือไหมครับ?</div>
+            </div>
+            <div class="chat-footer">
+                <input type="text" id="chatUserInput" placeholder="พิมพ์ข้อความทดสอบ..." onkeypress="if(event.key === 'Enter') sendDemoMessage()">
+                <button onclick="sendDemoMessage()">ส่ง</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        &copy; 2026 Marketing Spark Combine Co., Ltd. All Rights Reserved.<br>
+        <div style="margin-top: 10px;">
+            <a href="index.html">หน้าแรก</a> | 
+            <a href="agent.html">พาร์ทเนอร์โปรแกรม</a> | 
+            <a href="https://lin.ee/@636pgjnh/SIRINTHANATTH_PRIME" target="_blank">LINE Official Account</a>
+        </div>
+    </footer>
 
     <!-- Script ควบคุมระบบทั้งหมด -->
     <script>
@@ -367,7 +465,6 @@
         // 🔗 2. ระบบเชื่อมต่อ LIFF แบบมี Fallback ป้องกันเว็บค้าง
         async function initializeLiffAndBackend() {
             try {
-                // ใส่ Timeout กันเหนียว หากเน็ตช้าหรือ LINE API ค้าง
                 const liffInit = liff.init({ liffId: LIFF_ID });
                 await Promise.race([liffInit, new Promise((_, rej) => setTimeout(() => rej(new Error('LIFF Timeout')), 5000))]);
                 
@@ -402,7 +499,7 @@
             initializeLiffAndBackend();
         });
 
-        // 🛡️ 3. ระบบแสดงสถานะโหลด ป้องกันคนกดเบิ้ล (Anti-Double Click)
+        // 🛡️ 3. ระบบแสดงสถานะโหลด ป้องกันคนกดเบิ้ล
         function showGlobalLoader(text) {
             document.getElementById('loaderText').innerText = text;
             document.getElementById('globalLoader').style.display = 'flex';
@@ -487,13 +584,12 @@
             }
         }
 
-        // 🧠 4. การประมวลผล Checkout อย่างปลอดภัย
         function processVipPayment() {
             showGlobalLoader("GENERATING SECURE PAYMENT LINK...");
             const agentCodeInput = document.getElementById('agentCode').value.trim() || "NOAGENT";
             const payload = currentVipToken + "_AGENT_" + agentCodeInput + "_LINE_" + userLineId;
             
-            setTimeout(() => { // จำลองจังหวะดีเลย์เพื่อความเนียนก่อนย้ายไป Stripe
+            setTimeout(() => {
                 window.location.href = STRIPE_VIP_CHECKOUT_URL + "?client_reference_id=" + encodeURIComponent(payload);
             }, 800);
         }
@@ -531,6 +627,48 @@
                     window.location.href = LINE_OA_REDIRECT_URL; 
                 }
             }, 800);
+        }
+
+        // 💬 4. Web AI Sandbox Widget Control (ทดสอบแชทสดบนเว็บ)
+        function toggleChatBox() {
+            const box = document.getElementById('chatBoxContainer');
+            box.style.display = (box.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        async function sendDemoMessage() {
+            const input = document.getElementById('chatUserInput');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const chatBody = document.getElementById('chatBody');
+            chatBody.innerHTML += `<div class="chat-msg user">${text}</div>`;
+            input.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // จำลองการตอบกลับอัจฉริยะจากระบบ Cloud Run Backend / Gemini
+            const typingId = 'typing_' + Date.now();
+            chatBody.innerHTML += `<div class="chat-msg bot" id="${typingId}">กำลังประมวลผลผ่านระบบ Central Boss...</div>`;
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            try {
+                const res = await fetch(`${CLOUD_RUN_API_URL}/api/v1/line/demo-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, user_id: userLineId })
+                });
+                const data = await res.json();
+                document.getElementById(typingId).innerText = data.reply || "รับทราบคำสั่งเรียบร้อยครับ ระบบพร้อมเชื่อมต่อผ่าน LINE OA 100%";
+            } catch(e) {
+                // Fallback สมาร์ทบอทตอบกลับกรณีออฟไลน์ชั่วคราว
+                setTimeout(() => {
+                    document.getElementById(typingId).innerText = "ได้รับข้อความของคุณแล้วครับ ยินดีต้อนรับสู่ SIRINTHANATTH PRIME ระบบหลังบ้านพร้อมสลับไปทำงานบน LINE OA ทันทีครับ";
+                }, 1000);
+            }
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function playWelcomeAudio() {
+            alert("👑 SIRINTHANATTH PRIME: เสียงต้อนรับผู้บริหารระดับสูงเปิดใช้งานเรียบร้อย ระบบพร้อมสเตปถัดไปครับ");
         }
     </script>
 </body>

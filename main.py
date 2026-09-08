@@ -58,10 +58,12 @@ async def lifespan(app: FastAPI):
     try:
         from core_services.swarm_dispatcher import swarm_hub
         from agents.worker_0_ceo_secretary import CeoSecretaryWorker
-        from agents.worker_9_prime import PrimeAdvisorWorker 
+        from agents.worker_9_prime import PrimeAdvisorWorker
+        from agents.worker_13_it_architect import ITArchitectWorker 
         
         swarm_hub.register("WORKER_0_CEO", CeoSecretaryWorker())
         swarm_hub.register("WORKER_9_PRIME", PrimeAdvisorWorker())
+        swarm_hub.register("WORKER_13_IT", ITArchitectWorker())
         logger.info("✅ [Swarm Network]: All AI Agents are online and synchronized.")
     except ImportError as e:
         logger.warning(f"⚠️ [Swarm Network Warning]: AI Workers not fully loaded -> {e}")

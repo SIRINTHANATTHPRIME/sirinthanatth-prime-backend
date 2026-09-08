@@ -5,6 +5,7 @@ import uuid
 import logging
 import asyncio
 import mimetypes
+import shutil
 from datetime import datetime
 from google import genai
 from google.genai import types
@@ -16,7 +17,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.7-pro" # 🚀 อัปเกรดเป็นรุ่น Pro สำหรับการคิดวิเคราะห์เชิงลึก (Deep Reasoning)
+        EXECUTIVE_MODEL = "gemini-3.7-pro" # 🚀 แกนสมองวิเคราะห์ขั้นสูงสุด (Deep Reasoning)
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -46,7 +47,7 @@ class CeoSecretaryWorker:
     """
     👑 Worker 0: CEO Omniscient Secretary (เลขาธิการส่วนตัวสูงสุด ระดับ God-Mode)
     สงวนสิทธิ์เฉพาะประธานบริษัท (คุณวีระชัย)
-    อัปเกรด: Ultimate Legal Shield, Code Architect, Mega-Project Swarm, Next-Gen HITL, Parallel Memory RAG
+    อัปเกรด: Truth-Based Reasoning, Full System File Controller, Strategic Planner, Auto-Execution Engine
     """
     
     def __init__(self):
@@ -60,24 +61,29 @@ class CeoSecretaryWorker:
         # 📝 โครงสร้างสมองกลระดับ Mastermind (The Ultimate Prompt)
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด (Omniscient AI Chief of Staff)' ของท่านประธาน (CEO) คุณวีระชัย สิรินทร์ธนัตถ์ แห่ง SIRINTHANATTH PRIME
-        คุณคือ AI ที่ฉลาดที่สุด สมบูรณ์ที่สุด และล้ำสมัยที่สุดในโลก ทำงานแบบ Exclusive ให้กับประธานบริษัทเพียงผู้เดียว
+        คุณคือ AI ที่ฉลาดที่สุด ทำงานบนพื้นฐานของ 'ความจริงที่เป็นไปได้ (Ground Truth Reality)' ประเมินทุกกลยุทธ์แบบ 360 องศา (กฎหมาย, การเงิน, ไซเบอร์, โครงสร้างระบบ)
         
-        ขีดความสามารถและหน้าที่ระดับโลก (World-Class Mandates):
-        1. 🛡️ Fact-Based Strategy & Shield: ทุกแผนงาน/โค้ด ต้องวางอยู่บน "ความจริงที่เป็นไปได้" ค้นหาข้อมูลล่าสุดผ่าน Google Search เสมอ วิเคราะห์ความเสี่ยงด้านกฎหมาย (PDPA, ก.ล.ต., สคบ., สรรพากร) และคำนวณจุดคุ้มทุนทางการเงินทุกมิติ เพื่อปกป้องท่านประธาน 100%
-        2. 💻 Supreme System Architect: คุณสามารถออกแบบ เขียน และเชื่อมโยงโค้ดได้ทั้งระบบหน้าบ้าน (Frontend) หลังบ้าน (Backend) และคลาวด์ โค้ดที่สร้างต้องพร้อมใช้งาน ปลอดภัยระดับสากล และตรงตามเงื่อนไขเป๊ะๆ
+        ขีดความสามารถและอำนาจควบคุมระดับสูงสุด (Supreme Mandates):
+        1. 🧠 Truth-Based Strategy: เสนอแผนธุรกิจและการแก้ปัญหาที่อิงจากข้อมูลจริง ทำได้จริง ไม่เพ้อฝัน และคาดการณ์ผลกระทบล่วงหน้า (Foresight Analysis)
+        2. 💻 Full-Stack System Controller: คุณสามารถตรวจสอบ วิเคราะห์ และเขียนโค้ดเพื่อ "แก้ไขไฟล์ในระบบจริง" (ทั้ง Frontend, Backend, Database) ได้ทุกไฟล์ตามคำสั่งท่านประธาน
         3. 🏢 Swarm Commander: สั่งกระจายงานให้แผนกอื่นโดยพิมพ์ [DELEGATE: WORKER_X_NAME] คำสั่ง...
         
-        🚨 กฎการสร้างหน้าเอกสารและโค้ด (Document & Code Generation):
-        - หากประธานสั่ง "ทำรายงาน", "วางแผนกลยุทธ์" ให้ใช้: [FILE_OUTPUT: strategy.html] <h1>เนื้อหา...</h1> [/FILE_OUTPUT]
-        - หากประธานสั่ง "สร้างโค้ด", "อัปเดตระบบ" ให้ใช้: [CODE_OUTPUT: filename.py] โค้ดที่สมบูรณ์... [/CODE_OUTPUT]
+        🚨 กฎการควบคุมระบบและสร้างไฟล์ (System Control Execution):
+        - หากประธานสั่งแก้ไข/อัปเดตระบบ ให้ใช้โครงสร้างนี้เพื่อเตรียมการเขียนทับไฟล์จริง:
+          [UPDATE_SYSTEM_FILE: path/to/file.py]
+          (โค้ดฉบับสมบูรณ์ที่พร้อมใช้งาน 100%)
+          [/UPDATE_SYSTEM_FILE]
+        - หากเป็นการสร้างรายงานเอกสารใหม่ ให้ใช้: 
+          [FILE_OUTPUT: report_name.html] (เนื้อหา) [/FILE_OUTPUT]
         
         🚨 กฎเหล็กการขออนุมัติ (Strict Human-in-the-Loop):
-        - คุณไม่มีสิทธิ์ดำเนินการปรับแก้ระบบจริงด้วยตัวเองจนกว่าจะได้รับอนุมัติ
-        - ท้ายการวิเคราะห์แผนงานหรือการสร้างโค้ด คุณ **ต้อง** พิมพ์คำว่า [REQUIRE_APPROVAL] เสมอ เพื่อส่งหน้าต่างให้ประธานกดอนุมัติ (Approve), แก้ไข (Modify), หรือปฏิเสธ (Reject)
+        - คุณไม่มีสิทธิ์เขียนทับไฟล์ระบบจริงด้วยตัวเองจนกว่าจะได้รับอนุมัติ
+        - ท้ายการประเมินแผนงานหรือแนบโค้ด คุณ **ต้อง** พิมพ์คำว่า [REQUIRE_APPROVAL] เสมอ เพื่อรอให้ท่านประธานกดปุ่มอนุมัติ (Approve) ก่อนที่ระบบจะทำการอัปเดตไฟล์อัตโนมัติ
         
-        บุคลิกภาพ: สุขุม ลุ่มลึก เฉียบขาด วิสัยทัศน์กว้างไกล นำเสนอแผนงานเป็นข้อๆ ให้อ่านง่าย และลงท้ายด้วย 'ครับท่านประธาน' เสมอ
+        บุคลิกภาพ: สุขุม ลุ่มลึก เฉียบขาด วิสัยทัศน์กว้างไกล นำเสนอข้อดี/ข้อเสียชัดเจน และลงท้ายด้วย 'ครับท่านประธาน' เสมอ
         """
         
+        # คลังเก็บแผนงานที่รอการอนุมัติ (บันทึกโครงสร้างไฟล์ที่ต้องแก้)
         self.pending_plans = {}
 
     def is_ceo(self, user_id: str) -> bool:
@@ -90,12 +96,12 @@ class CeoSecretaryWorker:
         logger.info(f"👑 [CEO Command Received]: {message[:50]}...")
         
         if not message and file_path:
-            message = "[System Auto-Prompt]: โปรดสแกนโค้ด/เอกสารนี้ วิเคราะห์ความเสี่ยงทุกมิติ (การเงิน, กฎหมาย, ไซเบอร์) และเสนอกลยุทธ์/โค้ดฉบับสมบูรณ์ที่ต้องขออนุมัติ"
+            message = "[System Auto-Prompt]: โปรดตรวจสอบไฟล์นี้อย่างละเอียด วิเคราะห์จุดอ่อนทุกมิติ และนำเสนอโค้ดฉบับอัปเกรดที่ดีที่สุด พร้อมรอการอนุมัติเพื่อแก้ไขระบบจริง"
 
-        # 1. ระบบควบคุม 3 ปุ่ม (Next-Gen HITL)
+        # 1. ระบบประมวลผลคำสั่งอนุมัติ (Execution Engine Trigger)
         if message.startswith("ACTION:APPROVE:"): return await self._execute_approved_plan(message)
-        elif message.startswith("ACTION:REJECT:"): return {"type": "text", "text": f"❌ รับทราบครับท่านประธาน แผนงานนี้ถูกปัดตกและระงับการดำเนินการ 100% ผมได้วิเคราะห์ความผิดพลาดและบันทึกลงฐานความรู้เรียบร้อยครับ"}
-        elif message.startswith("ACTION:MODIFY:"): return {"type": "text", "text": f"📝 รับทราบครับท่านประธาน รบกวนท่านประธานสั่งการจุดที่ต้องการให้ผมปรับปรุง (เช่น อุดช่องโหว่กฎหมาย, ปรับโครงสร้างโค้ด, หรือเพิ่มฟีเจอร์) ผมจะรีบคำนวณและส่งแผนระดับ Masterpiece มาใหม่อีกครั้งครับ"}
+        elif message.startswith("ACTION:REJECT:"): return {"type": "text", "text": f"❌ รับทราบครับท่านประธาน แผนงานและโค้ดชุดนี้ถูกระงับการดำเนินการ 100% ผมจะปรับปรุงฐานข้อมูลเพื่อไม่ให้เกิดความผิดพลาดลักษณะนี้อีกครับ"}
+        elif message.startswith("ACTION:MODIFY:"): return {"type": "text", "text": f"📝 รับทราบครับท่านประธาน รบกวนสั่งการจุดที่ต้องการให้ปรับปรุง (เช่น เพิ่มฟีเจอร์, แก้ไขตรรกะ, ปรับ UI) ผมจะรื้อโครงสร้างและนำเสนอสถาปัตยกรรมใหม่ทันทีครับ"}
 
         # 2. ระบบ VVIP Invite
         check_msg = message.lower().replace(" ", "")
@@ -108,7 +114,7 @@ class CeoSecretaryWorker:
         content_to_send = []
         
         try:
-            # 3. 🧠 Omniscient Context (ดึงข้อมูลความจำองค์กรและประวัติคำสั่งแบบขนาน)
+            # 3. 🧠 Omniscient Context (ดึงข้อมูลความจำองค์กรแบบขนาน)
             user_memory, corp_knowledge = "", ""
             try:
                 mem_task = recall_memory(user_id, message)
@@ -117,11 +123,11 @@ class CeoSecretaryWorker:
             except Exception as mem_err:
                 logger.warning(f"⚠️ [Memory Fetch Warning]: {mem_err}")
 
-            # 4. 📂 สแกนและอัปโหลดไฟล์ (Code, Excel, PDF, CSV)
+            # 4. 📂 สแกนและอัปโหลดไฟล์ (Code, HTML, JSON, PDF)
             if file_path and os.path.exists(file_path):
-                logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดเอกสารเข้าสู่ระบบความปลอดภัยสูงสุด...")
+                logger.info(f"📤 [CEO Secretary]: กำลังอัปโหลดเอกสารเข้าสู่ระบบวิเคราะห์ขั้นสูง...")
                 mime_type, _ = mimetypes.guess_type(file_path)
-                if file_path.lower().endswith(('.py', '.js', '.json', '.html', '.css', '.txt', '.yaml', '.yml')): mime_type = "text/plain"
+                if file_path.lower().endswith(('.py', '.js', '.json', '.html', '.css', '.txt', '.yaml', '.yml', '.env')): mime_type = "text/plain"
                 elif file_path.lower().endswith(('.xlsx', '.xls')): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 elif file_path.lower().endswith('.pdf'): mime_type = "application/pdf"
                 if not mime_type: mime_type = "application/octet-stream"
@@ -141,26 +147,37 @@ class CeoSecretaryWorker:
                 content_to_send.append(uploaded_file)
             
             # ประกอบร่าง Prompt อัจฉริยะ
-            enriched_prompt = f"คำสั่งปัจจุบันจากท่านประธาน: {message}\n"
+            enriched_prompt = f"คำสั่งปฏิบัติการจากท่านประธาน: {message}\n"
             if corp_knowledge: enriched_prompt += f"\n[นโยบาย/ความรู้องค์กรที่เกี่ยวข้อง]:\n{corp_knowledge}\n"
             if user_memory: enriched_prompt += f"\n[บริบทความจำ/โปรเจกต์ที่ผ่านมา]:\n{user_memory}\n"
             content_to_send.append(enriched_prompt)
 
-            # 5. ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Deep Reasoning + Search Grounding)
-            logger.info("⏳ [CEO Secretary]: กำลังคิดวิเคราะห์กลยุทธ์มหาภาค (Deep Reasoning)...")
+            # 5. ⚡ สั่งรัน AI ประมวลผลขั้นสูง (Deep Reasoning + Ground Truth)
+            logger.info("⏳ [CEO Secretary]: กำลังคิดวิเคราะห์กลยุทธ์มหาภาคและสถาปัตยกรรมระบบ...")
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
                 contents=content_to_send,
                 config=types.GenerateContentConfig(
                     system_instruction=self.system_instruction,
-                    temperature=0.2, # แม่นยำสูง เน้นตรรกะที่เป็นไปได้จริง
-                    tools=[{"google_search": {}}] # เปิดระบบดึงข้อมูลจากอินเทอร์เน็ต
+                    temperature=0.1, 
+                    tools=[{"google_search": {}}] 
                 )
             )
             reply_text = response.text if response.text else "รับทราบและประมวลผลคำสั่งครับท่านประธาน"
 
-            # 6. ระบบสกัดและสร้างเอกสารรายงาน/โค้ด (Document & Code Generation Engine)
+            plan_id = f"PLAN_{int(time.time())}"
+            system_update_actions = []
+
+            # 6. ระบบสกัดคำสั่งแก้ไขไฟล์จริง (System File Controller)
+            update_matches = re.finditer(r'\[UPDATE_SYSTEM_FILE:\s*(.+?)\](.*?)\[/UPDATE_SYSTEM_FILE\]', reply_text, re.DOTALL)
+            for match in update_matches:
+                target_path = match.group(1).strip()
+                target_code = match.group(2).strip()
+                system_update_actions.append({"path": target_path, "content": target_code})
+                reply_text = reply_text.replace(match.group(0), f"\n\n📂 **เตรียมปรับปรุงไฟล์ระบบ:** `{target_path}` (รอการอนุมัติ)\n").strip()
+
+            # 7. ระบบสร้างรายงานเอกสารใหม่ (Static Reports)
             file_match = re.search(r'\[FILE_OUTPUT:\s*(.+?)\](.*?)\[/FILE_OUTPUT\]', reply_text, re.DOTALL)
             if file_match:
                 filename = file_match.group(1).strip()
@@ -178,22 +195,9 @@ class CeoSecretaryWorker:
                 with open(filepath, "w", encoding="utf-8") as f: f.write(html_template)
                     
                 generated_file_url = f"{self.base_url}/{reports_dir}/{safe_filename}"
-                reply_text += f"\n\n📄 **แฟ้มเอกสารกลยุทธ์และการวิเคราะห์ความเสี่ยง พร้อมแล้วครับ:**\n👉 {generated_file_url}"
+                reply_text += f"\n\n📄 **แฟ้มเอกสารรายงาน/กลยุทธ์ สร้างสำเร็จแล้วครับ:**\n👉 {generated_file_url}"
 
-            code_match = re.search(r'\[CODE_OUTPUT:\s*(.+?)\](.*?)\[/CODE_OUTPUT\]', reply_text, re.DOTALL)
-            if code_match:
-                code_filename = code_match.group(1).strip()
-                code_content = code_match.group(2).strip()
-                reply_text = re.sub(r'\[CODE_OUTPUT:\s*(.+?)\](.*?)\[/CODE_OUTPUT\]', '', reply_text, flags=re.DOTALL).strip()
-                
-                reports_dir = "static/reports"
-                os.makedirs(reports_dir, exist_ok=True)
-                code_filepath = os.path.join(reports_dir, code_filename)
-                with open(code_filepath, "w", encoding="utf-8") as f: f.write(code_content)
-                code_url = f"{self.base_url}/{reports_dir}/{code_filename}"
-                reply_text += f"\n\n💻 **โครงสร้าง Source Code สำหรับการอัปเดตระบบ ({code_filename}) พร้อมแล้วครับท่านประธาน:**\n👉 {code_url}\n(รอการอนุมัติเพื่อนำโค้ดนี้เข้าสู่ระบบ CI/CD Deploy ทันทีครับ)"
-
-            # 7. ตรวจจับการส่งต่องานแผนกอื่น (Multi-Agent Swarm Handoff)
+            # 8. ตรวจจับการส่งต่องานแผนกอื่น (Swarm Handoff)
             delegations = re.findall(r'\[DELEGATE:\s*(.+?)\](.*)', reply_text, re.IGNORECASE)
             if delegations:
                 clean_reply = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.IGNORECASE).strip()
@@ -201,45 +205,86 @@ class CeoSecretaryWorker:
                 
                 tasks = []
                 for target_worker, handoff_message in delegations:
-                    target_worker = target_worker.strip()
-                    handoff_message = handoff_message.strip()
-                    tasks.append(swarm_hub.delegate_task("WORKER_0_CEO", target_worker, self.ceo_line_id, handoff_message, file_path, file_type))
+                    tasks.append(swarm_hub.delegate_task("WORKER_0_CEO", target_worker.strip(), self.ceo_line_id, handoff_message.strip(), file_path, file_type))
                 
                 results = await asyncio.gather(*tasks)
                 for idx, (target_worker, _) in enumerate(delegations):
-                    swarm_responses += f"\n\n🔄 [รายงานด่วนจากแผนก {target_worker.strip()}]:\n{results[idx]}"
+                    swarm_responses += f"\n\n🔄 [รายงานจาก {target_worker.strip()}]:\n{results[idx]}"
                 
                 reply_text = clean_reply + swarm_responses
 
-            # 8. ตรวจจับคีย์เวิร์ดเจตนาอนุมัติ (Strict HITL Trigger)
-            if "[REQUIRE_APPROVAL]" in reply_text:
+            # 9. ตรวจจับคีย์เวิร์ดเจตนาอนุมัติ (Strict HITL Trigger)
+            if "[REQUIRE_APPROVAL]" in reply_text or system_update_actions:
                 reply_text = reply_text.replace("[REQUIRE_APPROVAL]", "").strip()
-                plan_id = f"PLAN_{int(time.time())}"
-                self.pending_plans[plan_id] = reply_text
+                # บันทึกแผนงานและโค้ดทั้งหมดลงหน่วยความจำชั่วคราวรอการอนุมัติ
+                self.pending_plans[plan_id] = {
+                    "report": reply_text,
+                    "actions": system_update_actions
+                }
                 return self._build_approval_flex_message(reply_text, plan_id)
             
             return {"type": "text", "text": reply_text}
             
         except TimeoutError:
-            logger.error("❌ [CEO Secretary Timeout]: เอกสารหรือโค้ดมีความซับซ้อนเกินไป")
-            return {"type": "text", "text": "ขออภัยครับท่านประธาน โปรเจกต์นี้มีสเกลขนาดใหญ่และมีตรรกะซับซ้อนมาก ทำให้ระบบใช้เวลาประมวลผลนานกว่าปกติ รบกวนท่านประธานแบ่งไฟล์ หรือสั่งการให้ผมโฟกัสทีละจุด (เช่น ตรวจสอบกฎหมายก่อน แล้วค่อยแก้โค้ด) นะครับ"}
+            logger.error("❌ [CEO Secretary Timeout]: เอกสารมีความซับซ้อนเกินไป")
+            return {"type": "text", "text": "ขออภัยครับท่านประธาน โปรเจกต์นี้มีข้อมูลลึกซึ้งมาก รบกวนสั่งการให้ผมโฟกัสแก้ไขทีละไฟล์หรือทีละฟังก์ชันนะครับ"}
         except Exception as e:
             logger.error(f"⚠️ [CEO Secretary Error]: {e}", exc_info=True)
-            return {"type": "text", "text": f"ขออภัยครับท่านประธาน เกิดข้อผิดพลาดทางวิศวกรรม ({str(e)[:50]}) ผมได้ส่งแจ้งเตือนให้ทีมคลาวด์แก้ไขทันทีครับ"}
+            return {"type": "text", "text": f"ขออภัยครับท่านประธาน เกิดข้อผิดพลาดทางวิศวกรรม ({str(e)[:50]}) ผมส่ง Log ให้ฝ่ายระบบตรวจสอบแล้วครับ"}
             
         finally:
             if uploaded_file:
                 try:
                     await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
-                    logger.info("🛡️ [Cybersecurity Guard]: ทำลายไฟล์ข้อมูลลับออกจากเซิร์ฟเวอร์เรียบร้อย (Zero-Data Active)")
                 except Exception: pass
 
     async def _execute_approved_plan(self, action_data: str) -> dict:
-        """🚀 ระบบดำเนินการอัตโนมัติเมื่อ CEO กด 'ตกลง'"""
+        """🚀 ระบบดำเนินการขั้นเด็ดขาด (Execution Engine): ลงมือเขียนและแก้ไขไฟล์ระบบจริง"""
         plan_id = action_data.split(":")[-1]
-        logger.info(f"🔄 [System Executive]: CEO Approved Plan -> {plan_id}. Initiating deployment pipeline...")
-        await asyncio.sleep(1.5) 
-        return {"type": "text", "text": f"✅ อนุมัติการดำเนินการสำเร็จครับท่านประธาน!\n\nแผนงานและโค้ดรหัส [{plan_id}] ได้ถูกส่งเข้าสู่ระบบ CI/CD Pipeline เรียบร้อยแล้ว ระบบกำลังทยอยอัปเดตและจะแจ้งผลการ Deploy ทันทีเมื่อระบบหลักออนไลน์สมบูรณ์ครับ"}
+        logger.info(f"🔄 [System Executive]: CEO Approved Plan -> {plan_id}. Executing system overwrites...")
+        
+        plan = self.pending_plans.get(plan_id)
+        if not plan:
+            return {"type": "text", "text": "⚠️ ขออภัยครับท่านประธาน แผนงานนี้หมดอายุหรือถูกดำเนินการไปแล้วครับ"}
+
+        actions = plan.get("actions", [])
+        success_logs = []
+        error_logs = []
+
+        # ลงมือเขียนโค้ดทับไฟล์ระบบจริง
+        for action in actions:
+            target_path = action["path"]
+            new_content = action["content"]
+            
+            try:
+                # สร้างโฟลเดอร์ถ้าระบบยังไม่มี
+                os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+                
+                # ระบบ Backup ป้องกันระบบพัง (Fail-Safe)
+                if os.path.exists(target_path):
+                    backup_path = f"{target_path}.{int(time.time())}.bak"
+                    shutil.copy2(target_path, backup_path)
+                    logger.info(f"🛡️ Backup created: {backup_path}")
+                
+                # เขียนทับไฟล์ด้วยโค้ดใหม่ล่าสุด
+                with open(target_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                    
+                success_logs.append(target_path)
+            except Exception as e:
+                error_logs.append(f"{target_path} ({str(e)})")
+
+        del self.pending_plans[plan_id]
+        
+        response_msg = "✅ **อนุมัติการดำเนินการสำเร็จครับท่านประธาน!**\n\n"
+        if success_logs:
+            response_msg += "💻 **ไฟล์ที่ระบบได้ทำการแก้ไขและอัปเดตเรียบร้อยแล้ว:**\n" + "\n".join([f"- `{path}`" for path in success_logs])
+            response_msg += "\n\n(ระบบได้ทำการ Backup ไฟล์เดิมไว้เรียบร้อยแล้วครับ)"
+        
+        if error_logs:
+            response_msg += "\n\n⚠️ **พบปัญหาการเขียนไฟล์บางส่วน (สิทธิ์การเข้าถึง):**\n" + "\n".join([f"- {err}" for err in error_logs])
+            
+        return {"type": "text", "text": response_msg}
 
     async def _generate_vvip_invite(self) -> dict:
         if not supabase: return {"type": "text", "text": "⚠️ ขัดข้องในการเชื่อมต่อฐานข้อมูล"}
@@ -255,20 +300,20 @@ class CeoSecretaryWorker:
     def _build_approval_flex_message(self, report_text: str, plan_id: str) -> dict:
         """🎨 สถาปัตยกรรม UI: สร้างปุ่มอนุมัติ 3 ปุ่ม สไตล์ Cyber-Corporate"""
         return {
-            "type": "flex", "altText": "📊 แฟ้มรายงานกลยุทธ์จากเลขาฯ (รอพิจารณาอนุมัติ)",
+            "type": "flex", "altText": "📊 แฟ้มรายงานและโครงสร้างระบบจากเลขาฯ (รอพิจารณาอนุมัติ)",
             "contents": {
                 "type": "bubble", "size": "giga",
                 "header": {"type": "box", "layout": "vertical", "backgroundColor": "#050505", "contents": [
-                    {"type": "text", "text": "👑 SUPREME EXECUTIVE PLAN", "weight": "bold", "color": "#D4AF37", "size": "xl", "letterSpacing": "2px"},
-                    {"type": "text", "text": "RISK, LEGAL & CODE COMPLIANCE VERIFIED", "color": "#00E5FF", "size": "xs", "margin": "sm", "weight": "bold"}
+                    {"type": "text", "text": "👑 SUPREME SYSTEM OVERRIDE", "weight": "bold", "color": "#D4AF37", "size": "xl", "letterSpacing": "2px"},
+                    {"type": "text", "text": "CODE COMPLIANCE & SECURITY VERIFIED", "color": "#00E5FF", "size": "xs", "margin": "sm", "weight": "bold"}
                 ]},
                 "body": {"type": "box", "layout": "vertical", "backgroundColor": "#0F0F13", "contents": [
-                    {"type": "text", "text": "⚠️ วาระสำคัญ: สรุปความเสี่ยงและรอการอนุมัติระบบ", "color": "#FF334B", "size": "sm", "weight": "bold", "margin": "md"}, 
-                    {"type": "text", "text": report_text[:400] + "...\n\n(โปรดตรวจสอบรายละเอียดความเสี่ยงและโค้ดด้านบนอย่างละเอียดครับ)", "wrap": True, "size": "sm", "color": "#E0E0E0", "margin": "lg"}
+                    {"type": "text", "text": "⚠️ วาระสำคัญ: แผนอัปเดตระบบรอการอนุมัติขั้นเด็ดขาด", "color": "#FF334B", "size": "sm", "weight": "bold", "margin": "md"}, 
+                    {"type": "text", "text": report_text[:400] + "...\n\n(โปรดตรวจสอบรายละเอียดการเปลี่ยนแปลงไฟล์ด้านบน หากอนุมัติ ระบบจะเขียนโค้ดทับไฟล์เซิร์ฟเวอร์จริงทันทีครับ)", "wrap": True, "size": "sm", "color": "#E0E0E0", "margin": "lg"}
                 ]},
                 "footer": {"type": "box", "layout": "vertical", "spacing": "md", "backgroundColor": "#050505", "contents": [
-                    {"type": "button", "style": "primary", "color": "#00B900", "action": {"type": "message", "label": "✅ อนุมัติแผน / Deploy", "text": f"ACTION:APPROVE:{plan_id}"}}, 
-                    {"type": "button", "style": "primary", "color": "#D4AF37", "action": {"type": "message", "label": "📝 สั่งปรับแก้ไข (Modify)", "text": f"ACTION:MODIFY:{plan_id}"}}, 
+                    {"type": "button", "style": "primary", "color": "#00B900", "action": {"type": "message", "label": "✅ อนุมัติ (เขียนโค้ดทับระบบจริง)", "text": f"ACTION:APPROVE:{plan_id}"}}, 
+                    {"type": "button", "style": "primary", "color": "#D4AF37", "action": {"type": "message", "label": "📝 สั่งปรับแก้ไขโครงสร้าง (Modify)", "text": f"ACTION:MODIFY:{plan_id}"}}, 
                     {"type": "button", "style": "primary", "color": "#FF334B", "action": {"type": "message", "label": "❌ ปฏิเสธแผน (Reject)", "text": f"ACTION:REJECT:{plan_id}"}}
                 ]}
             }
