@@ -63,4 +63,4 @@ images:
 # 🚀 บังคับเก็บ Log ลง Cloud Logging อย่างเดียว (แก้ Error สีแดงที่ท่านประธานพบ)
 options:
   logging: CLOUD_LOGGING_ONLY
-dynamic_substitutions: true
+dynamicSubstitutions: true
