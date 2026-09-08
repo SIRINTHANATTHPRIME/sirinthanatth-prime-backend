@@ -1,13 +1,37 @@
+# ==============================================================================
+# 🚀 SIRINTHANATTH PRIME - Enterprise CI/CD Pipeline (Google Cloud Build)
+# ==============================================================================
 steps:
-  # 1. สร้าง Image จาก Dockerfile
+  # ----------------------------------------------------------------------------
+  # 1. 🧠 Smart Cache: ดึง Image เวอร์ชันล่าสุดมาใช้เป็น Cache เพื่อเร่งความเร็ว Build
+  # ----------------------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA', '.']
-  
-  # 2. ดัน Image ขึ้น Cloud Registry ของ Google
+    entrypoint: 'bash'
+    args: ['-c', 'docker pull gcr.io/$PROJECT_ID/prime-core-agent:latest || exit 0']
+
+  # ----------------------------------------------------------------------------
+  # 2. 🏗️ Build: สร้าง Image ด้วย Multi-Stage Dockerfile และใช้ Cache
+  # ----------------------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA']
-  
-  # 3. อัปเดตเซิร์ฟเวอร์ Google Cloud Run อัตโนมัติ
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/prime-core-agent:latest'
+      - '--cache-from'
+      - 'gcr.io/$PROJECT_ID/prime-core-agent:latest'
+      - '.'
+
+  # ----------------------------------------------------------------------------
+  # 3. ☁️ Push: ดัน Image ขึ้น Container Registry (ทั้ง 2 Tags)
+  # ----------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/prime-core-agent', '--all-tags']
+
+  # ----------------------------------------------------------------------------
+  # 4. 🚀 Deploy: อัปเดตเซิร์ฟเวอร์ Google Cloud Run อัตโนมัติ (Zero-Downtime)
+  # ----------------------------------------------------------------------------
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -18,7 +42,25 @@ steps:
       - 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA'
       - '--region'
       - 'asia-southeast3'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'    # 🔓 อนุญาตให้ LINE Webhook ยิงเข้าหา API ได้
+      - '--cpu-boost'                # ⚡ เร่งความเร็ว CPU 2 เท่าตอน Start ลดปัญหา Timeout
+      - '--memory'
+      - '2048Mi'                     # 🧠 จัดสรร RAM 2GB ให้เพียงพอต่อการรัน AI
+      - '--cpu'
+      - '1'                          # 💻 ใช้ 1 vCPU ต่อ 1 Container
+      - '--min-instances'
+      - '0'                          # 💤 ลดลงเหลือ 0 เมื่อไม่มีคนใช้ (ประหยัดงบ)
+      - '--max-instances'
+      - '10'                         # 🛡️ ล็อกสูงสุด 10 เครื่อง ป้องกันคนยิงสแปมทำบิลช็อก
 
-# 🚀 แก้ปัญหา Error สีแดงตรงนี้! บังคับเก็บ Log ลง Cloud
+# แจ้งเตือน Cloud Build ให้รู้จัก Image ที่สร้างขึ้น
+images:
+  - 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/prime-core-agent:latest'
+
+# 🚀 บังคับเก็บ Log ลง Cloud Logging อย่างเดียว (แก้ Error สีแดงที่ท่านประธานพบ)
 options:
   logging: CLOUD_LOGGING_ONLY
+dynamic_substitutions: true

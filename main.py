@@ -14,8 +14,10 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from supabase import create_client, Client
-from core_services.swarm_dispatcher import swarm_hub
 
+# ==========================================
+# ⚙️ 1. Initialization & Environment
+# ==========================================
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_CORE")
@@ -41,6 +43,9 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     except Exception as e:
         logger.critical(f"❌ [System Critical Error]: Failed to unlock Supabase Vault: {e}")
 
+# ==========================================
+# 🚀 2. Lifespan & Swarm Network Bootup
+# ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 [System Ignition]: Booting SIRINTHANATTH PRIME Core Engine...")
@@ -49,20 +54,26 @@ async def lifespan(app: FastAPI):
     for directory in required_directories:
         os.makedirs(directory, exist_ok=True)
     
-    # โหลด Worker เฉพาะตอน Boot เท่านั้น (Lazy Initialization)
+    # 🧠 Lazy Initialization: โหลด Worker เฉพาะตอน Boot ประหยัด RAM
     try:
+        from core_services.swarm_dispatcher import swarm_hub
         from agents.worker_0_ceo_secretary import CeoSecretaryWorker
-        from agents.worker_9_prime import PrimeAdvisorWorker # แก้ไขชื่อคลาสให้ถูกต้อง
+        from agents.worker_9_prime import PrimeAdvisorWorker 
         
         swarm_hub.register("WORKER_0_CEO", CeoSecretaryWorker())
-        swarm_hub.register("WORKER_9_PRIME", PrimeAdvisorWorker()) # แก้ไขชื่อคลาสให้ถูกต้อง
+        swarm_hub.register("WORKER_9_PRIME", PrimeAdvisorWorker())
         logger.info("✅ [Swarm Network]: All AI Agents are online and synchronized.")
+    except ImportError as e:
+        logger.warning(f"⚠️ [Swarm Network Warning]: AI Workers not fully loaded -> {e}")
     except Exception as e:
-        logger.error(f"❌ [Swarm Network Error]: AI Engine failed to ignite -> {e}")
+        logger.error(f"❌ [Swarm Network Error]: AI Engine failed to ignite -> {e}", exc_info=True)
 
     yield 
     logger.info("🛑 [System Shutdown]: Gracefully shutting down services. Saving states...")
 
+# ==========================================
+# 🛡️ 3. FastAPI Core & Security Middlewares
+# ==========================================
 app = FastAPI(
     title="SIRINTHANATTH PRIME Core Engine",
     description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
@@ -71,25 +82,35 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_credentials=True, 
+    allow_methods=["GET", "POST", "OPTIONS"], # 🔒 ล็อก Method เพื่อความปลอดภัย
+    allow_headers=["*"]
+)
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
+    # 🛡️ Military-Grade Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["Content-Security-Policy"] = "default-src 'self' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:;"
     return response
 
+# ==========================================
+# 📂 4. Static Files & Routers Mount
+# ==========================================
 app.mount("/static", StaticFiles(directory="static"), name="static")
 if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="css")
 if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
+# 🔧 แก้ไขบั๊ก Double Route Mounting (เมานท์แค่ครั้งเดียวก็พอ)
 try:
     from api.routes_line import router as line_router
-    app.include_router(line_router) 
     app.include_router(line_router, prefix="/api/v1/line", tags=["LINE OA"])
     logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
 except Exception as e:
@@ -102,6 +123,9 @@ try:
 except Exception as e:
     logger.warning(f"⚠️ [System Warning]: Stats Router not found or skipped -> {e}")
 
+# ==========================================
+# 🌐 5. Core Endpoints
+# ==========================================
 @app.get("/")
 def root():
     return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "4.0.0", "mode": "Enterprise"}
@@ -124,6 +148,7 @@ def read_wallet():
 async def get_user_status(line_id: str):
     if not supabase: raise HTTPException(status_code=500, detail="Database Error")
     try:
+        # 🧵 Thread-Safe Database Query
         res = await asyncio.to_thread(supabase.table("prime_clients").select("*").eq("line_user_id", line_id).execute)
         if not res.data:
             return {"tier": "GUEST", "balance": 0, "message": "ยินดีต้อนรับสู่ SIRINTHANATTH PRIME! ลงทะเบียนวันนี้เพื่อสัมผัสประสบการณ์ AI ระดับโลกครับ"}
@@ -137,14 +162,14 @@ async def get_user_status(line_id: str):
         elif tier == "ENTERPRISE":
             if balance < 2000: msg = "🏢 ท่านผู้บริหารครับ เพื่อให้ระบบคลังข้อมูลทำงานอย่างราบรื่น ขอแนะนำให้เติม PRIME CREDITS สำรองไว้ครับ"
         elif tier == "PRIME":
-            if balance < 1000: msg = "💡 เพื่อให้การวิเคราะห์กลยุทธ์ธุรกิจและสร้างสื่อ 4K ดำเนินไปอย่างต่อเนื่องไร้รอยต่อ ขอแนะนำให้เติม PRIME CREDITS ครับ"
+            if balance < 1000: msg = "💡 เพื่อให้การวิเคราะห์กลยุทธ์ธุรกิจและสร้างสื่อ 4K ดำเนินไปอย่างต่อเนื่อง ขอแนะนำให้เติม PRIME CREDITS ครับ"
         elif tier == "ESSENTIAL":
-            if balance < 500: msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME เพื่อปลดล็อกที่ปรึกษาเชิงลึกระดับสากลได้ทันทีครับ"
+            if balance < 500: msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME เพื่อปลดล็อกที่ปรึกษาระดับสากลได้ทันทีครับ"
             else: msg = "✨ ยินดีต้อนรับครับ! ยกระดับธุรกิจด้วยแพ็กเกจ PRIME หรือ ENTERPRISE เพื่อรับสิทธิพิเศษขั้นสูงสุดได้เสมอครับ"
                 
         return {"tier": tier, "balance": balance, "message": msg}
     except Exception as e:
-        logger.error(f"Error fetching user status: {e}")
+        logger.error(f"Error fetching user status: {e}", exc_info=True)
         return {"tier": "ERROR", "balance": 0, "message": "ระบบกำลังปรับปรุงข้อมูลชั่วคราวครับ"}
 
 class UserProfile(BaseModel):
@@ -155,6 +180,7 @@ class UserProfile(BaseModel):
 @app.post("/api/sync-user")
 async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTasks):
     if not supabase: raise HTTPException(status_code=500, detail="Database not available")
+    
     def _sync():
         try:
             supabase.table("users").upsert({
@@ -165,9 +191,14 @@ async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTa
             }, on_conflict="line_user_id").execute()
         except Exception as err:
             logger.error(f"❌ [Sync System DB Error]: {err}")
+            
+    # โยนเข้า Background Task เพื่อความเร็วของฝั่ง Frontend
     background_tasks.add_task(_sync)
     return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
 
+# ==========================================
+# 💰 6. Financial Engine (Stripe Webhook)
+# ==========================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
     payload = await request.body()
@@ -180,18 +211,20 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError:
-        logger.error("❌ Stripe Signature Invalid!")
+        logger.error("❌ Stripe Signature Invalid (Potential Replay Attack)!")
         return Response(content="Invalid signature", status_code=400)
     except Exception as e:
+        logger.error(f"❌ Stripe Event Parsing Error: {e}")
         return Response(content=str(e), status_code=400)
 
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         client_ref = session.get('client_reference_id', '') 
-        amount_paid_thb = session.get('amount_total', 0) / 100 
+        amount_paid_thb = session.get('amount_total', 0) / 100.0
         
         logger.info(f"💰 [Stripe Revenue]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
 
+        # 🧵 ฟังก์ชันทำธุรกรรมการเงินแบบปลอดภัย (รันอยู่เบื้องหลัง)
         def _process_financials():
             if not supabase or not client_ref: return
             
@@ -225,18 +258,21 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                 
                 total_tokens_to_add = base_tokens + bonus_tokens
 
+                # ดึงยอดคงเหลือปัจจุบัน
                 res = supabase.table("prime_clients").select("token_balance").eq("line_user_id", user_id).execute()
                 current_balance = float(res.data[0].get("token_balance", 0)) if res.data else 0.0
                 new_balance = current_balance + total_tokens_to_add
                 
+                # อัปเดตข้อมูลแพ็กเกจ
                 update_data = {"token_balance": new_balance}
                 if is_subscription:
                     update_data["package_tier"] = package_tier
                     if package_tier in ["ENTERPRISE", "VIP_FOUNDER"]: update_data["role"] = "vip"
                 
                 supabase.table("prime_clients").upsert({"line_user_id": user_id, **update_data}, on_conflict="line_user_id").execute()
-                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits")
+                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits (ยอดใหม่: {new_balance})")
 
+                # ระบบพันธมิตร (Affiliate)
                 if agent_code and agent_code != "NOAGENT":
                     commission_rate = 0.30 if package_tier == "VIP_FOUNDER" else 0.15 
                     commission_amount = amount_paid_thb * commission_rate
@@ -252,11 +288,16 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                     logger.info(f"🤝 [Affiliate System]: บันทึก Commission {commission_amount} THB ให้ Agent: {agent_code}")
 
             except Exception as db_err:
-                logger.error(f"❌ [Financial Engine Error]: {db_err}")
+                logger.error(f"❌ [Financial Engine Error]: {db_err}", exc_info=True)
 
+        # สั่งรันเข้าคิว Background Tasks
         background_tasks.add_task(_process_financials)
+        
     return {"status": "success"}
 
+# ==========================================
+# 🚀 7. Server Ignition
+# ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME CORE ENGINE ON PORT {port}...")

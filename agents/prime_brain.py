@@ -1,295 +1,153 @@
 import os
 import time
-import re
 import logging
 import asyncio
-import mimetypes
-from datetime import datetime
+import pathlib
+from PIL import Image
+from typing import Optional, Dict, Any, List
+
 from google import genai
 from google.genai import types
 
-# =========================================================
-# 🌐 นำเข้าศูนย์บัญชาการ AI ส่วนกลางและระบบ Swarm
-# =========================================================
-from core_services.swarm_dispatcher import swarm_hub
+# 🚀 นำเข้าระบบความจำแบบ Async ที่เราเพิ่งอัปเกรดไป
+from agents.memory_engine import recall_memory, recall_corporate_knowledge, save_memory
+from core_services.ai_config import PrimeAIConfig
 
-try:
-    from core_services.ai_config import PrimeAIConfig
-except ImportError:
-    class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" 
-        @staticmethod
-        def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            if api_key: return genai.Client(api_key=api_key)
-            return genai.Client(
-                vertexai=True, 
-                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
-                location="asia-southeast3"
-            )
+logger = logging.getLogger("Prime-Brain")
 
 # =========================================================
-# 🧠 นำเข้าระบบความจำองค์กรและประวัติลูกค้า (Graph RAG & Vector Memory)
+# 🧠 The Core Intelligence (ระบบแกนสมองหลัก)
 # =========================================================
-try:
-    from agents.memory_engine import recall_corporate_knowledge, recall_memory, save_memory, save_corporate_knowledge
-except ImportError:
-    def recall_corporate_knowledge(q): return ""
-    def recall_memory(uid, msg): return ""
-    def save_memory(uid, summary): pass
-    def save_corporate_knowledge(title, content): return False
-
-logger = logging.getLogger("PrimeBrain")
-
-# 1. 🔑 ตั้งค่าการเชื่อมต่อ AI จากส่วนกลาง
-client = PrimeAIConfig.get_client()
-MODEL_NAME = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro-preview")
-
-# =========================================================
-# 👑 2. SYSTEM PROMPT: กฎเหล็กของสมองกลระดับโลก (Global Intelligence)
-# =========================================================
-SYSTEM_PROMPT = """คุณคือ "SIRINTHANATTH PRIME" สุดยอด AI สมองกลศูนย์กลางและที่ปรึกษาธุรกิจระดับสากล
-
-หน้าที่ของคุณคือคิดวิเคราะห์เชิงลึก (Deep Reasoning) วางแผนกลยุทธ์ และบริหารจัดการครอบคลุมทุกอุตสาหกรรมบนโลกอย่างแม่นยำ 100%
-
-ขีดความสามารถและกฎเหล็กการประมวลผล (World-Class Standard):
-1. 🌐 Real-time Fact-Checking: 
-   - ใช้เครื่องมือ Google Search เสมอเมื่อต้องการยืนยัน กฎหมาย, แนวโน้มตลาด, หรือข้อมูลที่ต้องการความอัปเดตล่าสุด ห้ามคาดเดาข้อมูลทางธุรกิจหรือการเงินเด็ดขาด
-2. 🧠 Predictive Empathy & Graph RAG: 
-   - วิเคราะห์จิตวิทยาและอารมณ์ของลูกค้า (Sentiment Analysis) เพื่อนำเสนอทางแก้ปัญหาแบบรู้ใจ (Proactive) ก่อนที่ลูกค้าจะร้องขอ
-3. 👁️ Omni-Modal Mastery (การจัดการไฟล์):
-   - สกัดเนื้อหาจาก PDF, Excel, หรือรูปภาพอย่างแม่นยำระดับ 100% เพื่อใช้วิเคราะห์งบการเงิน แผนการตลาด หรือโครงสร้างองค์กร
-4. 📚 ระบบเรียนรู้ด้วยตนเอง (Self-Learning Ingestion):
-   - หากผู้ใช้สั่ง "บันทึกความรู้" ให้คุณสกัดแก่นความรู้ (Core Knowledge) จัดโครงสร้างเป็น Bullet Points ให้อ่านง่าย เพื่อนำไปเซฟลงฐานข้อมูล
-5. 🛡️ Absolute Legal & Cybersecurity Shield: 
-   - ห้ามให้คำแนะนำการลงทุนแบบฟันธง (Buy/Sell/Hold) ห้ามการันตีผลตอบแทน เพื่อป้องกันการผิดกฎหมาย ก.ล.ต. / สคบ. / อย.
-   
-🚨 กฎการทำงานร่วมกับ Swarm Network:
-- หากคำถามต้องการผู้เชี่ยวชาญเฉพาะทาง (เช่น เลขาฯ, CTO, ทนายความ) ให้คุณโยนงานทันทีโดยพิมพ์:
-  [DELEGATE: WORKER_X_NAME] คำสั่งที่ต้องการส่งต่อ
-
-📄 กฎการสร้างไฟล์รายงาน:
-- หากถูกสั่งให้ "ทำรายงาน", "สร้าง PDF" หรือ "เขียนโค้ด" ให้พิมพ์แท็กนี้เสมอ:
-  [FILE_OUTPUT: ชื่อไฟล์.html] <h1>เนื้อหา</h1> [/FILE_OUTPUT]
-"""
-
-# =========================================================
-# ⚙️ 3. แกนประมวลผลเชิงลึก (Deep Reasoning Logic)
-# =========================================================
-async def generate_intelligent_response(user_id: str, incoming_message: str, file_path: str = None, file_type: str = None) -> str:
-    """ฟังก์ชันสมองกลประมวลผลเชิงลึก ดึงความจำ ดึงไฟล์ ค้นหาเว็บ สร้างรายงาน และผสาน Graph RAG"""
-    
-    if not client:
-        return "⚠️ System Offline: ไม่พบการเชื่อมต่อ API Key ในระบบส่วนกลางครับ"
-
-    uploaded_file = None
-    content_to_send = []
-    
-    # 🚩 ตรวจสอบโหมด "เรียนรู้ด้วยตนเอง" (Self-Learning Mode)
-    is_learning_mode = False
-    if incoming_message and any(k in incoming_message.lower() for k in ["บันทึกความรู้", "จงเรียนรู้", "learn this", "บันทึกลงฐานข้อมูล"]):
-        is_learning_mode = True
-
-    try:
-        # ==========================================
-        # 1. ดึงความรู้จาก Corporate DB และประวัติลูกค้า (Graph RAG Engine)
-        # ==========================================
-        corporate_context = ""
-        user_history = ""
+class PrimeBrainEngine:
+    def __init__(self):
+        self.client = PrimeAIConfig.get_client()
+        # ใช้รุ่น Flash สำหรับความเร็ว หรือ Pro สำหรับการวิเคราะห์ที่ซับซ้อนสุดยอด
+        self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash") 
         
-        if incoming_message and not is_learning_mode:
-            try:
-                corporate_context = await asyncio.to_thread(recall_corporate_knowledge, incoming_message)
-                user_history = await asyncio.to_thread(recall_memory, user_id, incoming_message)
-            except Exception as rag_err:
-                logger.warning(f"⚠️ [RAG Fetch Warning]: {rag_err}")
-
-        # ==========================================
-        # 2. ระบบจัดการไฟล์และมัลติมีเดียขั้นสูง
-        # ==========================================
-        if file_path and os.path.exists(file_path):
-            logger.info(f"🧠 [Prime Brain]: กำลังสกัดข้อมูลจากไฟล์ {file_type}...")
-            
-            mime_type, _ = mimetypes.guess_type(file_path)
-            if file_path.lower().endswith(('.xlsx', '.xls')): mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            elif file_path.lower().endswith('.csv'): mime_type = "text/csv"
-            elif file_path.lower().endswith('.pdf'): mime_type = "application/pdf"
-            if not mime_type: mime_type = "application/octet-stream"
-
-            try:
-                upload_config = types.UploadFileConfig(mime_type=mime_type)
-                uploaded_file = await asyncio.to_thread(client.files.upload, file=file_path, config=upload_config)
-            except Exception as e:
-                logger.warning(f"⚠️ File upload rejected by AI: {e}")
-                return "⚠️ ระบบความปลอดภัยปฏิเสธไฟล์ชนิดนี้ครับ รบกวนบันทึกเป็น PDF, รูปภาพ หรือไฟล์เสียง แล้วส่งมาใหม่อีกครั้งนะครับ"
-
-            timeout = 60
-            start_time = time.time()
-            while uploaded_file.state.name == "PROCESSING":
-                if time.time() - start_time > timeout:
-                    raise TimeoutError("การประมวลผลไฟล์ใช้เวลานานเกินกำหนดระบบรักษาความปลอดภัย")
-                await asyncio.sleep(2)
-                uploaded_file = await asyncio.to_thread(client.files.get, name=uploaded_file.name)
-                
-            if uploaded_file.state.name == "FAILED":
-                return "⚠️ ขออภัยครับ โครงสร้างไฟล์มีความซับซ้อนหรือติดรหัสผ่าน ระบบ AI ไม่สามารถถอดรหัสไฟล์นี้ได้ครับ"
-                
-            content_to_send.append(uploaded_file)
-            
-            if is_learning_mode:
-                content_to_send.append("โปรดสกัดองค์ความรู้สำคัญจากไฟล์นี้ และจัดโครงสร้างเป็นหมวดหมู่ เพื่อให้ระบบนำไปบันทึกลงฐานข้อมูลส่วนกลางอย่างมีประสิทธิภาพ")
-            elif not incoming_message or incoming_message.startswith("[System Alert:"):
-                content_to_send.append("โปรดวิเคราะห์ สกัดข้อมูลสำคัญ และอธิบายรายละเอียดเชิงลึกจากไฟล์นี้อย่างมืออาชีพครับ")
-            else:
-                content_to_send.append(incoming_message)
-        else:
-            content_to_send.append(incoming_message)
-
-        # ==========================================
-        # 3. ประกอบร่าง Graph RAG Context
-        # ==========================================
-        final_prompt = ""
-        if corporate_context or user_history:
-            final_prompt += "\n\n--- [ข้อมูลสนับสนุนจากระบบความจำ Graph RAG] ---\n"
-            if corporate_context:
-                final_prompt += f"🏢 [ฐานความรู้องค์กร/กฎหมาย]:\n{corporate_context}\n"
-            if user_history:
-                final_prompt += f"👤 [ประวัติและพฤติกรรมลูกค้ารายนี้]:\n{user_history}\n"
-            final_prompt += "--------------------------------------------------\nโปรดใช้ข้อมูลข้างต้นประกอบการวิเคราะห์อย่างเหนือชั้น"
-            
-            content_to_send.append(final_prompt)
-
-        # ==========================================
-        # 4. สั่งรันโมเดลเรือธง (Gemini 3.1 Pro + Search)
-        # ==========================================
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model=MODEL_NAME,
-            contents=content_to_send,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.2, 
-                tools=[{"google_search": {}}] 
-            )
-        )
+        # 🎭 จิตวิทยาและบุคลิกภาพของ AI (Persona)
+        self.system_instruction = """
+        คุณคือ 'SIRINTHANATTH PRIME' สุดยอดผู้ช่วย AI ระดับ Enterprise และที่ปรึกษาของผู้บริหารระดับสูง
         
-        reply_text = response.text if response.text else "รับทราบข้อมูลเรียบร้อยครับ มีส่วนไหนให้ผมช่วยเหลือเพิ่มเติม แจ้งได้เลยครับ"
-        
-        # ==========================================
-        # 5. ระบบสร้างเอกสารรายงานอัตโนมัติ (Document Engine)
-        # ==========================================
-        file_match = re.search(r'\[FILE_OUTPUT:\s*(.+?)\](.*?)\[/FILE_OUTPUT\]', reply_text, re.DOTALL)
-        if file_match:
-            filename = file_match.group(1).strip()
-            file_content = file_match.group(2).strip()
-            
-            reply_text = re.sub(r'\[FILE_OUTPUT:\s*(.+?)\](.*?)\[/FILE_OUTPUT\]', '', reply_text, flags=re.DOTALL).strip()
-            
-            safe_filename = "".join([c for c in filename if c.isalnum() or c in ' .-_']).rstrip()
-            if not safe_filename.endswith('.html'): safe_filename += '.html'
-            
-            reports_dir = "static/reports"
-            os.makedirs(reports_dir, exist_ok=True)
-            filepath = os.path.join(reports_dir, safe_filename)
-            
-            base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
-            
-            html_template = f"""
-            <!DOCTYPE html>
-            <html lang="th">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>{safe_filename} - SIRINTHANATTH PRIME</title>
-                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-                <style>
-                    body {{ font-family: 'Sarabun', sans-serif; background-color: #050505; color: #E0E0E0; line-height: 1.7; padding: 20px; }}
-                    .container {{ max-width: 1000px; margin: 0 auto; background: #0F0F13; padding: 50px; box-shadow: 0 15px 40px rgba(0, 229, 255, 0.08); border-radius: 16px; border-top: 6px solid #D4AF37; }}
-                    .header {{ text-align: center; margin-bottom: 40px; border-bottom: 1px solid #222; padding-bottom: 25px; }}
-                    .header h1 {{ color: #D4AF37; margin: 0; font-size: 32px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700; }}
-                    .header p {{ color: #888; font-weight: 400; margin-top: 10px; font-size: 14px; letter-spacing: 1px; }}
-                    h2, h3 {{ color: #00E5FF; margin-top: 30px; }}
-                    table {{ width: 100%; border-collapse: collapse; margin-top: 25px; margin-bottom: 25px; color: #fff; background: #15151A; }}
-                    th, td {{ border: 1px solid #333; padding: 15px; text-align: left; }}
-                    th {{ background-color: #1A1A24; color: #D4AF37; font-weight: 600; text-transform: uppercase; font-size: 14px; }}
-                    pre {{ background: #0A0A0C; padding: 20px; border-radius: 10px; overflow-x: auto; color: #00E5FF; border: 1px solid #2A2A35; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }}
-                    code {{ font-family: 'Consolas', 'Courier New', monospace; font-size: 14.5px; }}
-                    .timestamp {{ text-align: right; font-size: 12px; color: #555; margin-top: 40px; border-top: 1px solid #222; padding-top: 20px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>SIRINTHANATTH PRIME</h1>
-                        <p>STRICTLY CONFIDENTIAL • PRIME BRAIN ANALYTICS</p>
-                    </div>
-                    <div class="content">
-                        {file_content}
-                    </div>
-                    <div class="timestamp">Generated by Prime Omniscient Core | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
-                </div>
-            </body>
-            </html>
+        กฎเหล็กในการสื่อสาร:
+        1. ความเป็นมืออาชีพ: ตอบคำถามอย่างชาญฉลาด สุภาพ หรูหรา อบอุ่น และกระชับตรงประเด็น (ลงท้ายด้วย ครับ/ค่ะ เสมอ)
+        2. การใช้ความจำ: หากมีข้อมูลอดีต (User Memory) หรือกฎบริษัท (Corporate Knowledge) ให้ใช้ข้อมูลนั้นประกอบการตัดสินใจเสมอโดยไม่ต้องอ้างอิงว่าได้ข้อมูลมาจากไหน
+        3. ความแม่นยำ: หากไม่ทราบข้อมูล ให้ตอบอย่างสุภาพว่ากำลังประสานงานตรวจสอบ ไม่แต่งเรื่องขึ้นเองเด็ดขาด
+        4. การวิเคราะห์ไฟล์: หากผู้ใช้แนบรูปภาพหรือเอกสาร ให้วิเคราะห์เชิงลึกและดึง Insight ที่มีประโยชน์ที่สุดออกมา
+        """
+
+    async def _compress_and_save_memory(self, user_id: str, user_message: str, ai_response: str):
+        """🧹 บีบอัดความจำ (Summarization) และบันทึกลง Vector DB เบื้องหลัง เพื่อประหยัดพื้นที่และ Token"""
+        try:
+            prompt = f"""
+            สรุปใจความสำคัญสั้นๆ 1 ประโยค (ไม่เกิน 30 คำ) จากบทสนทนานี้ เพื่อใช้เป็น 'ความจำ' ในอนาคต
+            User: {user_message}
+            AI: {ai_response}
             """
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(html_template)
-                
-            generated_file_url = f"{base_url}/{reports_dir}/{safe_filename}"
-            reply_text += f"\n\n📄 **แฟ้มเอกสารรายงานการวิเคราะห์ พร้อมแล้วครับ**\nคลิกเพื่อตรวจสอบรายละเอียด และสามารถกด (Ctrl+P) เพื่อบันทึกเป็น PDF เก็บไว้ได้ทันทีครับ:\n👉 {generated_file_url}"
-
-        # ==========================================
-        # 6. ตรวจจับการส่งต่องาน (Swarm Delegation)
-        # ==========================================
-        delegate_match = re.search(r'\[DELEGATE:\s*(.+?)\](.*)', reply_text, re.DOTALL | re.IGNORECASE)
-        if delegate_match:
-            target_worker = delegate_match.group(1).strip()
-            handoff_message = delegate_match.group(2).strip()
-            
-            reply_text = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.DOTALL | re.IGNORECASE).strip()
-            
-            worker_response = await swarm_hub.delegate_task(
-                from_worker="PRIME_BRAIN", 
-                to_worker=target_worker, 
-                user_id=user_id, 
-                message=handoff_message, 
-                file_path=file_path, 
-                file_type=file_type
+            # ใช้แบบ Async เพื่อไม่ให้บล็อกระบบ
+            res = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model="gemini-3.7-flash",
+                contents=prompt
             )
-            return f"{reply_text}\n\n🔄 [สมองกลส่งต่อให้ผู้เชี่ยวชาญ {target_worker}]:\n{worker_response}"
+            summary = res.text.strip()
+            if summary:
+                await save_memory(user_id, summary)
+                logger.info(f"🧠 [Memory Engine]: บีบอัดและบันทึกความจำสำเร็จ -> {summary}")
+        except Exception as e:
+            logger.error(f"⚠️ [Memory Compress Error]: {e}")
 
-        # ==========================================
-        # 7. การบันทึกความรู้ (Self-Learning) และความจำ
-        # ==========================================
-        if is_learning_mode and uploaded_file:
-            title = f"Knowledge_Extract_{int(time.time())}"
-            success = await asyncio.to_thread(save_corporate_knowledge, title, reply_text)
-            if success:
-                reply_text = f"✅ [Knowledge Ingestion]: สกัดความรู้และบันทึกลงฐานข้อมูลสมองกลของ SIRINTHANATTH PRIME สำเร็จเรียบร้อยแล้วครับ\n\nสรุปเนื้อหา:\n{reply_text}"
-            else:
-                reply_text = "⚠️ สกัดความรู้สำเร็จ แต่เกิดข้อผิดพลาดในการเชื่อมต่อ Vector Database เพื่อบันทึกข้อมูลครับ"
+    async def process_interaction(self, user_id: str, message: str, file_path: Optional[str] = None, file_type: Optional[str] = None) -> str:
+        """⚡ วงจรประมวลผลหลัก (RAG + Vision + Generation)"""
+        
+        start_time = time.time()
+        logger.info(f"🧠 [Prime Brain]: กำลังประมวลผลคำสั่งจาก {user_id}")
 
-        elif incoming_message and not incoming_message.startswith("[System Alert:"):
-            # กรองข้อความสั้นๆ ทิ้ง ประหยัดพื้นที่
-            if len(incoming_message) > 10 or len(reply_text) > 20:
-                compact_memory = f"Q: {incoming_message[:150]} | A: {reply_text[:150]}"
-                asyncio.create_task(asyncio.to_thread(save_memory, user_id, compact_memory))
-            
-        return reply_text
+        if not self.client:
+            return "ขออภัยครับ ระบบสมองกลส่วนกลางขาดการเชื่อมต่อ (Missing API Key) ทีมวิศวกรกำลังเร่งแก้ไขครับ"
+
+        # ---------------------------------------------------------
+        # 🔍 1. Parallel RAG (ดึงความจำ 2 แหล่งพร้อมกันแบบคู่ขนาน เร็วขึ้น 2 เท่า!)
+        # ---------------------------------------------------------
+        mem_task = recall_memory(user_id, message)
+        corp_task = recall_corporate_knowledge(message)
         
-    except TimeoutError:
-        logger.error("❌ [Prime Brain Timeout]: ไฟล์มีขนาดใหญ่หรือซับซ้อนเกินไป")
-        return "ขออภัยครับคุณลูกค้า ไฟล์มีขนาดใหญ่เกินไป ทำให้ระบบประมวลผลนานกว่าปกติ รบกวนย่อขนาดไฟล์ลงนิดนึงนะครับ"
-    except Exception as e:
-        logger.error(f"❌ [Prime Brain Error]: {e}")
-        return "ขออภัยครับ ขณะนี้ระบบประมวลผลหลักอัจฉริยะกำลังปรับปรุงฐานข้อมูล กรุณาลองส่งข้อความใหม่อีกครั้งในสักครู่ครับ"
+        # รอให้ทั้งคู่ดึงข้อมูลเสร็จพร้อมกัน
+        user_memory, corp_knowledge = await asyncio.gather(mem_task, corp_task)
+
+        # ---------------------------------------------------------
+        # 🧱 2. Context Injection (ประกอบร่างความจำเข้ากับคำสั่ง)
+        # ---------------------------------------------------------
+        enriched_prompt = message
         
-    finally:
-        # ==========================================
-        # 🧹 8. Zero-Data Retention (ทำลายไฟล์ทิ้งเพื่อความปลอดภัยขั้นสูงสุด)
-        # ==========================================
-        if uploaded_file:
+        if corp_knowledge or user_memory:
+            enriched_prompt = f"คำสั่งของผู้บริหาร: {message}\n\n"
+            if corp_knowledge:
+                enriched_prompt += f"--- ข้อมูล/นโยบายขององค์กร ---\n{corp_knowledge}\n\n"
+            if user_memory:
+                enriched_prompt += f"--- บริบท/ความจำในอดีตของผู้บริหารท่านนี้ ---\n{user_memory}\n\n"
+            enriched_prompt += "โปรดนำข้อมูลด้านบนมาประกอบการตอบคำถามอย่างแนบเนียนและเป็นธรรมชาติที่สุด"
+
+        # ---------------------------------------------------------
+        # 👁️ 3. Multi-Modal Handling (จัดการไฟล์แนบ ภาพ/เอกสาร)
+        # ---------------------------------------------------------
+        contents_to_send = []
+        uploaded_gemini_file = None
+        
+        if file_path and os.path.exists(file_path):
             try:
-                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
-                logger.info(f"🛡️ [Zero-Data Security]: ทำลายไฟล์ {uploaded_file.name} ออกจากระบบ AI Cloud ทิ้งถาวรเรียบร้อยแล้ว")
+                if file_type == "image":
+                    # ใช้ PIL เปิดภาพให้ Gemini Vision
+                    img = await asyncio.to_thread(Image.open, file_path)
+                    contents_to_send.append(img)
+                else:
+                    # ถ้าเป็นไฟล์ PDF, Video, Audio ให้อัปโหลดเข้า Gemini File API
+                    logger.info(f"📁 [File API]: กำลังอัปโหลดไฟล์ {file_type} เข้าสู่สมองกล...")
+                    uploaded_gemini_file = await asyncio.to_thread(self.client.files.upload, file=file_path)
+                    contents_to_send.append(uploaded_gemini_file)
             except Exception as e:
-                logger.error(f"⚠️ [File Deletion Error]: ไม่สามารถลบไฟล์จาก AI Cloud ได้ -> {e}")
+                logger.error(f"❌ [Media Processing Error]: {e}")
+                enriched_prompt += "\n[หมายเหตุ: ระบบไม่สามารถเปิดอ่านไฟล์ที่แนบมาได้ โปรดแจ้งข้อขัดข้องนี้ให้ผู้บริหารทราบ]"
+
+        # ใส่ข้อความลงไปเป็นชิ้นสุดท้าย
+        contents_to_send.append(enriched_prompt)
+
+        # ---------------------------------------------------------
+        # 🚀 4. AI Generation (สร้างคำตอบด้วย Gemini 3.7)
+        # ---------------------------------------------------------
+        try:
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=contents_to_send,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.4, # ตั้งค่า 0.4 ให้มีความคิดสร้างสรรค์แต่ยังคงความแม่นยำสูง
+                )
+            )
+            reply_text = response.text if response.text else "ระบบประมวลผลเสร็จสิ้นครับ"
+            
+            # ลบไฟล์ออกจาก Gemini API เพื่อรักษาความปลอดภัย (Zero-Data Retention)
+            if uploaded_gemini_file:
+                await asyncio.to_thread(self.client.files.delete, name=uploaded_gemini_file.name)
+                logger.info(f"🧹 [Gemini API]: ลบไฟล์ลับ {uploaded_gemini_file.name} สำเร็จ")
+
+            # ---------------------------------------------------------
+            # 💾 5. Background Memory Saving (บันทึกความจำโดยไม่ให้ลูกค้าต้องรอ)
+            # ---------------------------------------------------------
+            asyncio.create_task(self._compress_and_save_memory(user_id, message, reply_text))
+
+            logger.info(f"✅ [Prime Brain]: ประมวลผลสำเร็จใน {time.time() - start_time:.2f} วินาที")
+            return reply_text
+
+        except Exception as e:
+            logger.error(f"❌ [Generation Error]: {e}", exc_info=True)
+            return "ขออภัยครับ สมองกลส่วนกลางเกิดข้อขัดข้องระหว่างการประมวลผลขั้นสูง ทีมวิศวกรกำลังเร่งตรวจสอบให้ครับ"
+
+# =========================================================
+# 🔌 Global Instance (เรียกใช้งานได้ทันทีจาก routes_line.py)
+# =========================================================
+prime_engine = PrimeBrainEngine()
+
+async def generate_intelligent_response(user_id: str, message: str, file_path: str = None, file_type: str = None) -> str:
+    """ฟังก์ชัน Wrapper สำหรับถูกเรียกจากภายนอก (เข้ากันได้กับ routes_line.py แบบ 100%)"""
+    return await prime_engine.process_interaction(user_id, message, file_path, file_type)

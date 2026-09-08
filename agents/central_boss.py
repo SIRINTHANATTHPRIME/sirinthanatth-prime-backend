@@ -2,9 +2,9 @@ import os
 import time
 import logging
 import asyncio
-import requests
+import httpx # ⚡ อัปเกรด: ใช้ HTTPX สำหรับ Non-Blocking I/O
 import json
-import re
+from pydantic import BaseModel, Field # ⚡ อัปเกรด: ใช้ Pydantic บังคับโครงสร้าง AI
 from google import genai
 from google.genai import types
 from supabase import create_client, Client
@@ -33,6 +33,11 @@ except ImportError:
                 location="asia-southeast3"
             )
 
+# 🧠 [NEW] สถาปัตยกรรมบังคับโครงสร้างความคิด AI (Structured Outputs)
+class SwarmRoutingSchema(BaseModel):
+    pipeline: list[str] = Field(description='รายชื่อแผนก (Worker Keys) ที่ต้องส่งงานให้ทำตามลำดับ เช่น ["WORKER_9_PRIME"]. หากเป็นคำทักทายทั่วไปให้ปล่อยว่าง []')
+    routing_msg: str = Field(description='ข้อความสุภาพที่จะตอบกลับลูกค้าทันที เพื่อแจ้งให้ทราบว่าระบบกำลังส่งงานให้แผนกไหนทำ')
+
 class CentralBossAgent:
     """
     🎩 ผู้บัญชาการส่วนกลาง (Central Boss Agent - The Master Orchestrator)
@@ -41,7 +46,7 @@ class CentralBossAgent:
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
         self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
-        self.liff_url = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
+        self.liff_url = os.getenv("LIFF_URL", "[https://liff.line.me/2011067128-fnWmOak4](https://liff.line.me/2011067128-fnWmOak4)")
         self.line_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
         
         supa_url = os.getenv("SUPABASE_URL")
@@ -91,7 +96,7 @@ class CentralBossAgent:
             for idx, w_key in enumerate(pipeline):
                 w_key = w_key.upper()
                 
-                # ดึง Worker จากระบบลงทะเบียนส่วนกลางใน main.py
+                # ดึง Worker จากระบบลงทะเบียนส่วนกลาง
                 worker_instance = swarm_hub._workers.get(w_key)
                 if not worker_instance: 
                     logger.warning(f"⚠️ [Swarm Pipeline]: ข้ามแผนก {w_key} เนื่องจากยังไม่ได้ออนไลน์ในระบบ")
@@ -118,20 +123,30 @@ class CentralBossAgent:
                 # 🛡️ Zero-Data Guard: แผนกแรกประมวลผลและลบไฟล์ไปแล้ว ห้ามส่ง Path ให้แผนกถัดไป
                 current_file = None 
 
-            # สิ้นสุด Pipeline จัดส่งผลลัพธ์ให้ลูกค้าผ่าน Push API
+            # สิ้นสุด Pipeline จัดส่งผลลัพธ์ให้ลูกค้าผ่าน Push API (⚡ อัปเกรดใช้ httpx)
             if final_result and self.line_token:
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
-                data = {"to": user_id, "messages": [{"type": "text", "text": str(final_result)}]}
-                res = await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data)
-                res.raise_for_status()
-                logger.info(f"✅ [Swarm Delivery]: จัดส่งผลการประมวลผลเครือข่ายองค์กรให้ {user_id} สำเร็จ!")
+                
+                # 💎 รองรับการตอบกลับด้วย Flex Message จาก Worker
+                if isinstance(final_result, dict) and final_result.get("type") in ["flex", "template"]:
+                    payload = final_result
+                else:
+                    payload = {"type": "text", "text": str(final_result)}
+                    
+                data = {"to": user_id, "messages": [payload]}
+                
+                async with httpx.AsyncClient() as http_client:
+                    res = await http_client.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data, timeout=15.0)
+                    res.raise_for_status()
+                    logger.info(f"✅ [Swarm Delivery]: จัดส่งผลการประมวลผลเครือข่ายองค์กรให้ {user_id} สำเร็จ!")
 
         except Exception as e:
-            logger.error(f"❌ [Swarm Execution Error]: {e}")
+            logger.error(f"❌ [Swarm Execution Error]: {e}", exc_info=True)
             if self.line_token:
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
                 data = {"to": user_id, "messages": [{"type": "text", "text": f"⚠️ ขออภัยครับ เกิดข้อขัดข้องระหว่างการประสานงานของทีมผู้เชี่ยวชาญ ทีมวิศวกรกำลังตรวจสอบครับ"}]}
-                await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data)
+                async with httpx.AsyncClient() as http_client:
+                    await http_client.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data, timeout=10.0)
 
     async def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message: str = "", file_path: str = None, file_type: str = None) -> str:
         """🧠 แกนสมอง Router ประเมินเจตนาลูกค้าและสร้างแผนผังการประชุม Swarm (Pipeline)"""
@@ -198,7 +213,6 @@ class CentralBossAgent:
         1. หากเป็นบทสนทนาทักทายทั่วไป ให้ส่ง pipeline ว่าง: []
         2. งานเฉพาะทางให้ใช้ 1 แผนก เช่น ["WORKER_9_PRIME"]
         3. งานซับซ้อนให้เรียงลำดับ เช่น สแกนสัญญาและวางแผนธุรกิจ = ["WORKER_2_RISK_QA", "WORKER_6_STRATEGY"]
-        4. ตอบกลับเป็นรูปแบบ JSON เท่านั้น โครงสร้าง: {"pipeline": [...], "routing_msg": "..."}
         """
 
         prompt = f"""
@@ -208,20 +222,20 @@ class CentralBossAgent:
         """
 
         try:
+            # 🧠 [อัปเกรด] ใช้ response_schema บังคับ AI คายข้อมูลเป็น JSON ตาม Class Pydantic เป๊ะๆ
             res = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=swarm_instruction,
-                    temperature=0.1, # ลดการคาดเดา เพื่อให้ได้โครงสร้าง JSON 100%
-                    response_mime_type="application/json"
+                    temperature=0.1, 
+                    response_mime_type="application/json",
+                    response_schema=SwarmRoutingSchema
                 )
             )
             
-            res_text = re.sub(r'^```json\s*', '', res.text.strip())
-            res_text = re.sub(r'\s*```$', '', res_text)
-            routing_data = json.loads(res_text)
+            routing_data = json.loads(res.text)
             
             pipeline = routing_data.get("pipeline", [])
             routing_msg = routing_data.get("routing_msg", "รับทราบครับ ระบบกำลังดำเนินการประสานงานให้ครับ")
@@ -235,7 +249,7 @@ class CentralBossAgent:
                 return routing_msg
 
         except Exception as e:
-            logger.error(f"⚠️ [Swarm Router Error]: {e} -> Fallback to Fast Conversation")
+            logger.error(f"⚠️ [Swarm Router Error]: {e} -> Fallback to Fast Conversation", exc_info=True)
 
         # ==========================================
         # 💬 4. โหมดสนทนาด่านหน้า (Fast Conversation Fallback)

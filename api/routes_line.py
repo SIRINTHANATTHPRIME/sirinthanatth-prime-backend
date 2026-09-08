@@ -2,9 +2,9 @@ import os
 import asyncio
 import inspect
 import logging
-import requests
 import uuid
 import time
+import httpx # ⚡ อัปเกรดเป็น Async HTTP
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
@@ -72,16 +72,48 @@ except ImportError: generate_voice_from_text = None
 # 🛠️ Core Transmission Functions (ระบบสั่งการ LINE ขั้นสูง)
 # =========================================================
 async def send_line_custom_payload(user_id: str, payload: dict) -> None:
-    """ส่ง Flex Message หรือ Custom JSON Payload ให้ผู้บริหารผ่าน Push API"""
-    if not LINE_TOKEN: return
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LINE_TOKEN}"}
-    data = {"to": user_id, "messages": [payload]}
+    """⚡ ส่ง Flex Message หรือ Custom JSON Payload ให้ผู้บริหารผ่าน Push API แบบปลอดภัย (Anti-Error 400)"""
+    if not LINE_TOKEN or not user_id: return
+    
+    # 🛡️ ระบบ Auto-Correction: ตรวจสอบและซ่อมแซมโครงสร้าง Flex Message
+    if payload.get("type") == "flex":
+        if "altText" not in payload:
+            payload["altText"] = "SIRINTHANATTH PRIME ส่งเอกสารสำคัญให้คุณ"
+        if "contents" not in payload and "body" in payload:
+            # ซ่อมแซมโครงสร้างถ้า Agent เจนมาผิดรูปแบบ
+            payload = {
+                "type": "flex",
+                "altText": payload.get("altText", "ข้อความสำคัญ"),
+                "contents": {
+                    "type": "bubble",
+                    "body": payload.get("body")
+                }
+            }
+
+    headers = {
+        "Content-Type": "application/json", 
+        "Authorization": f"Bearer {LINE_TOKEN}"
+    }
+    
+    # โครงสร้างที่ถูกต้อง 100% ตามกฎ LINE API
+    data = {
+        "to": user_id, 
+        "messages": [payload]
+    }
+    
     try:
-        res = await asyncio.to_thread(requests.post, "https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=10)
-        res.raise_for_status()
-        logger.info("📤 [System]: ส่ง Executive Custom Payload สำเร็จ")
+        # 🚀 เปลี่ยนมาใช้ httpx (Async) ขจัดปัญหา Timeout ถาวร
+        async with httpx.AsyncClient() as http_client:
+            res = await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=15.0)
+            
+            if res.status_code == 200:
+                logger.info("📤 [System]: ส่ง Executive Custom Payload สำเร็จ")
+            else:
+                logger.error(f"❌ [LINE API Error {res.status_code}]: {res.text}")
+    except httpx.TimeoutException:
+        logger.error("❌ [System Timeout]: LINE API ไม่ตอบสนองภายในเวลาที่กำหนด")
     except Exception as e:
-        logger.error(f"❌ [System Error]: ส่ง Custom Payload ล้มเหลว -> {e}")
+        logger.error(f"❌ [System Error]: ส่ง Custom Payload ล้มเหลว -> {e}", exc_info=True)
 
 async def dispatch_line_message(user_id: str, reply_token: Optional[str], messages: list) -> None:
     """ฟังก์ชันสลับ Reply / Push อัตโนมัติ ป้องกันปัญหา LINE Timeout และ Token หมดอายุ"""
@@ -92,7 +124,6 @@ async def dispatch_line_message(user_id: str, reply_token: Optional[str], messag
         else:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
     except LineBotApiError as line_err:
-        # หาก Reply Token หมดอายุ (เกิน 60 วิ) ระบบจะ Auto-Fallback เป็น Push ทันที
         logger.warning(f"🔄 [Auto-Retry]: Reply ล้มเหลว ({line_err.error.message}). สลับไปใช้ Push Message...")
         try:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
@@ -117,10 +148,10 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
-            if time.time() - start_time > 15.0: reply_token = None # บังคับ Push ถ้านานเกิน
+            if time.time() - start_time > 15.0: reply_token = None
             
             if isinstance(reply_payload, dict): 
-                if reply_payload.get("type") == "flex":
+                if reply_payload.get("type") == "flex" or reply_payload.get("type") == "template":
                     await send_line_custom_payload(user_id, reply_payload)
                 else:
                     await dispatch_line_message(user_id, reply_token, [TextSendMessage(text=reply_payload.get("text", ""))])
@@ -145,7 +176,6 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         reply_msg = ""
         if boss_agent:
             try:
-                # ใช้วิธีสร้าง Task ใหม่แทนการโยน bg_tasks ของ FastAPI ลงมา
                 if inspect.iscoroutinefunction(boss_agent.route_task):
                     reply_msg = await boss_agent.route_task(user_id, enhanced_message, incoming_message, file_path, file_type)
                 else:
@@ -174,7 +204,12 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         if guard and hasattr(guard, 'attach_financial_disclaimer'):
             reply_msg = guard.attach_financial_disclaimer(reply_msg)
 
-        messages_to_send = [TextSendMessage(text=reply_msg)]
+        # 🚀 ฟีเจอร์พิเศษ: ถ้า AI เจน JSON ออกมา ให้โยนเข้า Custom Payload
+        if isinstance(reply_msg, dict) and reply_msg.get("type") in ["flex", "template"]:
+            await send_line_custom_payload(user_id, reply_msg)
+            return
+
+        messages_to_send = [TextSendMessage(text=str(reply_msg))]
 
         # 🎙️ 7. [VOICE AI SYNTHESIS]: แปลงเสียงพูดกลับ (ElevenLabs)
         if file_type == 'audio' and generate_voice_from_text:
@@ -190,7 +225,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as audio_err:
                 logger.error(f"⚠️ [Voice Module Error]: {audio_err}")
         
-        # ประเมินเวลาทำงานทั้งหมด หากนานเกินไปให้ตัด Reply Token ทิ้ง
+        # ประเมินเวลาทำงานทั้งหมด หากนานเกิน 15 วิ ให้เปลี่ยนเป็น Push Message
         if time.time() - start_time > 15.0: reply_token = None 
 
         # 📤 8. [DISPATCH]: ส่งข้อมูลกลับหาลูกค้า
@@ -278,8 +313,14 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         elif message_type in ['audio', 'image', 'video', 'file']:
             message_id = event.message.id
             try:
-                # ตอบกลับทันทีว่ากำลังประมวลผล เพื่อกันลูกค้าชะงัก
-                await asyncio.to_thread(line_bot_api.reply_message, reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดไฟล์เข้าสู่ Data Lake ระดับองค์กรเพื่อวิเคราะห์เชิงลึก กรุณารอสักครู่นะครับ ⏳"))
+                # 💬 เคล็ดลับ: โยนการตอบกลับสถานะ ให้อยู่ใน Background Task แทน เพื่อไม่ให้ไปเผา Reply Token ดื้อๆ 
+                def _reply_loading():
+                    try:
+                        line_bot_api.reply_message(reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดไฟล์ระดับองค์กร กรุณารอสักครู่นะครับ ⏳"))
+                    except Exception as e:
+                        logger.error(f"Loading Reply Error: {e}")
+                
+                background_tasks.add_task(_reply_loading)
                 
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ".pdf"
@@ -287,7 +328,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 os.makedirs("/tmp", exist_ok=True)
                 file_path = f"/tmp/{file_name}"
                 
-                # ปรับปรุง Context Manager ป้องกัน Memory Leak
+                # เขียนไฟล์แบบปลอดภัย
                 def save_media():
                     with open(file_path, 'wb') as fd:
                         for chunk in message_content.iter_content(chunk_size=8192): 
@@ -304,7 +345,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         else: 
             continue
     
-        # 🚀 โยนเข้าคิวประมวลผล AI หลังบ้าน (ถอดตัวแปร background_tasks ออกตามหลักวิศวกรรม)
+        # 🚀 โยนเข้าคิวประมวลผล AI หลังบ้าน (แก้ปัญหา Timeout สมบูรณ์แบบ)
         background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
         
     return {"status": "OK"}
