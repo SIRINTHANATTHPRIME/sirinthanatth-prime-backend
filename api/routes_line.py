@@ -4,7 +4,7 @@ import inspect
 import logging
 import uuid
 import time
-import httpx # ⚡ อัปเกรดเป็น Async HTTP
+import httpx # ⚡ อัปเกรดเป็น Async HTTP ขั้นสุด
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
@@ -29,9 +29,9 @@ logger = logging.getLogger("Prime-API-Gateway")
 
 router = APIRouter()
 
-LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
-LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
-BASE_URL = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
+LINE_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_SECRET = os.environ.get("LINE_CHANNEL_SECRET")
+BASE_URL = os.environ.get("BASE_URL") or "https://prime-core-agent-601183279633.asia-southeast3.run.app"
 
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
 parser = WebhookParser(LINE_SECRET) if LINE_SECRET else None
@@ -69,6 +69,23 @@ try: from services.elevenlabs_service import generate_voice_from_text
 except ImportError: generate_voice_from_text = None
 
 # =========================================================
+# 🌟 Advanced UI/UX: LINE Loading Animation API (ฟีเจอร์ใหม่ล่าสุด)
+# =========================================================
+async def show_line_loading_animation(user_id: str, loading_seconds: int = 20) -> None:
+    """แสดงจุดไข่ปลา (...) อนิเมชันกำลังพิมพ์ให้ลูกค้าเห็นขณะ AI กำลังคิด ป้องกันความสับสน"""
+    if not LINE_TOKEN or not user_id: return
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_TOKEN}"
+    }
+    data = {"chatId": user_id, "loadingSeconds": loading_seconds}
+    try:
+        async with httpx.AsyncClient() as http_client:
+            await http_client.post("https://api.line.me/v2/bot/chat/loading/start", headers=headers, json=data, timeout=5.0)
+    except Exception as e:
+        logger.warning(f"⚠️ [Loading Animation Warning]: ไม่สามารถแสดงอนิเมชันได้ -> {e}")
+
+# =========================================================
 # 🛠️ Core Transmission Functions (ระบบสั่งการ LINE ขั้นสูง)
 # =========================================================
 async def send_line_custom_payload(user_id: str, payload: dict) -> None:
@@ -80,7 +97,6 @@ async def send_line_custom_payload(user_id: str, payload: dict) -> None:
         if "altText" not in payload:
             payload["altText"] = "SIRINTHANATTH PRIME ส่งเอกสารสำคัญให้คุณ"
         if "contents" not in payload and "body" in payload:
-            # ซ่อมแซมโครงสร้างถ้า Agent เจนมาผิดรูปแบบ
             payload = {
                 "type": "flex",
                 "altText": payload.get("altText", "ข้อความสำคัญ"),
@@ -90,22 +106,12 @@ async def send_line_custom_payload(user_id: str, payload: dict) -> None:
                 }
             }
 
-    headers = {
-        "Content-Type": "application/json", 
-        "Authorization": f"Bearer {LINE_TOKEN}"
-    }
-    
-    # โครงสร้างที่ถูกต้อง 100% ตามกฎ LINE API
-    data = {
-        "to": user_id, 
-        "messages": [payload]
-    }
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LINE_TOKEN}"}
+    data = {"to": user_id, "messages": [payload]}
     
     try:
-        # 🚀 เปลี่ยนมาใช้ httpx (Async) ขจัดปัญหา Timeout ถาวร
         async with httpx.AsyncClient() as http_client:
             res = await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=15.0)
-            
             if res.status_code == 200:
                 logger.info("📤 [System]: ส่ง Executive Custom Payload สำเร็จ")
             else:
@@ -116,15 +122,16 @@ async def send_line_custom_payload(user_id: str, payload: dict) -> None:
         logger.error(f"❌ [System Error]: ส่ง Custom Payload ล้มเหลว -> {e}", exc_info=True)
 
 async def dispatch_line_message(user_id: str, reply_token: Optional[str], messages: list) -> None:
-    """ฟังก์ชันสลับ Reply / Push อัตโนมัติ ป้องกันปัญหา LINE Timeout และ Token หมดอายุ"""
+    """ระบบสลับ Reply / Push อัจฉริยะ (Adaptive Dispatcher) ลดการใช้ Push Quota โดยไม่จำเป็น"""
     if not messages: return
     try:
+        # ถ้ามี Reply Token และอายุยังไม่เกิน (ใช้งานปกติ)
         if reply_token:
             await asyncio.to_thread(line_bot_api.reply_message, reply_token, messages)
         else:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
     except LineBotApiError as line_err:
-        logger.warning(f"🔄 [Auto-Retry]: Reply ล้มเหลว ({line_err.error.message}). สลับไปใช้ Push Message...")
+        logger.warning(f"🔄 [Auto-Retry]: Reply ล้มเหลว/Token หมดอายุ สลับไปใช้ Push Message แบบไร้รอยต่อ...")
         try:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
         except Exception as push_err:
@@ -136,6 +143,7 @@ async def dispatch_line_message(user_id: str, reply_token: Optional[str], messag
 # 🧠 The Ultimate AI Processing Pipeline (ท่อประมวลผลสมองกลหลัก)
 # =========================================================
 async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: Optional[str], file_path: Optional[str] = None, file_type: Optional[str] = None) -> None:
+    """ทำงานใน Background: ใช้เวลาคิดได้เต็มที่ ไร้ข้อจำกัด Timeout 5 วินาทีของ LINE"""
     try:
         start_time = time.time()
         
@@ -148,10 +156,10 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
-            if time.time() - start_time > 15.0: reply_token = None
+            if time.time() - start_time > 45.0: reply_token = None # LINE Reply Token หมดอายุใน 60 วินาที
             
             if isinstance(reply_payload, dict): 
-                if reply_payload.get("type") == "flex" or reply_payload.get("type") == "template":
+                if reply_payload.get("type") in ["flex", "template"]:
                     await send_line_custom_payload(user_id, reply_payload)
                 else:
                     await dispatch_line_message(user_id, reply_token, [TextSendMessage(text=reply_payload.get("text", ""))])
@@ -166,9 +174,9 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         golden_rules = ""
         if self_learning and hasattr(self_learning, 'get_rules_for_context'):
             try:
-                golden_rules = await asyncio.wait_for(self_learning.get_rules_for_context(safe_message), timeout=10.0)
+                golden_rules = await asyncio.wait_for(self_learning.get_rules_for_context(safe_message), timeout=5.0)
             except asyncio.TimeoutError:
-                logger.warning("⚠️ [Timeout]: ดึง Golden Rules ไม่สำเร็จในเวลาที่กำหนด ข้ามการทำงานส่วนนี้")
+                logger.warning("⚠️ [Timeout]: ดึง Golden Rules ไม่สำเร็จใน 5 วิ ข้ามไปก่อนเพื่อความเร็ว")
 
         enhanced_message = f"{golden_rules}\n{safe_message}" if golden_rules else safe_message
 
@@ -191,7 +199,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 else:
                     reply_msg = await asyncio.to_thread(generate_intelligent_response, user_id, enhanced_message, file_path, file_type)
             else:
-                sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบสั้นกระชับ {golden_rules}"
+                sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบสั้นกระชับ เป็นมืออาชีพ {golden_rules}"
                 response = await asyncio.to_thread(
                     client.models.generate_content,
                     model='gemini-3.7-flash',
@@ -225,8 +233,8 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as audio_err:
                 logger.error(f"⚠️ [Voice Module Error]: {audio_err}")
         
-        # ประเมินเวลาทำงานทั้งหมด หากนานเกิน 15 วิ ให้เปลี่ยนเป็น Push Message
-        if time.time() - start_time > 15.0: reply_token = None 
+        # ปรับเวลา Token Expiry ตามมาตรฐาน LINE (1 นาที)
+        if time.time() - start_time > 45.0: reply_token = None 
 
         # 📤 8. [DISPATCH]: ส่งข้อมูลกลับหาลูกค้า
         await dispatch_line_message(user_id, reply_token, messages_to_send)
@@ -248,7 +256,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
 # =========================================================
 @router.post("/webhook")
 async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
-    """ด่านหน้ารับข้อความจาก LINE OA (รองรับ 10,000+ Concurrent Requests)"""
+    """ด่านหน้ารับข้อความจาก LINE OA ออกแบบมาเพื่อป้องกัน Timeout 100% (Event-Driven Architecture)"""
     if not parser or not line_bot_api:
         logger.warning("⚠️ Webhook Parser ไม่พร้อมทำงาน ส่ง 200 OK เพื่อให้ Verify ผ่าน")
         return {"status": "ok", "message": "Verify Only Mode"}
@@ -284,7 +292,12 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
             continue
 
         # ==========================================
-        # 📝 1. โหมดข้อความและการกดปุ่ม
+        # ⚡ 1. โชว์จุดไข่ปลา (Loading Animation) ทันทีที่รับข้อความ!
+        # ==========================================
+        background_tasks.add_task(show_line_loading_animation, user_id, 20)
+
+        # ==========================================
+        # 📝 2. โหมดข้อความและการกดปุ่ม
         # ==========================================
         if message_type == 'text': 
             incoming_message = event.message.text.strip()
@@ -308,20 +321,11 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 continue
 
         # ==========================================
-        # 🖼️ 2. โหมดมัลติมีเดีย (รูปภาพ เสียง วิดีโอ PDF)
+        # 🖼️ 3. โหมดมัลติมีเดีย (รูปภาพ เสียง วิดีโอ PDF)
         # ==========================================
         elif message_type in ['audio', 'image', 'video', 'file']:
             message_id = event.message.id
             try:
-                # 💬 เคล็ดลับ: โยนการตอบกลับสถานะ ให้อยู่ใน Background Task แทน เพื่อไม่ให้ไปเผา Reply Token ดื้อๆ 
-                def _reply_loading():
-                    try:
-                        line_bot_api.reply_message(reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดไฟล์ระดับองค์กร กรุณารอสักครู่นะครับ ⏳"))
-                    except Exception as e:
-                        logger.error(f"Loading Reply Error: {e}")
-                
-                background_tasks.add_task(_reply_loading)
-                
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ".pdf"
                 file_name = f"file_{uuid.uuid4().hex}{ext}"
@@ -337,7 +341,6 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 
                 incoming_message = f"[System Alert: ลูกค้าอัปโหลดไฟล์ {message_type} สำเร็จ ช่วยวิเคราะห์เอกสาร/ภาพ/วิดีโอนี้อย่างละเอียดบนพื้นฐานกฎหมายและศีลธรรม]"
                 file_type = message_type
-                reply_token = None # รีเซ็ต Token เพราะใช้ตอบกลับไปแล้ว 1 ครั้ง
                 
             except Exception as e: 
                 logger.error(f"❌ File download error: {e}", exc_info=True)
@@ -345,7 +348,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         else: 
             continue
     
-        # 🚀 โยนเข้าคิวประมวลผล AI หลังบ้าน (แก้ปัญหา Timeout สมบูรณ์แบบ)
+        # 🚀 4. โยนเข้าคิวประมวลผล AI หลังบ้าน (FastAPI คืนค่า 200 OK กลับไปหา LINE ทันที)
         background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
         
     return {"status": "OK"}
