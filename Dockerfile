@@ -65,4 +65,4 @@ EXPOSE 8080
 # 8. 🚀 คำสั่งจุดระเบิดเซิร์ฟเวอร์ (Uvicorn) สำหรับ Google Cloud Run
 # - เพิ่ม --timeout-keep-alive 75 เพื่อซิงค์กับ Load Balancer ของ Google ป้องกันปัญหา 502 Bad Gateway
 # - เพิ่ม --workers 1 (Cloud Run จัดการ Scale ให้แล้ว ให้ 1 Container โฟกัสงานตัวเองเต็มที่)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*", "--timeout-keep-alive", "75", "--workers", "1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
