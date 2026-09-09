@@ -39,7 +39,7 @@ COPY --chown=primeuser:primegroup . .
 
 USER primeuser
 
-EXPOSE $PORT
+EXPOSE 8080
 
 # ใช้ Shell Form เพื่อให้ Uvicorn อ่านค่าพอร์ตจากระบบ Cloud Run ได้อย่างถูกต้อง
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips="*"
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
