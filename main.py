@@ -34,25 +34,40 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_CORE")
 
-try:
-    LINE_CHANNEL_ACCESS_TOKEN = PrimeSecretVault.get_secret("LINE_CHANNEL_ACCESS_TOKEN")
-    LINE_CHANNEL_SECRET = PrimeSecretVault.get_secret("LINE_CHANNEL_SECRET")
-    MASTER_ADMIN_LINE_ID = PrimeSecretVault.get_secret("MASTER_ADMIN_LINE_ID")
-    CEO_LINE_ID = PrimeSecretVault.get_secret("CEO_LINE_ID")
-    STRIPE_WEBHOOK_SECRET = PrimeSecretVault.get_secret("STRIPE_WEBHOOK_SECRET")
-    
-    GCP_PROJECT = PrimeSecretVault.get_secret("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
-    GCP_LOCATION = PrimeSecretVault.get_secret("GOOGLE_CLOUD_LOCATION") or "asia-southeast3"
-    GCP_QUEUE_NAME = PrimeSecretVault.get_secret("CLOUD_TASKS_QUEUE_NAME") or "prime-heavy-workers"
-    
-    stripe_key = PrimeSecretVault.get_secret("STRIPE_SECRET_KEY")
-    if stripe_key:
-        stripe.api_key = stripe_key
+# 🛡️ Safe Secret Loading (ป้องกันเซิร์ฟเวอร์พังตอน Startup หากดึงคีย์ไม่สำเร็จ)
+def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
+    try:
+        val = PrimeSecretVault.get_secret(secret_name)
+        return val if val else os.getenv(secret_name, fallback_env)
+    except Exception as e:
+        logger.warning(f"⚠️ [Secret Vault Warning]: ไม่สามารถดึง {secret_name} ได้ ใช้ค่าสำรองแทน -> {e}")
+        return os.getenv(secret_name, fallback_env)
 
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_SERVICE_KEY = PrimeSecretVault.get_secret("SUPABASE_SERVICE_ROLE_KEY")
-except Exception as e:
-    logger.critical(f"❌ [Boot Error]: ดึงคีย์จาก Secret Manager ล้มเหลว กรุณาตรวจสอบสิทธิ์ IAM -> {e}")
+LINE_CHANNEL_ACCESS_TOKEN = safe_get_secret("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = safe_get_secret("LINE_CHANNEL_SECRET")
+MASTER_ADMIN_LINE_ID = safe_get_secret("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
+CEO_LINE_ID = safe_get_secret("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
+STRIPE_WEBHOOK_SECRET = safe_get_secret("STRIPE_WEBHOOK_SECRET")
+
+# Google Cloud Project Config
+GCP_PROJECT = safe_get_secret("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
+GCP_LOCATION = safe_get_secret("GOOGLE_CLOUD_LOCATION", "asia-southeast3")
+GCP_QUEUE_NAME = safe_get_secret("CLOUD_TASKS_QUEUE_NAME", "prime-heavy-workers")
+
+stripe_key = safe_get_secret("STRIPE_SECRET_KEY")
+if stripe_key:
+    stripe.api_key = stripe_key
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = safe_get_secret("SUPABASE_SERVICE_ROLE_KEY")
+
+supabase: Optional[Client] = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        logger.info("✅ [System Database]: Supabase Vault initialized successfully.")
+    except Exception as e:
+        logger.critical(f"❌ [System Critical Error]: Failed to unlock Supabase Vault: {e}")
 
 # ==========================================
 # 🚀 2. Lifespan & Swarm Network Bootup
@@ -133,7 +148,7 @@ except Exception as e:
 # ==========================================
 def verify_line_signature(body: bytes, signature: str) -> bool:
     """🛡️ ตรวจสอบความถูกต้องของคำสั่ง ป้องกันการปลอมแปลง (Webhook Signature Validation)"""
-    if not LINE_CHANNEL_SECRET: return True # ข้ามการตรวจถ้าไม่ได้ตั้งค่าไว้
+    if not LINE_CHANNEL_SECRET: return True 
     hash_val = hmac.new(LINE_CHANNEL_SECRET.encode('utf-8'), body, hashlib.sha256).digest()
     expected_signature = base64.b64encode(hash_val).decode('utf-8')
     return hmac.compare_digest(signature, expected_signature)
@@ -142,7 +157,6 @@ async def process_payload_background(payload: dict):
     """🧠 ฟังก์ชันประมวลผลงานหนักแบบเบื้องหลัง (ไม่ล็อกการตอบกลับของ LINE)"""
     try:
         from core_services.swarm_dispatcher import swarm_hub
-        # โยน Payload ให้ระบบจ่ายงานอัจฉริยะ (Hybrid Task Dispatcher)
         await swarm_hub.dispatch_line_event(payload)
     except Exception as e:
         logger.error(f"❌ [Background Process Error]: {e}", exc_info=True)
@@ -155,7 +169,6 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
     signature = request.headers.get("x-line-signature", "")
     body_bytes = await request.body()
 
-    # 1. ป้องกันแฮกเกอร์ด้วย Signature Guard
     if not verify_line_signature(body_bytes, signature):
         logger.warning("🚫 [Security]: Invalid LINE Signature detected. Dropping request.")
         raise HTTPException(status_code=403, detail="Invalid signature")
@@ -163,7 +176,6 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
     try:
         payload = json.loads(body_bytes.decode('utf-8'))
         
-        # 2. แยกงานหนักโยนเข้า Cloud Tasks หรือ Background Tasks (Asynchronous Offloading)
         if CLOUD_TASKS_AVAILABLE and GCP_PROJECT:
             try:
                 client = tasks_v2.CloudTasksClient()
@@ -171,7 +183,7 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
                 task = {
                     "http_request": {
                         "http_method": tasks_v2.HttpMethod.POST,
-                        "url": f"https://{request.url.hostname}/api/v1/internal/process-task", # ชี้ไปที่ Endpoint ภายใน
+                        "url": f"https://{request.url.hostname}/api/v1/internal/process-task",
                         "headers": {"Content-type": "application/json"},
                         "body": body_bytes,
                     }
@@ -182,10 +194,8 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
                 logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Falling back to BackgroundTasks.")
                 background_tasks.add_task(process_payload_background, payload)
         else:
-            # ใช้ FastAPI BackgroundTasks เป็นกลไกพื้นฐาน
             background_tasks.add_task(process_payload_background, payload)
 
-        # 3. ตอบกลับ 200 OK ภายในเวลาไม่ถึง 100 มิลลิวินาที (Zero-Timeout)
         return Response(content="OK", status_code=200)
 
     except Exception as e:
@@ -224,7 +234,6 @@ def read_wallet():
 async def get_user_status(line_id: str):
     if not supabase: raise HTTPException(status_code=500, detail="Database Error")
     try:
-        # 🧵 Thread-Safe Database Query
         res = await asyncio.to_thread(supabase.table("prime_clients").select("*").eq("line_user_id", line_id).execute)
         if not res.data:
             return {"tier": "GUEST", "balance": 0, "message": "ยินดีต้อนรับสู่ SIRINTHANATTH PRIME! ลงทะเบียนวันนี้เพื่อสัมผัสประสบการณ์ AI ระดับโลกครับ"}
@@ -268,7 +277,6 @@ async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTa
         except Exception as err:
             logger.error(f"❌ [Sync System DB Error]: {err}")
             
-    # โยนเข้า Background Task เพื่อความเร็วของฝั่ง Frontend
     background_tasks.add_task(_sync)
     return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
 
@@ -300,7 +308,6 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
         
         logger.info(f"💰 [Stripe Revenue]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
 
-        # 🧵 ฟังก์ชันทำธุรกรรมการเงินแบบปลอดภัย (รันอยู่เบื้องหลัง)
         def _process_financials():
             if not supabase or not client_ref: return
             
@@ -334,12 +341,10 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                 
                 total_tokens_to_add = base_tokens + bonus_tokens
 
-                # ดึงยอดคงเหลือปัจจุบัน
                 res = supabase.table("prime_clients").select("token_balance").eq("line_user_id", user_id).execute()
                 current_balance = float(res.data[0].get("token_balance", 0)) if res.data else 0.0
                 new_balance = current_balance + total_tokens_to_add
                 
-                # อัปเดตข้อมูลแพ็กเกจ
                 update_data = {"token_balance": new_balance}
                 if is_subscription:
                     update_data["package_tier"] = package_tier
@@ -348,7 +353,6 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                 supabase.table("prime_clients").upsert({"line_user_id": user_id, **update_data}, on_conflict="line_user_id").execute()
                 logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits (ยอดใหม่: {new_balance})")
 
-                # ระบบพันธมิตร (Affiliate)
                 if agent_code and agent_code != "NOAGENT":
                     commission_rate = 0.30 if package_tier == "VIP_FOUNDER" else 0.15 
                     commission_amount = amount_paid_thb * commission_rate
@@ -366,7 +370,6 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             except Exception as db_err:
                 logger.error(f"❌ [Financial Engine Error]: {db_err}", exc_info=True)
 
-        # สั่งรันเข้าคิว Background Tasks
         background_tasks.add_task(_process_financials)
         
     return {"status": "success"}
