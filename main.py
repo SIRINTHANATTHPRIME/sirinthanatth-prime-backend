@@ -379,5 +379,4 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
 # ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME CORE ENGINE ON PORT {port}...")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)
