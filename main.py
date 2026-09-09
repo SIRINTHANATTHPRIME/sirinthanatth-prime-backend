@@ -34,31 +34,25 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_CORE")
 
-LINE_CHANNEL_ACCESS_TOKEN = PrimeSecretVault.get_secret("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_CHANNEL_SECRET = PrimeSecretVault.get_secret("LINE_CHANNEL_SECRET")
-MASTER_ADMIN_LINE_ID = PrimeSecretVault.get_secret("MASTER_ADMIN_LINE_ID")
-CEO_LINE_ID = PrimeSecretVault.get_secret("CEO_LINE_ID")
-STRIPE_WEBHOOK_SECRET = PrimeSecretVault.get_secret("STRIPE_WEBHOOK_SECRET")
+try:
+    LINE_CHANNEL_ACCESS_TOKEN = PrimeSecretVault.get_secret("LINE_CHANNEL_ACCESS_TOKEN")
+    LINE_CHANNEL_SECRET = PrimeSecretVault.get_secret("LINE_CHANNEL_SECRET")
+    MASTER_ADMIN_LINE_ID = PrimeSecretVault.get_secret("MASTER_ADMIN_LINE_ID")
+    CEO_LINE_ID = PrimeSecretVault.get_secret("CEO_LINE_ID")
+    STRIPE_WEBHOOK_SECRET = PrimeSecretVault.get_secret("STRIPE_WEBHOOK_SECRET")
+    
+    GCP_PROJECT = PrimeSecretVault.get_secret("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
+    GCP_LOCATION = PrimeSecretVault.get_secret("GOOGLE_CLOUD_LOCATION") or "asia-southeast3"
+    GCP_QUEUE_NAME = PrimeSecretVault.get_secret("CLOUD_TASKS_QUEUE_NAME") or "prime-heavy-workers"
+    
+    stripe_key = PrimeSecretVault.get_secret("STRIPE_SECRET_KEY")
+    if stripe_key:
+        stripe.api_key = stripe_key
 
-# Google Cloud Project Config
-GCP_PROJECT = PrimeSecretVault.get_secret("GOOGLE_CLOUD_PROJECT")
-GCP_LOCATION = PrimeSecretVault.get_secret("GOOGLE_CLOUD_LOCATION")
-GCP_QUEUE_NAME = PrimeSecretVault.get_secret("CLOUD_TASKS_QUEUE_NAME")
-
-stripe_key = PrimeSecretVault.get_secret("STRIPE_SECRET_KEY")
-if stripe_key:
-    stripe.api_key = stripe_key
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = PrimeSecretVault.get_secret("SUPABASE_SERVICE_ROLE_KEY")
-
-supabase: Optional[Client] = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-        logger.info("✅ [System Database]: Supabase Vault initialized successfully.")
-    except Exception as e:
-        logger.critical(f"❌ [System Critical Error]: Failed to unlock Supabase Vault: {e}")
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_SERVICE_KEY = PrimeSecretVault.get_secret("SUPABASE_SERVICE_ROLE_KEY")
+except Exception as e:
+    logger.critical(f"❌ [Boot Error]: ดึงคีย์จาก Secret Manager ล้มเหลว กรุณาตรวจสอบสิทธิ์ IAM -> {e}")
 
 # ==========================================
 # 🚀 2. Lifespan & Swarm Network Bootup
