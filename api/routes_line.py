@@ -4,7 +4,7 @@ import inspect
 import logging
 import uuid
 import time
-import httpx # ⚡ อัปเกรดเป็น Async HTTP ขั้นสุด
+import httpx # ⚡ อัปเกรดเป็น Async HTTP ขั้นสุดระดับ Enterprise
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
@@ -12,7 +12,7 @@ from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
     MessageEvent, FollowEvent, TextMessage, AudioMessage, ImageMessage, 
-    VideoMessage, FileMessage, TextSendMessage, AudioSendMessage, 
+    VideoMessage, FileMessage, StickerMessage, TextSendMessage, AudioSendMessage, 
     ImageSendMessage, VideoSendMessage, FlexSendMessage
 )
 from google import genai
@@ -29,8 +29,8 @@ logger = logging.getLogger("Prime-API-Gateway")
 
 router = APIRouter()
 
-LINE_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_SECRET = os.environ.get("LINE_CHANNEL_SECRET")
+LINE_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+LINE_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
 BASE_URL = os.environ.get("BASE_URL") or "https://prime-core-agent-601183279633.asia-southeast3.run.app"
 
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
@@ -69,7 +69,7 @@ try: from services.elevenlabs_service import generate_voice_from_text
 except ImportError: generate_voice_from_text = None
 
 # =========================================================
-# 🌟 Advanced UI/UX: LINE Loading Animation API (ฟีเจอร์ใหม่ล่าสุด)
+# 🌟 Advanced UI/UX: LINE Loading Animation API
 # =========================================================
 async def show_line_loading_animation(user_id: str, loading_seconds: int = 20) -> None:
     """แสดงจุดไข่ปลา (...) อนิเมชันกำลังพิมพ์ให้ลูกค้าเห็นขณะ AI กำลังคิด ป้องกันความสับสน"""
@@ -89,7 +89,7 @@ async def show_line_loading_animation(user_id: str, loading_seconds: int = 20) -
 # 🛠️ Core Transmission Functions (ระบบสั่งการ LINE ขั้นสูง)
 # =========================================================
 async def send_line_custom_payload(user_id: str, payload: dict) -> None:
-    """⚡ ส่ง Flex Message หรือ Custom JSON Payload ให้ผู้บริหารผ่าน Push API แบบปลอดภัย (Anti-Error 400)"""
+    """⚡ ส่ง Flex Message หรือ Custom JSON Payload ให้ผู้บริหารผ่าน Push API แบบปลอดภัย"""
     if not LINE_TOKEN or not user_id: return
     
     # 🛡️ ระบบ Auto-Correction: ตรวจสอบและซ่อมแซมโครงสร้าง Flex Message
@@ -125,7 +125,6 @@ async def dispatch_line_message(user_id: str, reply_token: Optional[str], messag
     """ระบบสลับ Reply / Push อัจฉริยะ (Adaptive Dispatcher) ลดการใช้ Push Quota โดยไม่จำเป็น"""
     if not messages: return
     try:
-        # ถ้ามี Reply Token และอายุยังไม่เกิน (ใช้งานปกติ)
         if reply_token:
             await asyncio.to_thread(line_bot_api.reply_message, reply_token, messages)
         else:
@@ -156,7 +155,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
-            if time.time() - start_time > 45.0: reply_token = None # LINE Reply Token หมดอายุใน 60 วินาที
+            if time.time() - start_time > 45.0: reply_token = None
             
             if isinstance(reply_payload, dict): 
                 if reply_payload.get("type") in ["flex", "template"]:
@@ -233,7 +232,6 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as audio_err:
                 logger.error(f"⚠️ [Voice Module Error]: {audio_err}")
         
-        # ปรับเวลา Token Expiry ตามมาตรฐาน LINE (1 นาที)
         if time.time() - start_time > 45.0: reply_token = None 
 
         # 📤 8. [DISPATCH]: ส่งข้อมูลกลับหาลูกค้า
@@ -321,18 +319,35 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 continue
 
         # ==========================================
-        # 🖼️ 3. โหมดมัลติมีเดีย (รูปภาพ เสียง วิดีโอ PDF)
+        # 👾 3. โหมดวิเคราะห์สติกเกอร์ (Sticker Vision)
+        # ==========================================
+        elif message_type == 'sticker':
+            # ดักจับสติกเกอร์และแปลผลให้ AI เข้าใจ ป้องกันอาการ "บอทเงียบ"
+            package_id = event.message.package_id
+            sticker_id = event.message.sticker_id
+            incoming_message = f"[System Alert: ลูกค้าส่งสติกเกอร์ทักทาย (Package ID: {package_id}, Sticker ID: {sticker_id}) โปรดกล่าวทักทายและตอบกลับสติกเกอร์นี้ด้วยความสุภาพและเป็นมิตร]"
+            file_type = "sticker"
+
+        # ==========================================
+        # 🖼️ 4. โหมดมัลติมีเดีย (รูปภาพ เสียง วิดีโอ PDF)
         # ==========================================
         elif message_type in ['audio', 'image', 'video', 'file']:
             message_id = event.message.id
             try:
+                def _reply_loading():
+                    try:
+                        line_bot_api.reply_message(reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดและวิเคราะห์ไฟล์ กรุณารอสักครู่นะครับ ⏳"))
+                    except Exception as e:
+                        logger.error(f"Loading Reply Error: {e}")
+                
+                background_tasks.add_task(_reply_loading)
+                
                 message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
                 ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ".pdf"
                 file_name = f"file_{uuid.uuid4().hex}{ext}"
                 os.makedirs("/tmp", exist_ok=True)
                 file_path = f"/tmp/{file_name}"
                 
-                # เขียนไฟล์แบบปลอดภัย
                 def save_media():
                     with open(file_path, 'wb') as fd:
                         for chunk in message_content.iter_content(chunk_size=8192): 
@@ -341,6 +356,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
                 
                 incoming_message = f"[System Alert: ลูกค้าอัปโหลดไฟล์ {message_type} สำเร็จ ช่วยวิเคราะห์เอกสาร/ภาพ/วิดีโอนี้อย่างละเอียดบนพื้นฐานกฎหมายและศีลธรรม]"
                 file_type = message_type
+                reply_token = None # รีเซ็ต Token เพราะใช้ตอบกลับไปแล้ว 1 ครั้ง ป้องกันข้อผิดพลาดจาก LINE API
                 
             except Exception as e: 
                 logger.error(f"❌ File download error: {e}", exc_info=True)
@@ -348,7 +364,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_li
         else: 
             continue
     
-        # 🚀 4. โยนเข้าคิวประมวลผล AI หลังบ้าน (FastAPI คืนค่า 200 OK กลับไปหา LINE ทันที)
+        # 🚀 5. โยนเข้าคิวประมวลผล AI หลังบ้าน (แก้ปัญหา Timeout สมบูรณ์แบบ)
         background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
         
     return {"status": "OK"}

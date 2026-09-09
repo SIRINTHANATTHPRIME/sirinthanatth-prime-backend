@@ -10,6 +10,7 @@ import stripe
 from datetime import datetime
 from google import genai
 from google.genai import types
+
 from core_services.swarm_dispatcher import swarm_hub
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -160,10 +161,11 @@ class CeoSecretaryWorker:
             if user_memory: enriched_prompt += f"\n[บริบทความจำ]:\n{user_memory}\n"
             content_to_send.append(enriched_prompt)
 
+            # ถอดการกำหนด {"google_search": {}} ออก เพื่อป้องกัน Error 400
             genai_config = types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 temperature=0.1, 
-                tools=[create_exclusive_invite, {"google_search": {}}] 
+                tools=[create_exclusive_invite] 
             )
 
             response = await asyncio.to_thread(
@@ -185,9 +187,6 @@ class CeoSecretaryWorker:
 
             reply_text = response.text if response.text else "ประมวลผลเสร็จสิ้นครับท่านประธาน"
 
-            # ========================================================
-            # 🔄 Parse Swarm Delegation & System Updates
-            # ========================================================
             delegations = re.findall(r'\[DELEGATE:\s*(.+?)\](.*)', reply_text, re.IGNORECASE)
             if delegations:
                 clean_reply = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.IGNORECASE).strip()
