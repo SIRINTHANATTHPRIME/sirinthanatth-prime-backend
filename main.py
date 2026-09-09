@@ -1,5 +1,9 @@
 import os
 import re
+import json
+import base64
+import hashlib
+import hmac
 import logging
 import stripe
 import uvicorn
@@ -14,6 +18,14 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from supabase import create_client, Client
+from core_services.secret_manager import PrimeSecretVault
+
+# ☁️ นำเข้า Google Cloud Tasks (Enterprise Queue)
+try:
+    from google.cloud import tasks_v2
+    CLOUD_TASKS_AVAILABLE = True
+except ImportError:
+    CLOUD_TASKS_AVAILABLE = False
 
 # ==========================================
 # ⚙️ 1. Initialization & Environment
@@ -22,18 +34,23 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_CORE")
 
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
-LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
-MASTER_ADMIN_LINE_ID = os.getenv("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
-CEO_LINE_ID = os.getenv("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+LINE_CHANNEL_ACCESS_TOKEN = PrimeSecretVault.get_secret("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = PrimeSecretVault.get_secret("LINE_CHANNEL_SECRET")
+MASTER_ADMIN_LINE_ID = PrimeSecretVault.get_secret("MASTER_ADMIN_LINE_ID")
+CEO_LINE_ID = PrimeSecretVault.get_secret("CEO_LINE_ID")
+STRIPE_WEBHOOK_SECRET = PrimeSecretVault.get_secret("STRIPE_WEBHOOK_SECRET")
 
-stripe_key = os.getenv("STRIPE_SECRET_KEY")
+# Google Cloud Project Config
+GCP_PROJECT = PrimeSecretVault.get_secret("GOOGLE_CLOUD_PROJECT")
+GCP_LOCATION = PrimeSecretVault.get_secret("GOOGLE_CLOUD_LOCATION")
+GCP_QUEUE_NAME = PrimeSecretVault.get_secret("CLOUD_TASKS_QUEUE_NAME")
+
+stripe_key = PrimeSecretVault.get_secret("STRIPE_SECRET_KEY")
 if stripe_key:
     stripe.api_key = stripe_key
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_SERVICE_KEY = PrimeSecretVault.get_secret("SUPABASE_SERVICE_ROLE_KEY")
 
 supabase: Optional[Client] = None
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
@@ -88,7 +105,7 @@ app.add_middleware(
     CORSMiddleware, 
     allow_origins=["*"], 
     allow_credentials=True, 
-    allow_methods=["GET", "POST", "OPTIONS"], # 🔒 ล็อก Method เพื่อความปลอดภัย
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"]
 )
 
@@ -110,14 +127,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="css")
 if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-# 🔧 แก้ไขบั๊ก Double Route Mounting (เมานท์แค่ครั้งเดียวก็พอ)
-try:
-    from api.routes_line import router as line_router
-    app.include_router(line_router, prefix="/api/v1/line", tags=["LINE OA"])
-    logger.info("✅ [System]: LINE Webhook Router mounted successfully.")
-except Exception as e:
-    logger.error(f"❌ [System Error]: Failed to mount line_router -> {e}")
-
 try:
     from api.routes_stats import router as stats_router
     app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
@@ -126,7 +135,78 @@ except Exception as e:
     logger.warning(f"⚠️ [System Warning]: Stats Router not found or skipped -> {e}")
 
 # ==========================================
-# 🌐 5. Core Endpoints
+# ⚡ 5. ZERO-TIMEOUT LINE WEBHOOK (Architecture Upgrade)
+# ==========================================
+def verify_line_signature(body: bytes, signature: str) -> bool:
+    """🛡️ ตรวจสอบความถูกต้องของคำสั่ง ป้องกันการปลอมแปลง (Webhook Signature Validation)"""
+    if not LINE_CHANNEL_SECRET: return True # ข้ามการตรวจถ้าไม่ได้ตั้งค่าไว้
+    hash_val = hmac.new(LINE_CHANNEL_SECRET.encode('utf-8'), body, hashlib.sha256).digest()
+    expected_signature = base64.b64encode(hash_val).decode('utf-8')
+    return hmac.compare_digest(signature, expected_signature)
+
+async def process_payload_background(payload: dict):
+    """🧠 ฟังก์ชันประมวลผลงานหนักแบบเบื้องหลัง (ไม่ล็อกการตอบกลับของ LINE)"""
+    try:
+        from core_services.swarm_dispatcher import swarm_hub
+        # โยน Payload ให้ระบบจ่ายงานอัจฉริยะ (Hybrid Task Dispatcher)
+        await swarm_hub.dispatch_line_event(payload)
+    except Exception as e:
+        logger.error(f"❌ [Background Process Error]: {e}", exc_info=True)
+
+@app.post("/api/v1/line/webhook", tags=["LINE OA"])
+async def line_webhook_gateway(request: Request, background_tasks: BackgroundTasks):
+    """
+    🚦 API Gateway ด่านหน้า: รับข้อมูล -> ยืนยันความปลอดภัย -> คืนค่า 200 OK ทันที -> โยนงานลงระบบคิว
+    """
+    signature = request.headers.get("x-line-signature", "")
+    body_bytes = await request.body()
+
+    # 1. ป้องกันแฮกเกอร์ด้วย Signature Guard
+    if not verify_line_signature(body_bytes, signature):
+        logger.warning("🚫 [Security]: Invalid LINE Signature detected. Dropping request.")
+        raise HTTPException(status_code=403, detail="Invalid signature")
+
+    try:
+        payload = json.loads(body_bytes.decode('utf-8'))
+        
+        # 2. แยกงานหนักโยนเข้า Cloud Tasks หรือ Background Tasks (Asynchronous Offloading)
+        if CLOUD_TASKS_AVAILABLE and GCP_PROJECT:
+            try:
+                client = tasks_v2.CloudTasksClient()
+                parent = client.queue_path(GCP_PROJECT, GCP_LOCATION, GCP_QUEUE_NAME)
+                task = {
+                    "http_request": {
+                        "http_method": tasks_v2.HttpMethod.POST,
+                        "url": f"https://{request.url.hostname}/api/v1/internal/process-task", # ชี้ไปที่ Endpoint ภายใน
+                        "headers": {"Content-type": "application/json"},
+                        "body": body_bytes,
+                    }
+                }
+                client.create_task(request={"parent": parent, "task": task})
+                logger.info("☁️ [Cloud Tasks]: Offloaded payload to Google Cloud Tasks successfully.")
+            except Exception as e:
+                logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Falling back to BackgroundTasks.")
+                background_tasks.add_task(process_payload_background, payload)
+        else:
+            # ใช้ FastAPI BackgroundTasks เป็นกลไกพื้นฐาน
+            background_tasks.add_task(process_payload_background, payload)
+
+        # 3. ตอบกลับ 200 OK ภายในเวลาไม่ถึง 100 มิลลิวินาที (Zero-Timeout)
+        return Response(content="OK", status_code=200)
+
+    except Exception as e:
+        logger.error(f"❌ [Webhook Gateway Error]: {e}")
+        return Response(content="Error processing request", status_code=500)
+
+@app.post("/api/v1/internal/process-task", include_in_schema=False)
+async def internal_cloud_task_worker(request: Request):
+    """⚙️ Endpoint ภายในสำหรับให้ Google Cloud Tasks เรียกกลับมาทำงานหนัก"""
+    payload = await request.json()
+    await process_payload_background(payload)
+    return {"status": "completed"}
+
+# ==========================================
+# 🌐 6. Core Endpoints
 # ==========================================
 @app.get("/")
 def root():
@@ -167,7 +247,7 @@ async def get_user_status(line_id: str):
             if balance < 1000: msg = "💡 เพื่อให้การวิเคราะห์กลยุทธ์ธุรกิจและสร้างสื่อ 4K ดำเนินไปอย่างต่อเนื่อง ขอแนะนำให้เติม PRIME CREDITS ครับ"
         elif tier == "ESSENTIAL":
             if balance < 500: msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME เพื่อปลดล็อกที่ปรึกษาระดับสากลได้ทันทีครับ"
-            else: msg = "✨ ยินดีต้อนรับครับ! ยกระดับธุรกิจด้วยแพ็กเกจ PRIME หรือ ENTERPRISE เพื่อรับสิทธิพิเศษขั้นสูงสุดได้เสมอครับ"
+        else: msg = "✨ ยินดีต้อนรับครับ! ยกระดับธุรกิจด้วยแพ็กเกจ PRIME หรือ ENTERPRISE เพื่อรับสิทธิพิเศษขั้นสูงสุดได้เสมอครับ"
                 
         return {"tier": tier, "balance": balance, "message": msg}
     except Exception as e:
@@ -199,7 +279,7 @@ async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTa
     return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
 
 # ==========================================
-# 💰 6. Financial Engine (Stripe Webhook)
+# 💰 7. Financial Engine (Stripe Webhook)
 # ==========================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -298,7 +378,7 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
     return {"status": "success"}
 
 # ==========================================
-# 🚀 7. Server Ignition
+# 🚀 8. Server Ignition
 # ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
