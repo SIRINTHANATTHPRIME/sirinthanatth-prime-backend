@@ -18,7 +18,6 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from supabase import create_client, Client
-from core_services.secret_manager import PrimeSecretVault
 
 # ☁️ นำเข้า Google Cloud Tasks (Enterprise Queue)
 try:
@@ -34,22 +33,23 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_CORE")
 
-# 🛡️ Safe Secret Loading (ป้องกันเซิร์ฟเวอร์พังตอน Startup หากดึงคีย์ไม่สำเร็จ)
+# 🛡️ Safe Secret Loading: ป้องกันเซิร์ฟเวอร์พังตอน Startup หากไลบรารีหรือคลาวด์มีปัญหา
 def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
     try:
+        from core_services.secret_manager import PrimeSecretVault
         val = PrimeSecretVault.get_secret(secret_name)
         return val if val else os.getenv(secret_name, fallback_env)
     except Exception as e:
-        logger.warning(f"⚠️ [Secret Vault Warning]: ไม่สามารถดึง {secret_name} ได้ ใช้ค่าสำรองแทน -> {e}")
+        logger.warning(f"⚠️ [Secret Vault Fallback]: ไม่สามารถดึง {secret_name} จากคลาวด์ได้ ใช้ค่าสำรอง (.env) -> {e}")
         return os.getenv(secret_name, fallback_env)
 
+# ดึงตัวแปรผ่านระบบนิรภัย
 LINE_CHANNEL_ACCESS_TOKEN = safe_get_secret("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = safe_get_secret("LINE_CHANNEL_SECRET")
 MASTER_ADMIN_LINE_ID = safe_get_secret("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
 CEO_LINE_ID = safe_get_secret("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
 STRIPE_WEBHOOK_SECRET = safe_get_secret("STRIPE_WEBHOOK_SECRET")
 
-# Google Cloud Project Config
 GCP_PROJECT = safe_get_secret("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
 GCP_LOCATION = safe_get_secret("GOOGLE_CLOUD_LOCATION", "asia-southeast3")
 GCP_QUEUE_NAME = safe_get_secret("CLOUD_TASKS_QUEUE_NAME", "prime-heavy-workers")
@@ -148,7 +148,7 @@ except Exception as e:
 # ==========================================
 def verify_line_signature(body: bytes, signature: str) -> bool:
     """🛡️ ตรวจสอบความถูกต้องของคำสั่ง ป้องกันการปลอมแปลง (Webhook Signature Validation)"""
-    if not LINE_CHANNEL_SECRET: return True 
+    if not LINE_CHANNEL_SECRET: return True
     hash_val = hmac.new(LINE_CHANNEL_SECRET.encode('utf-8'), body, hashlib.sha256).digest()
     expected_signature = base64.b64encode(hash_val).decode('utf-8')
     return hmac.compare_digest(signature, expected_signature)
