@@ -62,7 +62,6 @@ class SwarmDispatcher:
                         message_text = message_data.get("text", "")
                         logger.info(f"📨 [Swarm Hub]: รับข้อความจาก {user_id} -> '{message_text[:30]}...'")
                         
-                        # สร้าง Task โยนงานเข้าสู่ Swarm Network อย่างอิสระ ไม่รอกัน (Non-blocking)
                         task = asyncio.create_task(
                             self.delegate_task(
                                 from_worker="LINE_Gateway",
@@ -72,6 +71,26 @@ class SwarmDispatcher:
                             )
                         )
                         tasks.append(task)
+
+                    # เพิ่ม Block นี้เพื่อให้บอทอ่านสติกเกอร์ออก
+                    elif msg_type == "sticker":
+                        package_id = message_data.get("packageId", "")
+                        sticker_id = message_data.get("stickerId", "")
+                        logger.info(f"✨ [Swarm Hub]: รับสติกเกอร์จาก {user_id} (Package: {package_id}, Sticker: {sticker_id})")
+                        
+                        # แปลงสติกเกอร์เป็นข้อความเพื่อให้ Agent นำไปประมวลผลต่อได้ง่ายๆ
+                        simulated_message = "[ผู้ใช้ส่งสติกเกอร์ทักทาย]" 
+                        
+                        task = asyncio.create_task(
+                            self.delegate_task(
+                                from_worker="LINE_Gateway",
+                                to_worker=entry_worker,
+                                user_id=user_id,
+                                message=simulated_message
+                            )
+                        )
+                        tasks.append(task)
+                        
                     else:
                         logger.info(f"📎 [Swarm Hub]: ได้รับข้อความประเภท '{msg_type}' จาก {user_id} (ระบบรอการขยายผล)")
                 else:
