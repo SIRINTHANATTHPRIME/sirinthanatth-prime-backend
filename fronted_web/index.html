@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -60,7 +60,7 @@
         }
         @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
 
-        /* 🌟 Navbar Responsive */
+        /* 🌟 Navbar Responsive & Language Switcher */
         .top-navbar {
             display: flex; justify-content: space-between; align-items: center;
             padding: clamp(10px, 2vw, 20px) clamp(15px, 4vw, 40px);
@@ -71,6 +71,15 @@
             color: #fff; text-decoration: none; font-weight: 800; font-size: clamp(1rem, 2vw, 1.25rem);
             letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(255,255,255,0.25);
         }
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+        
+        /* 🌐 ปุ่มสลับภาษา */
+        .lang-switch-btn {
+            background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.4);
+            color: #FFD700; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .lang-switch-btn:hover { background: rgba(255, 215, 0, 0.25); transform: translateY(-1px); }
 
         /* 🚀 3D Typography & 4K Sharp Look */
         h1, h2, h3, p, span, li, a, label, input, button {
@@ -149,7 +158,7 @@
             100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
-        /* 🛡️ Global Loading Overlay (ระบบใหม่) */
+        /* 🛡️ Global Loader */
         #globalLoader {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 17, 0.9); backdrop-filter: blur(10px);
@@ -162,7 +171,7 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 👁️ Scroll Animation Classes (ระบบใหม่) */
+        /* 👁️ Scroll Animation Classes */
         .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
         .reveal.active { opacity: 1; transform: translateY(0); }
 
@@ -235,8 +244,8 @@
             .video-text { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; text-align: left; }
         }
 
-        .video-content { position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; }
-        .video-content video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .video-content { position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .video-content video { width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; }
         .video-text { padding: 30px 20px; }
         .video-text h3 { color: #D4AF37; font-size: 1.8rem; margin-top: 0; margin-bottom: 15px; font-weight: 600; }
         .video-text p { color: #dddddd; font-size: 1rem; line-height: 1.6; margin-bottom: 20px; }
@@ -349,7 +358,7 @@
         }
         .checkout-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5); }
 
-        /* 💬 Web AI Sandbox Widget (อัปเกรด Sales Closer & PDPA) */
+        /* 💬 Web AI Sandbox Widget (Sales Closer Persona & PDPA Rules) */
         #aiChatWidget {
             position: fixed; bottom: 25px; right: 25px; z-index: 9997;
         }
@@ -394,8 +403,10 @@
 
     <nav class="top-navbar">
         <a href="index.html" class="nav-brand">SIRINTHANATTH <span class="gold-text">PRIME</span></a>
-        <div>
-            <a href="agent.html" class="btn-3d btn-cyan" style="padding: 8px 16px; font-size: 0.85rem;">💼 สมัครสมาชิกพาร์ทเนอร์ (Agent)</a>
+        <div class="nav-actions">
+            <!-- 🌐 ปุ่มสลับภาษา -->
+            <button class="lang-switch-btn" id="langSwitchBtn" onclick="toggleLanguage()">EN / ภาษาไทย</button>
+            <a href="agent.html" class="btn-3d btn-cyan" style="padding: 8px 16px; font-size: 0.85rem;" data-i18n="nav_agent">💼 สมัครสมาชิกพาร์ทเนอร์ (Agent)</a>
         </div>
     </nav>
 
@@ -403,12 +414,12 @@
         <div class="content-container reveal">
             <img src="assets/1000097983.png" alt="Logo" class="logo" onmouseenter="playHoverBell()" onclick="playWelcomeAudio()">
             <h1 class="main-title">SIRINTHANATTH <span class="gold-text">PRIME</span></h1>
-            <p class="subtitle">ระบบผู้ช่วยปัญญาประดิษฐ์ผู้บริหารระดับสากล ยกระดับการจัดการธุรกิจ ลดต้นทุน และเฝ้าระวังความเสี่ยงองค์กรอย่างเต็มรูปแบบ</p>
+            <p class="subtitle" data-i18n="hero_subtitle">ระบบผู้ช่วยปัญญาประดิษฐ์ผู้บริหารระดับสากล ยกระดับการจัดการธุรกิจ ลดต้นทุน และเฝ้าระวังความเสี่ยงองค์กรอย่างเต็มรูปแบบ</p>
             
-            <button class="vip-button" onclick="initiateVipFlow()">👑 สมัคร 100 VIP Founders Club</button>
+            <button class="vip-button" onclick="initiateVipFlow()" data-i18n="hero_vip_btn">👑 สมัคร 100 VIP Founders Club</button>
             
             <div class="action-buttons" style="margin-top: 15px;">
-                <button class="btn-3d btn-cyan" onclick="document.getElementById('company-profile').scrollIntoView({behavior: 'smooth'})" style="padding: 10px 25px; font-size: 0.95rem;">ดูรายละเอียดระบบ</button>
+                <button class="btn-3d btn-cyan" onclick="document.getElementById('company-profile').scrollIntoView({behavior: 'smooth'})" style="padding: 10px 25px; font-size: 0.95rem;" data-i18n="hero_detail_btn">ดูรายละเอียดระบบ</button>
             </div>
         </div>
     </div>
@@ -616,11 +627,11 @@
             </div>
         </div>
 
-        <!-- 🚀 4K Video Optimization: preload="none", lazy loading & poster -->
+        <!-- 🚀 4K Video Optimization: preload="none", lazy loading & exact thumbnail images (1, 2, 3) -->
         <div class="video-showcase">
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="image_34544a.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="assets/image_34544a.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video1.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -633,7 +644,7 @@
 
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="image_34574e.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="assets/image_34574e.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video2.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -646,7 +657,7 @@
 
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="image_3457e8.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="assets/image_3457e8.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video3.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -673,8 +684,8 @@
         <div class="founder-letter reveal">
             <p class="founder-text">"เทคโนโลยีที่แท้จริง ไม่ได้ถูกสร้างมาเพื่อแทนที่มนุษย์ แต่ถูกสร้างมาเพื่อ 'ปลดล็อก' ศักยภาพที่ซ่อนอยู่ภายในตัวเรา <br><br>ที่ SIRINTHANATTH PRIME เราไม่ได้พัฒนาแค่โปรแกรมคอมพิวเตอร์ แต่เรากำลังสร้างระบบ AI ที่ง่าย เข้าใจคุณ "ครบ จบ ที่เดียว" ที่ปรึกษาส่วนตัวเฉพาะคุณ จดจำรายละเอียด วางแผนกลยุทธ์ บริหารจัดการ และเฝ้าระวังความเสี่ยง เพื่อมอบเวลาอันมีค่า ให้คุณได้โฟกัสกับสิ่งที่คุณรัก และเป้าหมายที่ยิ่งใหญ่กว่า"</p>
             <div class="signature-box">
-                <!-- 🚀 Lazy load signature image -->
-                <img src="CEO sign.png" alt="Signature - Weerachai Sirinthanatth" class="signature-img" loading="lazy">
+                <!-- 🚀 Linked exact CEO sign image -->
+                <img src="assets/CEO%20sign.png" alt="Signature - Weerachai Sirinthanatth" class="signature-img" loading="lazy">
                 <p class="ceo-name">วีระชัย สิรินทร์ธนัตถ์</p>
                 <p class="ceo-title">Founder & CEO, Marketing Spark Combine Co., Ltd.</p>
             </div>
@@ -762,21 +773,21 @@
         </div>
     </section>
 
-    <!-- 💬 Web AI Sandbox Widget (Sales Closer Persona & PDPA Rules) -->
+    <!-- 💬 Web AI Sandbox Widget (Sales Closer & Real Intelligence & Language Support) -->
     <div id="aiChatWidget">
         <button id="chatToggleBtn" onclick="toggleChatBox()" title="ทดสอบแชทกับ AI">💬</button>
         <div id="chatBoxContainer">
             <div class="chat-header">
-                <span>🤖 SIRINTHANATTH PRIME - Live Demo</span>
+                <span id="chatHeaderTitle">🤖 SIRINTHANATTH PRIME - Live Demo</span>
                 <span style="cursor:pointer; font-size:18px;" onclick="toggleChatBox()">&times;</span>
             </div>
             <div class="chat-body" id="chatBody">
-                <div class="chat-msg bot">สวัสดีครับท่านผู้บริหาร ผมคือ <strong>SIRINTHANATTH PRIME</strong> สุดยอดผู้ช่วย AI ปิดการขายระดับ Enterprise ผมพร้อมให้รายละเอียดแพ็กเกจ (100VIP, Essential, Prime, Enterprise), ระบบ Token, Agent และมาตรฐานความปลอดภัยทางกฎหมาย (PDPA) ครับ ท่านสนใจรับบริการด้านไหนเป็นพิเศษไหมครับ?</div>
+                <div class="chat-msg bot" id="initialBotMsg">สวัสดีครับท่านผู้บริหาร ผมคือ <strong>SIRINTHANATTH PRIME</strong> สุดยอดผู้ช่วย AI ปิดการขายระดับ Enterprise พร้อมเข้าใจความรู้สึกและดูแลท่านอย่างใกล้ชิด ท่านสามารถสอบถามเกี่ยวกับบริการ Line OA, รายละเอียดแพ็กเกจ (100VIP, Essential, Prime, Enterprise), สิทธิพิเศษ หรือระบบความปลอดภัยได้เลยครับ มีอะไรให้ผมรับใช้ไหมครับ? 😊</div>
             </div>
             <div class="chat-footer">
                 <div class="input-group">
-                    <input type="text" id="chatUserInput" placeholder="สอบถามรายละเอียดแพ็กเกจหรือระบบ..." onkeypress="if(event.key === 'Enter') sendDemoMessage()">
-                    <button onclick="sendDemoMessage()">ส่ง</button>
+                    <input type="text" id="chatUserInput" placeholder="พิมพ์สอบถามหรือปรึกษาเรื่องแพ็กเกจ..." onkeypress="if(event.key === 'Enter') sendDemoMessage()">
+                    <button onclick="sendDemoMessage()" id="chatSendBtn">ส่ง</button>
                 </div>
                 <div class="pdpa-notice">ประมวลผลบน RAM ชั่วคราว ล้างข้อมูลอัตโนมัติใน 60 วินาที</div>
             </div>
@@ -823,6 +834,37 @@
         let currentVipToken = ""; 
         let currentFlowStatus = ""; 
         let userLineId = "WEB_GUEST"; 
+
+        // 🌐 ระบบสลับภาษา (Localization Dictionary)
+        let currentLang = 'th';
+        const translations = {
+            th: {
+                nav_agent: "💼 สมัครสมาชิกพาร์ทเนอร์ (Agent)",
+                hero_subtitle: "ระบบผู้ช่วยปัญญาประดิษฐ์ผู้บริหารระดับสากล ยกระดับการจัดการธุรกิจ ลดต้นทุน และเฝ้าระวังความเสี่ยงองค์กรอย่างเต็มรูปแบบ",
+                hero_vip_btn: "👑 สมัคร 100 VIP Founders Club",
+                hero_detail_btn: "ดูรายละเอียดระบบ"
+            },
+            en: {
+                nav_agent: "💼 Partner Agent Registration",
+                hero_subtitle: "Global Executive AI Assistant Ecosystem, elevating business management, reducing costs, and monitoring organizational risks.",
+                hero_vip_btn: "👑 Join 100 VIP Founders Club",
+                hero_detail_btn: "View System Details"
+            }
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'th' ? 'en' : 'th';
+            document.getElementById('htmlRoot').setAttribute('lang', currentLang);
+            document.getElementById('langSwitchBtn').innerText = currentLang === 'th' ? 'EN / ภาษาไทย' : 'TH / English';
+            
+            // แปลงข้อความ element ที่มี data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(translations[currentLang][key]) {
+                    el.innerText = translations[currentLang][key];
+                }
+            });
+        }
 
         // 👁️ Intersection Observer (Scroll Reveal Animation)
         const revealElements = document.querySelectorAll('.reveal');
@@ -1038,7 +1080,7 @@
             }, 800);
         }
 
-        // 💬 Web AI Sandbox Widget Control (Sales Closer & PDPA Setup)
+        // 💬 Web AI Sandbox Widget Control (Sales Closer & Real Intelligence & Empathy)
         function toggleChatBox() {
             const box = document.getElementById('chatBoxContainer');
             box.style.display = (box.style.display === 'flex') ? 'none' : 'flex';
@@ -1059,23 +1101,23 @@
 
             demoMessageCount++;
 
-            // Trigger PDPA Notice
+            // Trigger PDPA Notice after 1st message
             if(demoMessageCount === 1) {
                 clearTimeout(pdpaTimer);
                 pdpaTimer = setTimeout(() => {
-                    chatBody.innerHTML += `<div class="chat-msg bot" style="border-left: 3px solid #FF334B; color: #FFD700; font-size: 0.8rem;">[Security] ล้างข้อมูลสนทนาชั่วคราวเรียบร้อยแล้วตามมาตรฐาน PDPA</div>`;
+                    chatBody.innerHTML += `<div class="chat-msg bot" style="border-left: 3px solid #FF334B; color: #FFD700; font-size: 0.8rem;">[PDPA Security Notice] ข้อมูลสนทนาชั่วคราวถูกล้างเรียบร้อยแล้วเพื่อความปลอดภัยสูงสุดตามกฎหมาย PDPA ครับ</div>`;
                     chatBody.scrollTop = chatBody.scrollHeight;
                 }, 60000);
             }
 
-            // Route to LINE OA upon fatigue limit (max 3 exchanges)
+            // Route to LINE OA smoothly after interactive engagement (max 3 exchanges)
             if(demoMessageCount >= 3) {
                 const redirectId = 'redirect_' + Date.now();
-                chatBody.innerHTML += `<div class="chat-msg bot" id="${redirectId}">...</div>`;
+                chatBody.innerHTML += `<div class="chat-msg bot" id="${redirectId}">กำลังนำท่านเข้าสู่ห้องแชท LINE OA...</div>`;
                 chatBody.scrollTop = chatBody.scrollHeight;
                 
                 setTimeout(() => {
-                    document.getElementById(redirectId).innerHTML = "เพื่อการบริการและการให้ข้อมูลเชิงลึกระดับ Enterprise อย่างเต็มประสิทธิภาพ ระบบขออนุญาตนำท่านเข้าสู่ห้องแชทหลัก (LINE OA) ของ SIRINTHANATTH PRIME ทันทีครับ 🚀";
+                    document.getElementById(redirectId).innerHTML = "เพื่อการดูแลและเปิดสิทธิ์การใช้งานระดับพรีเมียมอย่างไร้รอยต่อ ขออนุญาตพาคุณผู้บริหารเข้าสู่ห้องแชทหลัก (LINE OA) ของเรานะครับ 🚀";
                     chatBody.scrollTop = chatBody.scrollHeight;
                     setTimeout(() => { window.location.href = LINE_OA_REDIRECT_URL; }, 2500);
                 }, 800);
@@ -1083,7 +1125,7 @@
             }
 
             const typingId = 'typing_' + Date.now();
-            chatBody.innerHTML += `<div class="chat-msg bot" id="${typingId}">กำลังประมวลผลคำตอบ...</div>`;
+            chatBody.innerHTML += `<div class="chat-msg bot" id="${typingId}">กำลังวิเคราะห์คำถามและเรียบเรียงคำตอบเพื่อท่าน...</div>`;
             chatBody.scrollTop = chatBody.scrollHeight;
 
             try {
@@ -1093,21 +1135,21 @@
                     body: JSON.stringify({ message: text, user_id: userLineId })
                 });
                 const data = await res.json();
-                document.getElementById(typingId).innerText = data.reply || "ข้อมูลแพ็กเกจการสมัครและสิทธิพิเศษพร้อมให้บริการ สนใจรายละเอียดส่วนไหนสอบถามเพิ่มได้เลยครับ";
+                document.getElementById(typingId).innerText = data.reply || "ยินดีให้บริการครับ มีส่วนไหนให้ผมช่วยดูแลเพิ่มเติมไหมครับ?";
             } catch(e) {
-                // Sales Closer offline fallback with real intelligence and empathy
+                // 🧠 Advanced Empathy & Smart Sales Closer Fallback (ตอบตรงคำถามและจูงใจแบบมืออาชีพ)
                 setTimeout(() => {
-                    let fallbackReply = "ข้อมูลแพ็กเกจการสมัครและสิทธิพิเศษพร้อมให้บริการ สนใจรายละเอียดส่วนไหนสอบถามเพิ่มได้เลยครับ";
+                    let fallbackReply = "ยินดีให้บริการครับ มีส่วนไหนให้ผมช่วยดูแลเพิ่มเติมไหมครับ?";
                     const query = text.toLowerCase();
                     
                     if (query.includes("ทำอะไร") || query.includes("บริการ") || query.includes("ช่วยอะไร")) {
-                        fallbackReply = "ระบบ SIRINTHANATTH PRIME คือ AI เลขาส่วนตัวบน LINE OA ครับ 💼 เราช่วยท่านจัดการเอกสาร, วิเคราะห์กราฟหุ้น, ผลิตสื่อวิดีโอ 4K และเป็นเกราะป้องกันทางกฎหมาย (PDPA/สคบ.) เหมือนท่านมีทีมงานผู้เชี่ยวชาญทำงานแทน 24 ชม. ช่วยประหยัดเวลาและลดต้นทุนองค์กรได้อย่างมหาศาลครับ ท่านสนใจให้ผมดูแลด้านไหนเป็นพิเศษไหมครับ? 😊";
-                    } else if (query.includes("แพ็กเกจ") || query.includes("ราคา") || query.includes("สิทธิพิเศษ") || query.includes("สมัคร") || query.includes("โปรโมชั่น")) {
-                        fallbackReply = "เรามีแพ็กเกจที่ออกแบบมาเพื่อสเกลธุรกิจอย่างคุ้มค่าครับ 💎\n- **100 VIP**: คุ้มที่สุด! รับสิทธิ์ Founder ลดถาวรตลอดชีพ\n- **Essential (990.-)**: ผู้ช่วยงานรายวัน\n- **Prime (2,500.-)**: ยอดนิยม จัดการบัญชีและเอกสาร\n- **Enterprise (4,900.-)**: เชื่อมต่อ Big Data\nทุกแพ็กเกจมาพร้อม Token อัจฉริยะ และระบบตัวแทน (Agent) ท่านสามารถใช้งานได้ทันทีครับ สนใจเริ่มต้นที่แพ็กเกจไหนดีครับ? ผมพร้อมดูแลการเปิดระบบให้ทันทีครับ 🚀";
+                        fallbackReply = "ระบบ SIRINTHANATTH PRIME ทำหน้าที่เป็น **AI เลขาส่วนตัวบน LINE OA** ครับ 💼 เราช่วยท่านจัดการเอกสาร, วิเคราะห์กราฟหุ้น/งบการเงิน, ผลิตสื่อวิดีโอ 4K และมีเกราะปกป้องความเสี่ยงทางกฎหมาย (PDPA/สคบ./อย.) แบบอัตโนมัติ 24 ชั่วโมง เสมือนท่านมีทีมผู้เชี่ยวชาญคอยสนับสนุน ช่วยลดต้นทุนและเพิ่มเวลาให้ท่านไปโฟกัสกับเป้าหมายใหญ่ได้เต็มที่ครับ 😊";
+                    } else if (query.includes("แพ็กเกจ") || query.includes("ราคา") || query.includes("สิทธิพิเศษ") || query.includes("สมัคร") || query.includes("โปรโมชั่น") || query.includes("100vip")) {
+                        fallbackReply = "เรามีแพ็กเกจรองรับทุกขนาดธุรกิจอย่างคุ้มค่าครับ 💎\n- **100 VIP Founders Club**: คุ้มที่สุดสำหรับผู้นำ! ล็อกเรทราคาพิเศษถาวร พร้อมรับโบนัสสิทธิพิเศษเต็มระบบ\n- **Essential (990.-)**: ผู้ช่วยงานรายวันและประหยัดค่าขนส่ง\n- **Prime (2,500.-)**: ยอดนิยม สำหรับวิเคราะห์งบการเงินและบริหารจัดการองค์กร\n- **Enterprise (4,900.-)**: เชื่อมต่อ Real-time Big Data\nทุกแพ็กเกจมาพร้อมระบบ Token และระบบตัวแทน (Agent) ท่านสนใจรับสิทธิ์แพ็กเกจไหนดีครับ? ผมพร้อมอำนวยความสะดวกให้ทันทีครับ 🚀";
                     } else if (query.includes("line oa") || query.includes("ไลน์") || query.includes("ใช้งาน")) {
-                        fallbackReply = "การใช้งานง่ายและไร้รอยต่อมากๆ ครับ ✨ เมื่อสมัครแล้ว ท่านสามารถสั่งงานผมผ่าน LINE OA ได้ทันที ไม่ต้องโหลดแอปเพิ่ม แค่พิมพ์, สั่งงานด้วยเสียง, หรือส่งไฟล์เอกสาร/รูปภาพ ผมจะประมวลผลและส่งผลลัพธ์กลับในแชตทันที สะดวกและตอบโจทย์วิถีผู้บริหารยุคใหม่แน่นอนครับ สนใจรับสิทธิ์ 100 VIP เพื่อสัมผัสประสบการณ์นี้เลยไหมครับ?";
+                        fallbackReply = "การใช้งานสะดวกและไร้รอยต่อมากๆ ครับ ✨ เมื่อสมัครแล้ว ท่านสามารถสั่งงานผ่าน **LINE OA** ได้ทันทีโดยไม่ต้องติดตั้งแอปพลิเคชันเพิ่ม แค่พิมพ์ข้อความ, สั่งงานด้วยเสียง หรือส่งไฟล์เอกสาร/รูปภาพ AI ของเราจะประมวลผลและตอบกลับในแชททันที ตอบโจทย์วิถีผู้บริหารยุคใหม่แน่นอนครับ สนใจให้ผมพาไปเปิดสิทธิ์ใช้งานเลยไหมครับ?";
                     } else {
-                        fallbackReply = "เข้าใจเลยครับท่านผู้บริหาร 💡 หากท่านต้องการผู้ช่วยธุรกิจแบบสมบูรณ์แบบ ผมขอแนะนำ **100 VIP Founders Club** รับสิทธิ์ AI จดจำธุรกิจถาวร หรือแพ็กเกจ **PRIME** ครับ ท่านต้องการให้ผมอธิบายระบบ Tokenomics หรือส่วนของการดูแลกฎหมาย PDPA เพิ่มเติมไหมครับ? ผมยินดีให้คำปรึกษาแบบสบายๆ ไม่กดดันครับ 😊";
+                        fallbackReply = "เข้าใจเลยครับท่านผู้บริหาร 💡 ทุกความสำเร็จต้องอาศัยข้อมูลที่แม่นยำและเครื่องมือที่ทรงพลัง หากท่านต้องการที่ปรึกษาที่รู้ใจและทำงานแทนท่านได้ตลอด 24 ชม. ผมแนะนำให้เริ่มต้นที่แพ็กเกจ **PRIME** หรือสิทธิ์พิเศษ **100 VIP Founders Club** ครับ ท่านต้องการให้ผมสรุปรายละเอียดระบบ Token หรือข้อดีเพิ่มเติมส่วนไหนไหมครับ? ยินดีดูแลเสมอครับ 😊";
                     }
                     
                     document.getElementById(typingId).innerHTML = fallbackReply.replace(/\n/g, '<br>');
