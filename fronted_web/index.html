@@ -620,7 +620,7 @@
         <div class="video-showcase">
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="assets/video1_poster.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="image_34544a.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video1.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -633,20 +633,20 @@
 
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="assets/video2_poster.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="image_34574e.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video2.mp4" type="video/mp4">
                     </video>
                 </div>
                 <div class="video-text">
                     <h3>สร้างสรรค์สื่อไร้ขีดจำกัด ด้วยขุมพลังระดับโลก</h3>
                     <p>เปลี่ยนไอเดียให้เป็นภาพและเสียงระดับสตูดิโอ เราพร้อมผลิตสื่อวิดีโอคุณภาพระดับ 4K พร้อมเสียงพากย์คุณภาพสูง เพื่อยกระดับแบรนด์ของคุณในพริบตา</p>
-                    <div><span class="feature-tag">4K video Gen</span><span class="feature-tag">Voice Studio</span></div>
+                    <div><span class="feature-tag">4K Video Gen</span><span class="feature-tag">Voice Studio</span></div>
                 </div>
             </div>
 
             <div class="video-card reveal">
                 <div class="video-content">
-                    <video controls preload="none" poster="assets/video3_poster.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <video controls preload="none" poster="image_3457e8.jpg" loading="lazy" style="width: 100%; border-radius: 10px; cursor: pointer; border: 1px solid rgba(212, 175, 55, 0.3);">
                         <source src="assets/video3.mp4" type="video/mp4">
                     </video>
                 </div>
@@ -674,7 +674,7 @@
             <p class="founder-text">"เทคโนโลยีที่แท้จริง ไม่ได้ถูกสร้างมาเพื่อแทนที่มนุษย์ แต่ถูกสร้างมาเพื่อ 'ปลดล็อก' ศักยภาพที่ซ่อนอยู่ภายในตัวเรา <br><br>ที่ SIRINTHANATTH PRIME เราไม่ได้พัฒนาแค่โปรแกรมคอมพิวเตอร์ แต่เรากำลังสร้างระบบ AI ที่ง่าย เข้าใจคุณ "ครบ จบ ที่เดียว" ที่ปรึกษาส่วนตัวเฉพาะคุณ จดจำรายละเอียด วางแผนกลยุทธ์ บริหารจัดการ และเฝ้าระวังความเสี่ยง เพื่อมอบเวลาอันมีค่า ให้คุณได้โฟกัสกับสิ่งที่คุณรัก และเป้าหมายที่ยิ่งใหญ่กว่า"</p>
             <div class="signature-box">
                 <!-- 🚀 Lazy load signature image -->
-                <img src="assets/signature.png" alt="Signature" class="signature-img" loading="lazy">
+                <img src="CEO sign.png" alt="Signature - Weerachai Sirinthanatth" class="signature-img" loading="lazy">
                 <p class="ceo-name">วีระชัย สิรินทร์ธนัตถ์</p>
                 <p class="ceo-title">Founder & CEO, Marketing Spark Combine Co., Ltd.</p>
             </div>
@@ -1083,7 +1083,7 @@
             }
 
             const typingId = 'typing_' + Date.now();
-            chatBody.innerHTML += `<div class="chat-msg bot" id="${typingId}">กำลังประมวลผลคำตอบจากฐานข้อมูลระบบแพ็กเกจ...</div>`;
+            chatBody.innerHTML += `<div class="chat-msg bot" id="${typingId}">กำลังประมวลผลคำตอบ...</div>`;
             chatBody.scrollTop = chatBody.scrollHeight;
 
             try {
@@ -1095,9 +1095,22 @@
                 const data = await res.json();
                 document.getElementById(typingId).innerText = data.reply || "ข้อมูลแพ็กเกจการสมัครและสิทธิพิเศษพร้อมให้บริการ สนใจรายละเอียดส่วนไหนสอบถามเพิ่มได้เลยครับ";
             } catch(e) {
-                // Sales Closer offline fallback
+                // Sales Closer offline fallback with real intelligence and empathy
                 setTimeout(() => {
-                    document.getElementById(typingId).innerHTML = "หากท่านต้องการผู้ช่วยธุรกิจแบบสมบูรณ์แบบ ผมขอแนะนำ <strong>100 VIP Founders Club</strong> รับสิทธิ์ AI จดจำธุรกิจถาวร หรือแพ็กเกจ <strong>PRIME</strong> ครับ ท่านต้องการให้ผมอธิบายระบบ Tokenomics หรือส่วนของการดูแลกฎหมาย PDPA เพิ่มเติมไหมครับ?";
+                    let fallbackReply = "ข้อมูลแพ็กเกจการสมัครและสิทธิพิเศษพร้อมให้บริการ สนใจรายละเอียดส่วนไหนสอบถามเพิ่มได้เลยครับ";
+                    const query = text.toLowerCase();
+                    
+                    if (query.includes("ทำอะไร") || query.includes("บริการ") || query.includes("ช่วยอะไร")) {
+                        fallbackReply = "ระบบ SIRINTHANATTH PRIME คือ AI เลขาส่วนตัวบน LINE OA ครับ 💼 เราช่วยท่านจัดการเอกสาร, วิเคราะห์กราฟหุ้น, ผลิตสื่อวิดีโอ 4K และเป็นเกราะป้องกันทางกฎหมาย (PDPA/สคบ.) เหมือนท่านมีทีมงานผู้เชี่ยวชาญทำงานแทน 24 ชม. ช่วยประหยัดเวลาและลดต้นทุนองค์กรได้อย่างมหาศาลครับ ท่านสนใจให้ผมดูแลด้านไหนเป็นพิเศษไหมครับ? 😊";
+                    } else if (query.includes("แพ็กเกจ") || query.includes("ราคา") || query.includes("สิทธิพิเศษ") || query.includes("สมัคร") || query.includes("โปรโมชั่น")) {
+                        fallbackReply = "เรามีแพ็กเกจที่ออกแบบมาเพื่อสเกลธุรกิจอย่างคุ้มค่าครับ 💎\n- **100 VIP**: คุ้มที่สุด! รับสิทธิ์ Founder ลดถาวรตลอดชีพ\n- **Essential (990.-)**: ผู้ช่วยงานรายวัน\n- **Prime (2,500.-)**: ยอดนิยม จัดการบัญชีและเอกสาร\n- **Enterprise (4,900.-)**: เชื่อมต่อ Big Data\nทุกแพ็กเกจมาพร้อม Token อัจฉริยะ และระบบตัวแทน (Agent) ท่านสามารถใช้งานได้ทันทีครับ สนใจเริ่มต้นที่แพ็กเกจไหนดีครับ? ผมพร้อมดูแลการเปิดระบบให้ทันทีครับ 🚀";
+                    } else if (query.includes("line oa") || query.includes("ไลน์") || query.includes("ใช้งาน")) {
+                        fallbackReply = "การใช้งานง่ายและไร้รอยต่อมากๆ ครับ ✨ เมื่อสมัครแล้ว ท่านสามารถสั่งงานผมผ่าน LINE OA ได้ทันที ไม่ต้องโหลดแอปเพิ่ม แค่พิมพ์, สั่งงานด้วยเสียง, หรือส่งไฟล์เอกสาร/รูปภาพ ผมจะประมวลผลและส่งผลลัพธ์กลับในแชตทันที สะดวกและตอบโจทย์วิถีผู้บริหารยุคใหม่แน่นอนครับ สนใจรับสิทธิ์ 100 VIP เพื่อสัมผัสประสบการณ์นี้เลยไหมครับ?";
+                    } else {
+                        fallbackReply = "เข้าใจเลยครับท่านผู้บริหาร 💡 หากท่านต้องการผู้ช่วยธุรกิจแบบสมบูรณ์แบบ ผมขอแนะนำ **100 VIP Founders Club** รับสิทธิ์ AI จดจำธุรกิจถาวร หรือแพ็กเกจ **PRIME** ครับ ท่านต้องการให้ผมอธิบายระบบ Tokenomics หรือส่วนของการดูแลกฎหมาย PDPA เพิ่มเติมไหมครับ? ผมยินดีให้คำปรึกษาแบบสบายๆ ไม่กดดันครับ 😊";
+                    }
+                    
+                    document.getElementById(typingId).innerHTML = fallbackReply.replace(/\n/g, '<br>');
                 }, 1000);
             }
             chatBody.scrollTop = chatBody.scrollHeight;
