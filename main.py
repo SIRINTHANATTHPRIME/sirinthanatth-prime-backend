@@ -373,10 +373,3 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
         background_tasks.add_task(_process_financials)
         
     return {"status": "success"}
-
-# ==========================================
-# 🚀 8. Server Ignition
-# ==========================================
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
