@@ -33,6 +33,7 @@ elevenlabs>=1.0.0           # Voice AI ขั้่นสูง
 # --- 6. Google Cloud APIs (ระบบคลาวด์) ---
 google-api-python-client>=2.100.0
 google-auth>=2.25.0
+google-cloud-secret-manager>=2.20.0
 
 # --- 7. Media Processing & Utils (ระบบจัดการภาพ เสียง และวิดีโอ 4K) ---
 moviepy>=1.0.3              # ระบบตัดต่อวิดีโอ

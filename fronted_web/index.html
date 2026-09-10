@@ -21,24 +21,24 @@
             text-rendering: optimizeLegibility;
             margin: 0; padding: 0;
             font-family: 'Prompt', sans-serif;
-            background-color: #030407;
+            background-color: #020202;
             color: #ffffff;
             overflow-x: hidden;
         }
 
-        /* 🖼️ แบ็กกราวด์ 4K ประหยัด RAM (GPU Acceleration) */
+        /* 🖼️ แบ็กกราวด์ 4K ประหยัด RAM (GPU Acceleration) คุมโทนลึกลับสากล */
         .page-bg-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url('assets/bg_template.jpg'); 
             background-size: cover; background-position: center;
-            opacity: 0.15; z-index: -2; pointer-events: none;
+            opacity: 0.18; z-index: -2; pointer-events: none;
             image-rendering: high-quality; 
             transform: translateZ(0); -webkit-backface-visibility: hidden; will-change: transform;
-            filter: brightness(0.6) contrast(1.3) saturate(1.2); 
+            filter: brightness(0.4) contrast(1.4) saturate(1.2); 
         }
         .page-dark-shade {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(3,4,7,0.6) 0%, rgba(0,0,1,0.98) 100%);
+            background: radial-gradient(circle at center, rgba(2,2,4,0.85) 0%, rgba(0,0,1,0.98) 100%);
             z-index: -1; pointer-events: none;
         }
 
@@ -48,7 +48,7 @@
         .laser-sweep {
             position: fixed; top: 0; left: -100%; width: 100%; height: 2px;
             background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
-            animation: laserMove 4s infinite linear; z-index: 1001;
+            animation: laserMove 5s infinite linear; z-index: 1001;
             box-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
         }
         @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
@@ -57,7 +57,7 @@
         .top-navbar {
             display: flex; justify-content: space-between; align-items: center;
             padding: clamp(10px, 2vw, 20px) clamp(15px, 4vw, 40px);
-            background: rgba(3, 4, 7, 0.8); border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+            background: rgba(3, 3, 5, 0.95); border-bottom: 1px solid rgba(0, 229, 255, 0.15);
             position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(12px); width: 100%;
         }
         .nav-brand {
@@ -67,7 +67,7 @@
 
         /* 🚀 3D Typography & Neon Text */
         h1, h2, h3, p, span, li, label {
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(255, 255, 255, 0.1);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(255, 255, 255, 0.15);
         }
 
         .main-title { 
@@ -90,7 +90,7 @@
 
         .subtitle { 
             font-size: clamp(1rem, 1.9vw, 1.3rem); padding: 0 clamp(10px, 3vw, 20px); 
-            text-align: center; color: #a0aab5; line-height: 1.8; margin: 20px auto;
+            text-align: center; color: #e2e8f0; line-height: 1.8; margin: 20px auto;
             max-width: 850px; font-weight: 400; text-wrap: pretty;
             border-left: 3px solid #00e5ff; border-right: 3px solid #00e5ff;
             background: rgba(10, 14, 23, 0.6); padding-top: 15px; padding-bottom: 15px; border-radius: 12px;
@@ -99,35 +99,29 @@
 
         /* ✨ ปุ่ม 3D Neon ขั้นสูง พร้อม Breathing Effect */
         .btn-3d {
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); 
             position: relative; z-index: 1; padding: clamp(12px, 1.5vw, 16px) clamp(20px, 3vw, 28px);
-            border-radius: 12px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); cursor: pointer; letter-spacing: 1px;
+            border-radius: 10px; font-size: clamp(0.9rem, 1.2vw, 1.05rem); cursor: pointer; letter-spacing: 1px;
             text-decoration: none; display: inline-block; text-align: center; font-weight: 800;
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Prompt', sans-serif; border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.6);
         }
+        .btn-3d:active { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.8); }
 
         .btn-cyan { 
-            background: linear-gradient(145deg, #0a1128, #02060d);
-            border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 229, 255, 0.2);
+            background: linear-gradient(135deg, #33EDFF 0%, #00e5ff 50%, #008299 100%); color: #020202 !important;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
         }
         .btn-cyan:hover { 
-            transform: translateY(-3px); color: #fff !important; border-color: #00e5ff;
-            background: linear-gradient(145deg, #0d1a3a, #040b17);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 25px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 229, 255, 0.6); 
-            text-shadow: 0 0 10px #00e5ff;
+            transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(0, 229, 255, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7);
         }
 
         .btn-gold { 
-            background: linear-gradient(145deg, #1a1608, #0d0a02);
-            border: 1px solid rgba(255, 215, 0, 0.4); color: #FFD700 !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.2);
+            background: linear-gradient(135deg, #FFE84D 0%, #FFD700 50%, #C59B1B 100%); color: #020202 !important;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.7);
         }
         .btn-gold:hover { 
-            transform: translateY(-3px); color: #fff !important; border-color: #FFD700;
-            background: linear-gradient(145deg, #261f0a, #141002);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 25px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 215, 0, 0.6); 
-            text-shadow: 0 0 10px #FFD700;
+            transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 28px rgba(255, 215, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.7);
         }
 
         /* 👑 ปุ่ม VIP Breathing Animation */
@@ -175,17 +169,17 @@
         .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 40px; }
         
         .card { 
-            padding: 40px 30px; background: linear-gradient(165deg, rgba(15, 20, 30, 0.9) 0%, rgba(5, 8, 15, 0.95) 100%);
-            border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; justify-content: space-between; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6); backdrop-filter: blur(10px); transition: all 0.4s ease; cursor: pointer;
+            padding: 40px 30px; background: rgba(10, 10, 15, 0.9);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; 
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 15px 40px rgba(0,0,0,0.85); backdrop-filter: blur(10px); transition: all 0.4s ease; cursor: pointer;
         }
         .card:hover { transform: translateY(-10px); border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 229, 255, 0.15); }
         
         .card-prime { 
-            border-color: rgba(255, 215, 0, 0.2); background: linear-gradient(165deg, rgba(26, 22, 10, 0.9) 0%, rgba(10, 8, 2, 0.95) 100%); 
-            position: relative; 
+            border-color: rgba(255, 215, 0, 0.5); background: rgba(16, 16, 10, 0.95); 
+            position: relative; box-shadow: inset 0 1px 0 rgba(255,215,0,0.25), 0 15px 45px rgba(255,215,0,0.12);
         }
-        .card-prime:hover { border-color: #FFD700; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.15); }
+        .card-prime:hover { border-color: #FFD700; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.2); }
         
         .card h3 { font-weight: 800; font-size: 1.5rem; letter-spacing: 1px; color: #ffffff; margin: 0; }
         .card-prime h3 { color: #FFD700; }
@@ -194,7 +188,7 @@
         .promo-cyan { background: rgba(0, 229, 255, 0.1); border: 1px dashed #00e5ff; color: #00e5ff; }
         .promo-gold { background: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; color: #FFD700; }
         
-        .features { list-style: none; padding: 0; margin: 20px 0; color: #bcc5ce; font-size: 0.95rem; line-height: 1.8; }
+        .features { list-style: none; padding: 0; margin: 20px 0; color: #e2e8f0; font-size: 0.95rem; line-height: 1.8; }
         .features li { margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }
         .features li::before { content: '✦'; color: #00e5ff; font-size: 1.2rem; line-height: 1.4; }
         .card-prime .features li::before { color: #FFD700; }
@@ -209,15 +203,28 @@
         input:checked + .slider { background-color: #1a1608; border-color: #FFD700; }
         input:checked + .slider:before { transform: translateX(26px); background: linear-gradient(135deg, #FFE84D, #DAA520); box-shadow: 0 0 10px #FFD700; }
 
-        /* 🛡️ Modals */
+        /* 🛡️ Modals อัปเกรดความพรีเมียมตาม Agent System */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9998; backdrop-filter: blur(8px); }
-        .modal-box { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto; background: rgba(8,10,15,0.98); border: 1px solid #00e5ff; border-radius: 24px; z-index: 9999; padding: 40px; box-sizing: border-box; text-align: left; box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(0,229,255,0.15); }
-        .vip-modal-box { border-color: #FFD700; box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(255,215,0,0.15); }
+        
+        .modal-box { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; 
+            background: rgba(14,14,18,0.98); border: 1px solid rgba(0,229,255,0.4); border-radius: 16px; 
+            z-index: 9999; padding: 40px; box-sizing: border-box; text-align: left; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.95), 0 0 40px rgba(0,229,255,0.15); 
+        }
+        .vip-modal-box { border-color: rgba(255,215,0,0.5); box-shadow: 0 20px 60px rgba(0,0,0,0.95), 0 0 40px rgba(255,215,0,0.15); }
+        
         .close-btn { position: absolute; top: 20px; right: 25px; font-size: 32px; color: #888; cursor: pointer; transition: 0.2s; }
         .close-btn:hover { color: #fff; }
 
         .agent-input-group { margin: 20px 0; }
-        .agent-input-group input { width: 100%; padding: 18px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,229,255,0.2); border-radius: 12px; color: #fff; font-size: 1.1rem; text-align: center; outline: none; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
+        .agent-input-group input { 
+            width: 100%; padding: 18px; background: rgba(0,0,0,0.5); 
+            border: 1px solid rgba(0,229,255,0.2); border-radius: 12px; color: #fff; 
+            font-size: 1.1rem; outline: none; transition: 0.3s; 
+            text-transform: uppercase; letter-spacing: 2px; font-family: 'Prompt', sans-serif;
+        }
         .agent-input-group input:focus { border-color: #00e5ff; box-shadow: 0 0 15px rgba(0, 229, 255, 0.2), inset 0 2px 10px rgba(0,0,0,0.5); }
         .vip-modal-box .agent-input-group input:focus { border-color: #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2), inset 0 2px 10px rgba(0,0,0,0.5); }
         
@@ -289,7 +296,7 @@
     <section id="company-profile" class="company-profile-section reveal">
         <div class="profile-card">
             <h3>🏢 Corporate Excellence & Architecture</h3>
-            <p><strong>Marketing Spark Combine Co., Ltd.</strong> ผู้นำด้านการพัฒนาสถาปัตยกรรม Enterprise AI SaaS ระบบนิเวศ <strong>SIRINTHANATTH PRIME</strong> ถูกออกแบบมาเพื่อทลายขีดจำกัดความเหนื่อยล้าจากการสลับแอป (Zero App-Switching Fatigue) รองรับการสั่งการ 80% ผ่าน LINE Chat และ 20% ผ่านหน้าจอ LIFF[cite: 10] ขับเคลื่อนด้วยโครงข่าย Microservices บน Google Cloud Platform เพื่อความปลอดภัยและความเสถียรระดับโลก</p>
+            <p><strong>Marketing Spark Combine Co., Ltd.</strong> ผู้นำด้านการพัฒนาสถาปัตยกรรม Enterprise AI SaaS ระบบนิเวศ <strong>SIRINTHANATTH PRIME</strong> ถูกออกแบบมาเพื่อทลายขีดจำกัดความเหนื่อยล้าจากการสลับแอป (Zero App-Switching Fatigue) รองรับการสั่งการ 80% ผ่าน LINE Chat และ 20% ผ่านหน้าจอ LIFF ขับเคลื่อนด้วยโครงข่าย Microservices บน Google Cloud Platform เพื่อความปลอดภัยและความเสถียรระดับโลก</p>
             
             <h3 style="margin-top: 40px;">👥 Core Engineering & Leadership</h3>
             <div class="team-grid">
@@ -302,7 +309,7 @@
                 <div class="team-member" style="border-color: #00e5ff;">
                     <h4 style="color: #00e5ff;">Google Gemini Advanced</h4>
                     <div class="role">AI Copilot & Swarm Engine</div>
-                    <p>ขุมพลังประมวลผลหลัก ทำหน้าที่วิเคราะห์บริบท จิตวิทยาการขาย และเรนเดอร์ข้อมูลอย่างอัจฉริยะแบบ Real-time[cite: 4]</p>
+                    <p>ขุมพลังประมวลผลหลัก ทำหน้าที่วิเคราะห์บริบท จิตวิทยาการขาย และเรนเดอร์ข้อมูลอย่างอัจฉริยะแบบ Real-time</p>
                 </div>
             </div>
         </div>
@@ -333,10 +340,10 @@
                     </div>
                     <div class="promo-badge promo-cyan">🎁 เริ่มต้นลดภาระงาน 1,000 Tokens</div>
                     <ul class="features">
-                        <li>สั่งงานเบ็ดเสร็จผ่าน LINE (Zero Friction)[cite: 10]</li>
+                        <li>สั่งงานเบ็ดเสร็จผ่าน LINE (Zero Friction)</li>
                         <li>ระบบประมวลผล RAG อัจฉริยะพื้นฐาน</li>
                         <li>เชื่อมต่อข้อมูล 1 ฐานข้อมูลหลัก</li>
-                        <li>ไม่ต้องสลับแอปให้เหนื่อยล้า[cite: 10]</li>
+                        <li>ไม่ต้องสลับแอปให้เหนื่อยล้า</li>
                     </ul>
                 </div>
                 <button class="btn-3d btn-cyan" style="width: 100%; margin-top: 30px;" onclick="initiateNormalFlow('ESSENTIAL')">เลือกแพ็กเกจ Essential</button>
@@ -354,7 +361,7 @@
                     <div class="promo-badge promo-gold">🎁 ขุมพลังเต็มพิกัด 3,000 Tokens</div>
                     <ul class="features">
                         <li>รวมทุกสิทธิ์ของแพ็กเกจ Essential</li>
-                        <li style="color: #FFD700; font-weight: 600; text-shadow: 0 0 10px rgba(255,215,0,0.3);">ความปลอดภัยสูงสุด ลบข้อมูลทิ้งทันที (Zero-Data Retention)[cite: 11]</li>
+                        <li style="color: #FFD700; font-weight: 600; text-shadow: 0 0 10px rgba(255,215,0,0.3);">ความปลอดภัยสูงสุด ลบข้อมูลทิ้งทันที (Zero-Data Retention)</li>
                         <li>วิเคราะห์กลยุทธ์เชิงลึกระดับ CEO</li>
                         <li>เครือข่าย AI ปฏิบัติการ 12 แผนกอัตโนมัติ</li>
                     </ul>
@@ -383,18 +390,21 @@
         </div>
     </section>
 
-    <!-- Modal ข้อตกลงเงื่อนไข (Disclaimer) -->
+    <!-- Modal ข้อตกลงเงื่อนไข (Disclaimer) อัปเกรดความพรีเมียม -->
     <div id="disclaimerModal" class="modal-overlay">
         <div class="modal-box" id="disclaimerBox">
+            <span class="close-btn" onclick="closeDisclaimer()">&times;</span>
             <h3 style="color: #00e5ff; margin-top: 0; font-size: 1.5rem; text-align: center;">🛡️ คำมั่นสัญญาและข้อตกลงระดับสากล</h3>
-            <div style="font-size: 0.95rem; color: #a0aab5; line-height: 1.8; overflow-y: auto; padding-right: 15px; margin: 25px 0; border-top: 1px solid rgba(0,229,255,0.2); border-bottom: 1px solid rgba(0,229,255,0.2); padding: 20px 0; max-height: 350px;">
+            
+            <div style="font-size: 0.95rem; color: #ccc; line-height: 1.8; overflow-y: auto; padding-right: 15px; margin: 25px 0; border-top: 1px solid rgba(0,229,255,0.2); border-bottom: 1px solid rgba(0,229,255,0.2); padding: 20px 0; max-height: 350px;">
                 <p><strong>1. เครื่องมือสนับสนุนผู้บริหาร (No Financial Advice):</strong> ระบบวิเคราะห์และสังเคราะห์ข้อมูลด้วย Ground Truth มิใช่การชี้ชวนหรือการันตีผลลัพธ์ทางการเงิน</p>
-                <p><strong>2. มาตรฐานความปลอดภัยข้อมูล (PDPA):</strong> ข้อมูลสำคัญ (เช่น ไฟล์ Code, สลิปโอนเงิน) จะถูกประมวลผลบน RAM และลบทิ้งทันที (Zero-Data Retention) ภายใน 60 วินาที[cite: 11]</p>
+                <p><strong>2. มาตรฐานความปลอดภัยข้อมูล (PDPA):</strong> ข้อมูลสำคัญ (เช่น ไฟล์ Code, สลิปโอนเงิน) จะถูกประมวลผลบน RAM และลบทิ้งทันที (Zero-Data Retention) ภายใน 60 วินาที</p>
                 <p><strong>3. ข้อจำกัดความรับผิดชอบ (AI Hallucinations):</strong> เทคโนโลยี AI ระดับโลกอาจเกิดความคลาดเคลื่อน ผู้บริหารระดับสูงควรตรวจสอบก่อนดำเนินกลยุทธ์จริง</p>
             </div>
             
+            <!-- Agent Code Input (Optional) ปรับแต่งให้ลดแรงต้าน -->
             <div id="dynamicAgentInputArea" class="agent-input-group" style="display: none; margin-bottom: 25px;">
-                <p style="color: #00e5ff; margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600;">🔑 รหัสองค์กรผู้แนะนำ (Agent Code):</p>
+                <p style="color: #00e5ff; margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600;">🔑 รหัสองค์กรผู้แนะนำ (Agent Code) - <span style="color:#aaa; font-weight:400;">ไม่บังคับ</span></p>
                 <input type="text" id="globalAgentCode" placeholder="ระบุรหัสอ้างอิงพาร์ทเนอร์ (ถ้ามี)">
             </div>
 
@@ -405,7 +415,7 @@
                 </label>
             </div>
             <div style="display: flex; gap: 20px; margin-top: 20px;">
-                <button id="confirmBtn" class="btn-3d" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-weight: 800; background: #111; color: #555; cursor: not-allowed; box-shadow: none;">เข้าสู่ระบบและดำเนินการต่อ</button>
+                <button id="confirmBtn" class="btn-3d" onclick="proceedAfterConsent()" disabled style="flex: 1; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-weight: 800; background: #222; color: #666; cursor: not-allowed; box-shadow: none;">เข้าสู่ระบบและดำเนินการต่อ</button>
                 <button class="btn-3d" onclick="closeDisclaimer()" style="flex: 0.5; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: #fff; box-shadow: none;">ยกเลิก</button>
             </div>
         </div>
@@ -416,7 +426,7 @@
         <div class="modal-box vip-modal-box" id="vipModalBox">
             <span class="close-btn" onclick="closeVipModal()">&times;</span>
             <h2 style="color: #FFD700; text-align: center; margin-top: 0; font-size: 1.8rem; text-shadow: 0 0 20px rgba(255,215,0,0.4);">👑 100 VIP FOUNDER ALLOCATION</h2>
-            <p style="text-align: center; color: #a0aab5; font-size: 1rem; margin-bottom: 30px;">สิทธิ์พิเศษจำกัดจำนวน ได้รับการอัปเดตฟีเจอร์ RAG รุ่นใหม่ก่อนใคร[cite: 9]</p>
+            <p style="text-align: center; color: #a0aab5; font-size: 1rem; margin-bottom: 30px;">สิทธิ์พิเศษจำกัดจำนวน ได้รับการอัปเดตฟีเจอร์ RAG รุ่นใหม่ก่อนใคร</p>
             
             <div class="vip-payment-box">
                 <div style="background: linear-gradient(145deg, rgba(26,22,10,0.9), rgba(10,8,2,0.95)); padding: 25px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,215,0,0.4); margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,215,0,0.1);">
@@ -426,13 +436,13 @@
                 </div>
 
                 <div class="agent-input-group">
-                    <p style="color: #FFD700; margin: 0 0 10px 0; font-size: 1rem; font-weight: 600;">🔑 รหัสพันธมิตร (Partner Code):</p>
+                    <p style="color: #FFD700; margin: 0 0 10px 0; font-size: 1rem; font-weight: 600;">🔑 รหัสพันธมิตร (Partner Code) - <span style="color:#aaa; font-weight:400;">ไม่บังคับ</span>:</p>
                     <input type="text" id="agentCode" placeholder="กรอกรหัสแนะนำ (ถ้ามี)">
                 </div>
 
                 <div style="display: flex; align-items: flex-start; gap: 15px; margin-bottom: 30px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 12px; border-left: 4px solid #FFD700;">
                     <input type="checkbox" id="ackVipCheck" onchange="toggleVipPayBtn()" style="margin-top: 3px; width: 24px; height: 24px; cursor: pointer;">
-                    <label for="ackVipCheck" style="font-size: 1rem; color: #fff; cursor: pointer; line-height: 1.6; font-weight: 600;">ข้าพเจ้าเข้าใจและยอมรับสิทธิ์ Founding VIP ราคาพิเศษ 4,490 บาท/ปี[cite: 9]</label>
+                    <label for="ackVipCheck" style="font-size: 1rem; color: #fff; cursor: pointer; line-height: 1.6; font-weight: 600;">ข้าพเจ้าเข้าใจและยอมรับสิทธิ์ Founding VIP ราคาพิเศษ 4,490 บาท/ปี</label>
                 </div>
 
                 <button class="checkout-btn" id="vipPayBtn" onclick="processVipPayment()" disabled style="background: #222; color: #555; cursor: not-allowed; opacity: 0.6; box-shadow: none;">💳 ยืนยันชำระเงินเพื่อเปิดสิทธิ์ทันที (฿4,490)</button>
@@ -570,8 +580,8 @@
                 btn.style.boxShadow = '0 10px 20px rgba(0,229,255,0.4)';
             } else {
                 btn.disabled = true; 
-                btn.style.background = '#111'; 
-                btn.style.color = '#555'; btn.style.cursor = 'not-allowed';
+                btn.style.background = '#222'; 
+                btn.style.color = '#666'; btn.style.cursor = 'not-allowed';
                 btn.style.boxShadow = 'none';
             }
         }
