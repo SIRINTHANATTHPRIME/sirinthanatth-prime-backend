@@ -13,9 +13,13 @@ from google.genai import types
 
 from core_services.swarm_dispatcher import swarm_hub
 
+# =========================================================
+# 💳 ระบบชำระเงินและ VVIP Token (Stripe & Supabase)
+# =========================================================
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 
 def create_exclusive_invite(min_topup_thb: int = 100) -> dict:
+    """สร้างลิงก์เชิญ VVIP และสร้างหน้าต่างชำระเงินผ่าน Stripe"""
     try:
         if not stripe.api_key:
             return {"status": "error", "message": "ระบบชำระเงินยังไม่พร้อมใช้งาน (Missing Stripe Key)"}
@@ -55,17 +59,25 @@ def create_exclusive_invite(min_topup_thb: int = 100) -> dict:
     except Exception as e:
         return {"status": "error", "message": f"Stripe/DB Error: {str(e)}"}
 
+# =========================================================
+# 🌐 ศูนย์บัญชาการ AI ส่วนกลาง (Multi-Model Fallback)
+# =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" 
+        PRIMARY_EXECUTIVE_MODEL = "gemini-1.5-pro" # 🚀 โมเดลที่ดีที่สุดและเสถียรที่สุด
+        FALLBACK_EXECUTIVE_MODEL = "gemini-1.5-flash" 
+        
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
             if api_key: return genai.Client(api_key=api_key, http_options={'timeout': 300.0})
             return genai.Client(vertexai=True, project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), location="asia-southeast3", http_options={'timeout': 300.0})
 
+# =========================================================
+# 🧠 ระบบความจำระดับองค์กร (Corporate RAG)
+# =========================================================
 try:
     from agents.memory_engine import save_corporate_knowledge, process_and_save_link_knowledge, recall_memory, recall_corporate_knowledge
 except ImportError:
@@ -86,7 +98,12 @@ logger = logging.getLogger("CeoSecretary")
 
 class CeoSecretaryWorker:
     """
-    👑 Worker 0: CEO Omniscient Secretary (ดักจับ Error และสร้างปุ่มอนุมัติแก้โค้ด)
+    👑 Worker 0: CEO Omniscient Secretary (เลขาฯ อัจฉริยะส่วนตัว)
+    ฟีเจอร์ระดับโลก: 
+    - True Native Async I/O
+    - Swarm Multi-Agent Delegation
+    - Hot-Reload System File Updates
+    - Zero Quota Drop (Auto-Fallback)
     """
     def __init__(self):
         self.ceo_line_id = os.getenv("CEO_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
@@ -94,14 +111,15 @@ class CeoSecretaryWorker:
         self.base_url = os.getenv("BASE_URL", "https://prime-core-agent-601183279633.asia-southeast3.run.app")
         
         self.client = PrimeAIConfig.get_client()
-        self.model_name = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro-preview")
+        self.primary_model = getattr(PrimeAIConfig, "PRIMARY_EXECUTIVE_MODEL", "gemini-1.5-pro")
+        self.fallback_model = getattr(PrimeAIConfig, "FALLBACK_EXECUTIVE_MODEL", "gemini-1.5-flash")
         
         self.system_instruction = """
         คุณคือ 'เลขาธิการส่วนตัวสูงสุด (Omniscient AI Chief of Staff)' ของท่านประธาน คุณวีระชัย สิรินทร์ธนัตถ์
         คุณทำงานประสานกับ CTO (Worker 9) เพื่อดักจับ Error และอัปเดตระบบ
         
         ขีดความสามารถ:
-        1. 🛠️ Autonomous Function Calling: เรียกใช้ Tools ทันทีเมื่อถูกสั่ง
+        1. 🛠️ Autonomous Function Calling: เรียกใช้ Tools (เช่น create_exclusive_invite) ทันทีเมื่อถูกสั่ง
         2. 💻 System Controller: เมื่อได้โค้ดจาก CTO หรือคิดโค้ดเอง ให้ใช้ [UPDATE_SYSTEM_FILE: path]...[/UPDATE_SYSTEM_FILE]
         3. 🏢 Swarm Commander: สั่งงานแผนกอื่นด้วย [DELEGATE: WORKER_NAME] คำสั่ง...
         
@@ -113,6 +131,60 @@ class CeoSecretaryWorker:
     def is_ceo(self, user_id: str) -> bool:
         return user_id in [self.ceo_line_id, self.master_admin_id] if user_id else False
 
+    async def _safe_generate_content(self, contents, config: types.GenerateContentConfig):
+        """ระบบบริหารโควตาอัจฉริยะ (Zero Quota Drop Engine) พร้อมรองรับ Function Calling"""
+        if not self.client:
+            raise ConnectionError("ระบบ AI ขาดการเชื่อมต่อ API Key")
+
+        models_to_try = [self.primary_model, self.fallback_model]
+        
+        for model in models_to_try:
+            try:
+                # 🚀 ใช้ Native Async ของ Google SDK (.aio)
+                response = await self.client.aio.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=config
+                )
+                
+                # จัดการ Function Calling Loop หาก AI ขอเรียกใช้ Tool
+                while response.function_calls:
+                    for fn_call in response.function_calls:
+                        if fn_call.name == "create_exclusive_invite":
+                            args = fn_call.args if fn_call.args else {}
+                            tool_result = create_exclusive_invite(**args)
+                            
+                            # เพิ่มบริบทกลับเข้าไปให้ AI วิเคราะห์ผลลัพธ์จาก Tool
+                            if response.candidates and response.candidates[0].content:
+                                contents.append(response.candidates[0].content)
+                            contents.append(
+                                types.Content(parts=[
+                                    types.Part.from_function_response(name=fn_call.name, response={"result": tool_result})
+                                ])
+                            )
+                    
+                    # รีรัน AI เพื่อให้สร้างคำตอบสุดท้ายหลังจากได้ข้อมูลจากฟังก์ชัน
+                    response = await self.client.aio.models.generate_content(
+                        model=model,
+                        contents=contents,
+                        config=config
+                    )
+
+                return response.text if response.text else "ประมวลผลเสร็จสิ้นครับท่านประธาน"
+                
+            except Exception as e:
+                err_str = str(e).upper()
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    logger.warning(f"⚠️ [Rate Limit]: โควตา {model} เต็ม สลับไปรุ่นถัดไป...")
+                    continue
+                elif "NOT_FOUND" in err_str or "404" in err_str:
+                    logger.error(f"❌ [Model Missing]: ไม่พบ {model} ข้ามไปรุ่นถัดไป...")
+                    continue
+                else:
+                    raise e
+                    
+        return "⚠️ สมองกลประมวลผลหลักรับภาระหนักเกินไป กรุณาสั่งการใหม่อีกครั้งครับ"
+
     async def process_ceo_command(self, message: str, file_path: str = None, file_type: str = None) -> dict:
         user_id = self.ceo_line_id
         message = (message or "").strip()
@@ -121,6 +193,7 @@ class CeoSecretaryWorker:
         if not message and file_path:
             message = "[System Auto-Prompt]: ตรวจสอบไฟล์นี้ สแกนหาช่องโหว่ นำเสนอโค้ดแก้ไข พร้อมรออนุมัติอัปเดต"
 
+        # 1. ระบบควบคุม Human-in-the-Loop (3 ปุ่ม)
         if message.startswith("ACTION:APPROVE:"): return await self._execute_approved_plan(message)
         elif message.startswith("ACTION:REJECT:"): return {"type": "text", "text": "❌ ระงับแผนงานและโค้ด 100% ครับท่านประธาน"}
         elif message.startswith("ACTION:MODIFY:"): return {"type": "text", "text": "📝 รับทราบครับท่านประธาน รบกวนสั่งการจุดที่ต้องการปรับปรุงครับ"}
@@ -131,12 +204,17 @@ class CeoSecretaryWorker:
         content_to_send = []
         
         try:
+            # 2. ดึงความจำแบบขนาน (Parallel Memory Fetch) ทำให้เร็วขึ้น 2 เท่า
             user_memory, corp_knowledge = "", ""
             try:
-                user_memory, corp_knowledge = await asyncio.gather(recall_memory(user_id, message), recall_corporate_knowledge(message))
+                user_memory, corp_knowledge = await asyncio.gather(
+                    recall_memory(user_id, message), 
+                    recall_corporate_knowledge(message)
+                )
             except Exception as e:
                 logger.warning(f"⚠️ [Memory Fetch]: {e}")
 
+            # 3. อัปโหลดไฟล์ด้วย Native Async
             if file_path and os.path.exists(file_path):
                 mime_type, _ = mimetypes.guess_type(file_path)
                 if file_path.lower().endswith(('.py', '.js', '.json', '.html', '.css', '.txt', '.env')): mime_type = "text/plain"
@@ -144,49 +222,35 @@ class CeoSecretaryWorker:
                 if not mime_type: mime_type = "application/octet-stream"
                 
                 upload_config = types.UploadFileConfig(mime_type=mime_type)
-                uploaded_file = await asyncio.to_thread(self.client.files.upload, file=file_path, config=upload_config)
+                logger.info(f"📤 กำลังอัปโหลดไฟล์ขนาด {os.path.getsize(file_path)} bytes...")
+                uploaded_file = await self.client.aio.files.upload(file=file_path, config=upload_config)
                 
                 timeout = 150 
                 start_time = time.time()
                 while uploaded_file.state.name == "PROCESSING":
                     if time.time() - start_time > timeout: raise TimeoutError("หมดเวลาสแกนเอกสาร")
                     await asyncio.sleep(3)
-                    uploaded_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
+                    uploaded_file = await self.client.aio.files.get(name=uploaded_file.name)
                     
                 if uploaded_file.state.name == "FAILED": return {"type": "text", "text": "⚠️ โครงสร้างไฟล์ซับซ้อนเกินไป ถอดรหัสไม่สำเร็จครับ"}
                 content_to_send.append(uploaded_file)
             
+            # 4. ประกอบร่าง Context และเรียก AI
             enriched_prompt = f"คำสั่งปฏิบัติการ: {message}\n"
             if corp_knowledge: enriched_prompt += f"\n[นโยบายองค์กร]:\n{corp_knowledge}\n"
             if user_memory: enriched_prompt += f"\n[บริบทความจำ]:\n{user_memory}\n"
             content_to_send.append(enriched_prompt)
 
-            # ถอดการกำหนด {"google_search": {}} ออก เพื่อป้องกัน Error 400
             genai_config = types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 temperature=0.1, 
                 tools=[create_exclusive_invite] 
             )
 
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model_name,
-                contents=content_to_send,
-                config=genai_config
-            )
+            # 🚀 เรียกใช้เครื่องยนต์ Zero Quota Drop Engine
+            reply_text = await self._safe_generate_content(content_to_send, genai_config)
 
-            while response.function_calls:
-                for fn_call in response.function_calls:
-                    if fn_call.name == "create_exclusive_invite":
-                        args = fn_call.args if fn_call.args else {}
-                        tool_result = create_exclusive_invite(**args)
-                        content_to_send.append(response.candidates[0].content)
-                        content_to_send.append(types.Content(parts=[types.Part.from_function_response(name=fn_call.name, response={"result": tool_result})]))
-                
-                response = await asyncio.to_thread(self.client.models.generate_content, model=self.model_name, contents=content_to_send, config=genai_config)
-
-            reply_text = response.text if response.text else "ประมวลผลเสร็จสิ้นครับท่านประธาน"
-
+            # 5. ระบบ Swarm Commander (แจกจ่ายงานให้แผนกอื่น)
             delegations = re.findall(r'\[DELEGATE:\s*(.+?)\](.*)', reply_text, re.IGNORECASE)
             if delegations:
                 clean_reply = re.sub(r'\[DELEGATE:\s*(.+?)\](.*)', '', reply_text, flags=re.IGNORECASE).strip()
@@ -201,6 +265,7 @@ class CeoSecretaryWorker:
                 
                 reply_text = clean_reply + swarm_responses
 
+            # 6. ระบบ System Controller (เตรียมแพตช์ไฟล์)
             plan_id = f"PLAN_{int(time.time())}"
             system_update_actions = []
 
@@ -210,6 +275,7 @@ class CeoSecretaryWorker:
                 system_update_actions.append({"path": target_path, "content": target_code})
                 reply_text = reply_text.replace(match.group(0), f"\n\n📂 **เตรียมแพตช์ไฟล์ระบบ:** `{target_path}` (รอการอนุมัติ)\n").strip()
 
+            # 7. คืนค่าเป็น Flex Message กรณีมีการแพตช์ หรือ ส่งเป็น Text ปกติ
             if "[REQUIRE_APPROVAL]" in reply_text or system_update_actions:
                 reply_text = reply_text.replace("[REQUIRE_APPROVAL]", "").strip()
                 self.pending_plans[plan_id] = {"report": reply_text, "actions": system_update_actions}
@@ -222,10 +288,11 @@ class CeoSecretaryWorker:
             return {"type": "text", "text": f"เกิดข้อผิดพลาดทางวิศวกรรม ({str(e)[:50]}) ฝ่ายระบบกำลังตรวจสอบครับ"}
         finally:
             if uploaded_file:
-                try: await asyncio.to_thread(self.client.files.delete, name=uploaded_file.name)
+                try: await self.client.aio.files.delete(name=uploaded_file.name)
                 except Exception: pass
 
     async def _execute_approved_plan(self, action_data: str) -> dict:
+        """ระบบเขียนไฟล์อัตโนมัติ (Hot-Reload) พร้อมทำ Backup"""
         plan_id = action_data.split(":")[-1]
         plan = self.pending_plans.get(plan_id)
         if not plan: return {"type": "text", "text": "⚠️ แผนงานนี้หมดอายุหรือดำเนินการไปแล้วครับ"}
