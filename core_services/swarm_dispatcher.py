@@ -3,14 +3,15 @@ import asyncio
 import inspect
 import uuid
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
+# ตั้งค่า Logger ให้ดูเป็นมืออาชีพและระบุต้นทางชัดเจน
 logger = logging.getLogger("SwarmDispatcher")
 
 class SwarmDispatcher:
     """
     🌐 Enterprise P2P Agentic Swarm Hub (ศูนย์กลางสับรางงานอัจฉริยะขั้นสูงสุด)
-    อัปเกรด: Signature Introspection, Auto-Healing (Retry), Smart Parameter Injection
+    อัปเกรด: Signature Introspection, Auto-Healing (Retry), Smart Parameter Injection, Concurrent LINE Webhook
     """
     _instance = None
     _workers: Dict[str, Any] = {}
@@ -32,6 +33,59 @@ class SwarmDispatcher:
         """ลงทะเบียน Agent เข้าสู่ระบบ Swarm Network"""
         self._workers[worker_name] = worker_instance
         logger.info(f"🔗 [Swarm Hub]: ขึ้นทะเบียน '{worker_name}' สำเร็จ (Active Agents: {len(self._workers)})")
+
+    async def dispatch_line_event(self, payload: Dict[str, Any], entry_worker: str = "core_agent") -> List[Any]:
+        """
+        📥 จุดรับข้อมูลจาก LINE Webhook (แก้ปัญหา AttributeError)
+        สกัดข้อมูลจาก Payload และกระจายงานแบบคู่ขนาน (Concurrent) ไปยัง Agent ตัวแรก
+        
+        :param payload: ข้อมูล JSON ที่ได้จาก LINE Messaging API
+        :param entry_worker: ชื่อของ Agent ที่จะรับจบเป็นด่านแรก (เช่น 'core_agent', 'ceo_agent')
+        """
+        events = payload.get("events", [])
+        if not events:
+            logger.warning("⚠️ [Swarm Hub]: ได้รับ Payload จาก LINE แต่ไม่มี events (อาจเป็นการ Verify Webhook)")
+            return []
+
+        tasks = []
+        for event in events:
+            try:
+                user_id = event.get("source", {}).get("userId", "unknown_user")
+                event_type = event.get("type", "unknown")
+
+                # กรองรับเฉพาะ Event ประเภทข้อความ (ขยายต่อได้ในอนาคต)
+                if event_type == "message":
+                    message_data = event.get("message", {})
+                    msg_type = message_data.get("type", "unknown")
+                    
+                    if msg_type == "text":
+                        message_text = message_data.get("text", "")
+                        logger.info(f"📨 [Swarm Hub]: รับข้อความจาก {user_id} -> '{message_text[:30]}...'")
+                        
+                        # สร้าง Task โยนงานเข้าสู่ Swarm Network อย่างอิสระ ไม่รอกัน (Non-blocking)
+                        task = asyncio.create_task(
+                            self.delegate_task(
+                                from_worker="LINE_Gateway",
+                                to_worker=entry_worker,
+                                user_id=user_id,
+                                message=message_text
+                            )
+                        )
+                        tasks.append(task)
+                    else:
+                        logger.info(f"📎 [Swarm Hub]: ได้รับข้อความประเภท '{msg_type}' จาก {user_id} (ระบบรอการขยายผล)")
+                else:
+                    logger.debug(f"ℹ️ [Swarm Hub]: ข้าม Event ประเภท '{event_type}'")
+                    
+            except Exception as e:
+                logger.error(f"❌ [Swarm Hub]: เกิดข้อผิดพลาดขณะแกะ Payload ของ LINE: {e}", exc_info=True)
+
+        # รอให้ทุก Task ที่แยกไปทำงานเสร็จสิ้น และป้องกันไม่ให้ Error ย่อยทำให้ระบบล่มทั้งหมด (return_exceptions=True)
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            return results
+        
+        return []
 
     async def delegate_task(self, from_worker: str, to_worker: str, user_id: str, message: str, 
                             file_path: Optional[str] = None, file_type: Optional[str] = None, 
@@ -62,7 +116,6 @@ class SwarmDispatcher:
             return f"⚠️ แผนก {to_worker} ขาดสถาปัตยกรรมรองรับคำสั่ง (Method missing)"
 
         # 🧠 2. AI Signature Introspection (ฉีดพารามิเตอร์อัจฉริยะ)
-        # ตรวจสอบว่าฟังก์ชันเป้าหมาย "ต้องการรับตัวแปรอะไรบ้าง" แล้วจ่ายให้พอดีเป๊ะ ป้องกัน TypeError
         sig = inspect.signature(target_method)
         available_payload = {
             'user_id': user_id, 
@@ -114,4 +167,5 @@ class SwarmDispatcher:
                 
             return "⚠️ เกิดข้อผิดพลาดทางเทคนิคระดับลึกระหว่างประสานงานในเครือข่ายครับ"
 
+# สร้าง Singleton Instance เผื่อถูก Import ไปใช้ในไฟล์อื่น
 swarm_hub = SwarmDispatcher.get_instance()
