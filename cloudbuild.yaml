@@ -60,7 +60,7 @@ images:
   - 'gcr.io/$PROJECT_ID/prime-core-agent:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/prime-core-agent:latest'
 
-# 🚀 บังคับเก็บ Log ลง Cloud Logging อย่างเดียว (แก้ Error สีแดงที่ท่านประธานพบ)
+# 🚀 บังคับเก็บ Log ลง Cloud Logging อย่างเดียว (แก้ Error สีแดง)
 options:
   logging: CLOUD_LOGGING_ONLY
-dynamicSubstitutions: true
+  dynamicSubstitutions: true
