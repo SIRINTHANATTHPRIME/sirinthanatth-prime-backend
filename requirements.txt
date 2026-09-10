@@ -34,12 +34,10 @@ elevenlabs>=1.0.0           # Voice AI ขั้่นสูง
 google-api-python-client>=2.100.0
 google-auth>=2.25.0
 google-cloud-secret-manager>=2.20.0
+google-cloud-tasks>=2.10.0
 
 # --- 7. Media Processing & Utils (ระบบจัดการภาพ เสียง และวิดีโอ 4K) ---
 moviepy>=1.0.3              # ระบบตัดต่อวิดีโอ
 gTTS>=2.5.1                 # ระบบแปลงข้อความเป็นเสียงพื้นฐาน
 Pillow>=10.2.0              # ระบบประมวลผลรูปภาพความละเอียดสูง
 beautifulsoup4>=4.12.3      # ระบบดึงข้อมูลจากเว็บไซต์ (Web Scraping)
-
-google-cloud-secret-manager
-google-cloud-tasks
