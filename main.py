@@ -373,3 +373,7 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
         background_tasks.add_task(_process_financials)
         
     return {"status": "success"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
