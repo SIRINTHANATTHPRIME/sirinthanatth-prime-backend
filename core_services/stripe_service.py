@@ -4,6 +4,8 @@ import logging
 import asyncio
 import hashlib
 import stripe
+import re
+from typing import Dict, Any
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -16,7 +18,7 @@ try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 โมเดลเรือธงความเร็วแสง
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 โมเดลเรือธงความเร็วแสงสำหรับงานด่านหน้า
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -30,7 +32,7 @@ except ImportError:
 class StripeService:
     """
     💳 ระบบจัดการ Payment Gateway ระดับ Enterprise (Stripe & PromptPay)
-    อัปเกรด: SHA-256 Idempotency, Smart 1-Hour Lock, AI System Instruction 3.7
+    อัปเกรด: SHA-256 Idempotency, Smart 1-Hour Lock, Fail-Safe AI Copywriting
     """
     
     def __init__(self):
@@ -45,13 +47,13 @@ class StripeService:
         self.ai_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
 
     async def create_checkout_session(self, user_id: str, package_name: str, agent_code: str = "NOAGENT") -> str:
-        """สร้างลิงก์ชำระเงิน (Checkout URL) ป้องกันบิลซ้ำซ้อน และใช้ AI กระตุ้นยอดขาย"""
+        """สร้างลิงก์ชำระเงิน (Checkout URL) ป้องกันบิลซ้ำซ้อน และใช้ AI กระตุ้นยอดขายแบบ Real-time"""
         if not stripe.api_key:
             logger.error("❌ [Stripe]: ไม่พบ STRIPE_SECRET_KEY ระบบชำระเงินออฟไลน์")
             return ""
 
         # ข้อมูลราคาตั้งต้นในหน่วย 'บาท'
-        packages = {
+        packages: Dict[str, Dict[str, Any]] = {
             "ESSENTIAL": {"price": 59000, "name": "แพ็กเกจ ESSENTIAL (เพื่อนคู่คิด)"},
             "PRIME": {"price": 149000, "name": "แพ็กเกจ PRIME (ที่ปรึกษาส่วนตัว)"},
             "ENTERPRISE": {"price": 490000, "name": "แพ็กเกจ ENTERPRISE (พันธมิตรองค์กร)"},
@@ -60,15 +62,15 @@ class StripeService:
 
         selected_pkg = packages.get(package_name.upper(), packages["PRIME"])
         
-        # 👑 Default Copywriting ระดับพรีเมียม (เผื่อ AI Timeout)
-        dynamic_desc = f'ยกระดับธุรกิจของคุณด้วย {selected_pkg["name"]} สู่มาตรฐานระดับโลก'
+        # 👑 Default Copywriting ระดับพรีเมียม (Fail-Safe กรณี AI Timeout)
+        dynamic_desc = f'ยกระดับวิสัยทัศน์ธุรกิจของคุณด้วย {selected_pkg["name"]} สู่มาตรฐานระดับโลก'
         
         if self.ai_client:
             try:
                 system_instruction = """
                 คุณคือ 'Chief Marketing Officer (CMO)' ระดับโลก
                 หน้าที่ของคุณคือ: เขียนคำอธิบายสั้นๆ 1 ประโยค (15-20 คำ) กระตุ้นให้ลูกค้าระดับ VIP โอนเงินซื้อแพ็กเกจนี้ทันที
-                กฎเหล็ก: ห้ามใช้เครื่องหมายคำพูด (") และห้ามใช้ Markdown (เช่น **) เด็ดขาด ให้ใช้ข้อความล้วนที่ดูหรูหราทรงพลัง
+                กฎเหล็ก: ห้ามใช้เครื่องหมายคำพูด (") และห้ามใช้ Markdown เด็ดขาด ให้ใช้ข้อความล้วนที่ดูหรูหราทรงพลัง
                 """
                 
                 async def fetch_ad_copy():
@@ -82,21 +84,25 @@ class StripeService:
                         )
                     )
                 
-                ai_res = await asyncio.wait_for(fetch_ad_copy(), timeout=5.0)
+                # ⏱️ Circuit Breaker: รอคำตอบจาก AI สูงสุด 4 วินาที เพื่อไม่ให้ลูกค้าเสียเวลารอหน้าโหลด
+                ai_res = await asyncio.wait_for(fetch_ad_copy(), timeout=4.0)
+                
                 if ai_res.text:
-                    # คลีนอักขระแปลกปลอมอีกชั้นเพื่อความปลอดภัย 100%
-                    dynamic_desc = ai_res.text.strip().replace('"', '').replace('**', '').replace('*', '')
+                    # 🛡️ คลีนอักขระแปลกปลอมด้วย Regex ป้องกัน Payload ของ Stripe พัง
+                    cleaned_text = re.sub(r'["*#_[\]{}]', '', ai_res.text)
+                    dynamic_desc = cleaned_text.strip()
+                    
             except asyncio.TimeoutError:
-                logger.warning("⚠️ [Stripe AI]: AI Copywriting Timeout ใช้ข้อความมาตรฐานแทน")
+                logger.warning("⚠️ [Stripe AI]: AI Copywriting Timeout สลับใช้ข้อความมาตรฐานอัตโนมัติ")
             except Exception as e:
                 logger.warning(f"⚠️ [Stripe AI Warning]: ข้ามการใช้ AI Copywriting ({e})")
 
+        # สร้าง Reference ID สำหรับตรวจจับใน Webhook
         client_ref = f"{package_name.upper()}_AGENT_{agent_code}_LINE_{user_id}"
         
         # 🛡️ Bank-Grade Idempotency Key (SHA-256) + 1-Hour Smart Lock
-        # ล็อกบิลซ้ำซ้อนภายใน 1 ชั่วโมง เพื่อไม่ปิดกั้นลูกค้ารายเดิมที่ต้องการซื้อแพ็กเกจที่ 2 ในวันเดียวกัน
         hash_str = f"{client_ref}_{int(time.time() // 3600)}"
-        idempotency_key = hashlib.sha256(hash_str.encode()).hexdigest()
+        idempotency_key = hashlib.sha256(hash_str.encode('utf-8')).hexdigest()
 
         try:
             def _create_session():
@@ -109,7 +115,7 @@ class StripeService:
                                 'name': selected_pkg["name"], 
                                 'description': dynamic_desc
                             },
-                            # ⚠️ Future-Proof: ใช้ int(round(...)) ป้องกันบั๊ก Float Precision หักเงินลูกค้าไม่ตรงเศษสตางค์
+                            # ⚠️ Floating-Point Precision: ป้องกันยอดเงินคลาดเคลื่อน
                             'unit_amount': int(round(selected_pkg["price"] * 100)),
                         },
                         'quantity': 1,
@@ -125,11 +131,14 @@ class StripeService:
                         "agent_code": agent_code,
                         "system_version": "4.0.0-ENTERPRISE",
                         "ai_generated_desc": dynamic_desc
-                    }
-                , idempotency_key=idempotency_key)
+                    },
+                    idempotency_key=idempotency_key
+                )
             
+            # ⚡ โยนเข้า Background Thread ป้องกันการบล็อกเซิร์ฟเวอร์หลัก
             session = await asyncio.to_thread(_create_session)
             logger.info(f"💳 [Stripe]: สร้างบิลชำระเงิน {selected_pkg['price']:,.2f} THB สำเร็จ (Ref: {client_ref})")
+            
             return session.url
             
         except stripe.error.StripeError as e:

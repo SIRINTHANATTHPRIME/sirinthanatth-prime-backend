@@ -3,8 +3,9 @@ import time
 import logging
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel, Field, ConfigDict
 from supabase import create_client, Client
 from google import genai
 from google.genai import types
@@ -17,12 +18,12 @@ logger = logging.getLogger("Prime-Stats-Gateway")
 
 router = APIRouter()
 
-# 🌐 1. Connection Initialization
+# 🌐 1. Connection Initialization (Graceful Degradation)
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash"
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 แกนสมองสายสปีดสำหรับงาน Real-time
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -35,20 +36,21 @@ except ImportError:
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+supabase: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # =========================================================
 # 🛡️ 2. Enterprise SWR Caching (Zero-Latency System)
 # =========================================================
 class StaleWhileRevalidateCache:
-    """ระบบ Cache อัจฉริยะ: ส่งข้อมูลเก่าให้ผู้ใช้ทันที (0.001s) และอัปเดตข้อมูลใหม่เบื้องหลัง"""
+    """ระบบ Cache อัจฉริยะแบบ SWR: ตอบกลับเสี้ยววินาที พร้อมระบบ Lock ป้องกัน Race Condition"""
     def __init__(self, ttl_seconds=60):
         self.ttl = ttl_seconds
         self.last_update = 0
         self.is_updating = False
+        self._lock = asyncio.Lock() # 🔒 เพิ่ม Lock ป้องกันการยิงโหลดซ้ำซ้อนเมื่อทราฟฟิกหนาแน่น
         self.data = {
             "status": "initializing",
-            "paid_count": 82, # Initial Seed
+            "paid_count": 82, # Initial Seed (ค่าตั้งต้น)
             "max_quota": 100,
             "remaining": 18,
             "urgency_level": "MEDIUM",
@@ -56,32 +58,33 @@ class StaleWhileRevalidateCache:
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-    def get_data(self, background_tasks: BackgroundTasks, update_func):
+    def get_data(self, background_tasks: BackgroundTasks, update_func) -> dict:
         now = time.time()
-        # หาก Cache หมดอายุ และยังไม่มี Worker ตัวอื่นกำลังอัปเดต
+        # หาก Cache หมดอายุ และยังไม่มีคิวอัปเดต
         if (now - self.last_update) > self.ttl and not self.is_updating:
             self.is_updating = True
+            # สั่งอัปเดตข้อมูลเบื้องหลัง โดยที่ลูกค้าไม่ต้องรอ (Non-Blocking)
             background_tasks.add_task(self._background_update, update_func)
         return self.data
 
     async def _background_update(self, update_func):
-        try:
-            # ส่งค่า paid_count ล่าสุดไปให้เป็น Fallback ป้องกันการใช้ค่า Hardcode
-            new_data = await update_func(last_known_count=self.data["paid_count"])
-            self.data = new_data
-            self.last_update = time.time()
-        except Exception as e:
-            logger.error(f"❌ [Cache Background Update Failed]: {e}")
-        finally:
-            self.is_updating = False
+        async with self._lock: # 🛡️ ล็อก Thread ป้องกัน Thundering Herd Problem
+            try:
+                new_data = await update_func(last_known_count=self.data["paid_count"])
+                self.data = new_data
+                self.last_update = time.time()
+            except Exception as e:
+                logger.error(f"❌ [Cache Background Update Failed]: {e}")
+            finally:
+                self.is_updating = False
 
-# อัปเดตทุก 60 วินาทีเพื่อความสดใหม่ของข้อมูลการตลาด
 stats_cache = StaleWhileRevalidateCache(ttl_seconds=60)
 
 # =========================================================
 # 📦 3. Pydantic V2 Schema (Strict API Standards)
 # =========================================================
 class VIPStatsResponse(BaseModel):
+    model_config = ConfigDict(strict=True) # 🛡️ บังคับ Data Type เข้มงวดระดับสากล ป้องกัน API พัง
     status: str = Field(..., description="สถานะของ API")
     paid_count: int = Field(..., description="จำนวนผู้สมัคร VIP ปัจจุบัน")
     max_quota: int = Field(..., description="โควตาสูงสุด")
@@ -94,16 +97,20 @@ class VIPStatsResponse(BaseModel):
 # 🧠 4. Core Processing (AI & DB Engine)
 # =========================================================
 async def generate_live_stats(last_known_count: int) -> dict:
+    """เครื่องยนต์ดึงข้อมูล 2 แกน (Supabase Real-time + AI CMO Copywriting)"""
     MAX_QUOTA = 100
     paid_count = last_known_count
     
     try:
-        # 📊 1. Database Query (Async Threading)
+        # 📊 1. Database Query (Async Threading & Error Resilient)
         if supabase:
             def fetch_vip_count():
                 res = supabase.table("prime_clients").select("id", count="exact").eq("package_tier", "VIP_FOUNDER").execute()
                 return res.count if res.count is not None else last_known_count
-            paid_count = await asyncio.to_thread(fetch_vip_count)
+            try:
+                paid_count = await asyncio.to_thread(fetch_vip_count)
+            except Exception as db_err:
+                logger.error(f"⚠️ [Supabase Query Error]: {db_err}. Using fallback count: {paid_count}")
             
         remaining = max(0, MAX_QUOTA - paid_count)
         
@@ -135,12 +142,15 @@ async def generate_live_stats(last_known_count: int) -> dict:
                     ai_client.models.generate_content,
                     model=model_name,
                     contents=prompt,
-                    config=types.GenerateContentConfig(temperature=0.85)
+                    config=types.GenerateContentConfig(
+                        temperature=0.85,
+                        max_output_tokens=100 # 🛡️ บังคับให้ AI ตอบสั้นกระชับ ป้องกัน UI พัง
+                    )
                 )
                 if ai_res.text:
                     fomo_message = ai_res.text.strip().replace('"', '').replace('**', '')
             except Exception as ai_err:
-                logger.warning(f"⚠️ [AI Generation Timeout]: {ai_err}")
+                logger.warning(f"⚠️ [AI CMO Generation Failed]: {ai_err}")
                 
         elif remaining == 0:
             fomo_message = "SOLD OUT: สิทธิพิเศษ VIP Founders ครบ 100 ท่านแล้ว ขอบพระคุณท่านประธานและคณะผู้บริหารครับ"
@@ -157,6 +167,7 @@ async def generate_live_stats(last_known_count: int) -> dict:
 
     except Exception as e:
         logger.error(f"❌ [Stats Engine Critical Error]: {e}", exc_info=True)
+        # Fallback ขั้นสูงสุด ป้องกันหน้าเว็บแสดงผลขาวหรือล่ม
         remaining = max(0, MAX_QUOTA - last_known_count)
         return {
             "status": "degraded", 

@@ -2,51 +2,54 @@ import os
 import time
 import logging
 import asyncio
-import httpx # ⚡ อัปเกรด: ใช้ HTTPX สำหรับ Non-Blocking I/O
+import httpx 
 import json
-from pydantic import BaseModel, Field # ⚡ อัปเกรด: ใช้ Pydantic บังคับโครงสร้าง AI
+from pydantic import BaseModel, Field, ConfigDict
 from google import genai
 from google.genai import types
 from supabase import create_client, Client
 from fastapi import BackgroundTasks
 
-# นำเข้าศูนย์กลางสื่อสาร (ป้องกัน Circular Import และดึง Worker จากส่วนกลาง)
+# นำเข้าศูนย์กลางสื่อสาร (Swarm Hub)
 from core_services.swarm_dispatcher import swarm_hub
 
 logger = logging.getLogger("CentralBoss-Swarm")
 
 # =========================================================
-# 🌐 นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
+# 🌐 1. นำเข้าศูนย์บัญชาการ AI และฐานข้อมูล
 # =========================================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        CORE_MODEL = "gemini-3.7-flash" # 🚀 อัปเกรดแกนสมองสายสปีดรุ่นล่าสุด
+        CORE_MODEL = "gemini-3.7-flash" # 🚀 แกนสมองเรือธงสายสปีดที่เร็วและฉลาดที่สุด
         @staticmethod
         def get_client():
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            if api_key: return genai.Client(api_key=api_key)
+            if api_key: return genai.Client(api_key=api_key, http_options={'timeout': 300.0})
             return genai.Client(
                 vertexai=True, 
                 project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
-                location="asia-southeast3"
+                location="asia-southeast3",
+                http_options={'timeout': 300.0}
             )
 
 # 🧠 [NEW] สถาปัตยกรรมบังคับโครงสร้างความคิด AI (Structured Outputs)
 class SwarmRoutingSchema(BaseModel):
-    pipeline: list[str] = Field(description='รายชื่อแผนก (Worker Keys) ที่ต้องส่งงานให้ทำตามลำดับ เช่น ["WORKER_9_PRIME"]. หากเป็นคำทักทายทั่วไปให้ปล่อยว่าง []')
+    model_config = ConfigDict(strict=True)
+    pipeline: list[str] = Field(description='รายชื่อแผนก (Worker Keys) ที่ต้องส่งงานให้ทำตามลำดับ เช่น ["WORKER_2_RISK_QA", "WORKER_6_STRATEGY"]. หากเป็นคำทักทายทั่วไปให้ปล่อยว่าง []')
     routing_msg: str = Field(description='ข้อความสุภาพที่จะตอบกลับลูกค้าทันที เพื่อแจ้งให้ทราบว่าระบบกำลังส่งงานให้แผนกไหนทำ')
 
 class CentralBossAgent:
     """
     🎩 ผู้บัญชาการส่วนกลาง (Central Boss Agent - The Master Orchestrator)
     จัดการ Pipeline ฝูงสมองกล (Swarm Intelligence) จ่ายงานต่อเนื่องและ Push ผลลัพธ์กลับสู่ LINE
+    อัปเกรด: Native Async I/O, Pydantic Structured Outputs, 14-Worker Network Support
     """
     def __init__(self):
         self.client = PrimeAIConfig.get_client()
         self.model_name = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
-        self.liff_url = os.getenv("LIFF_URL", "[https://liff.line.me/2011067128-fnWmOak4](https://liff.line.me/2011067128-fnWmOak4)")
+        self.liff_url = os.getenv("LIFF_URL", "https://liff.line.me/2011067128-fnWmOak4")
         self.line_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
         
         supa_url = os.getenv("SUPABASE_URL")
@@ -55,7 +58,7 @@ class CentralBossAgent:
         
         self.system_instruction = """
         คุณคือ 'Central Boss' ผู้จัดการระดับสูงสุดของระบบ SIRINTHANATTH PRIME
-        จิตวิทยาในการสื่อสาร: สุภาพ หรูหรา อบอุ่น และเป็นมืออาชีพ (ใช้คำว่า ครับ/ค่ะ เสมอ)
+        จิตวิทยาในการสื่อสาร: สุภาพ หรูหรา อบอุ่น และเป็นมืออาชีพ (ใช้คำว่า ครับ/ค่ะ เสมอ) ไม่เยิ่นเย้อ
         """
 
     async def _get_user_profile(self, user_id: str) -> dict:
@@ -96,7 +99,7 @@ class CentralBossAgent:
             for idx, w_key in enumerate(pipeline):
                 w_key = w_key.upper()
                 
-                # ดึง Worker จากระบบลงทะเบียนส่วนกลาง
+                # 1. ตรวจสอบ Worker จากระบบลงทะเบียนส่วนกลาง
                 worker_instance = swarm_hub._workers.get(w_key)
                 if not worker_instance: 
                     logger.warning(f"⚠️ [Swarm Pipeline]: ข้ามแผนก {w_key} เนื่องจากยังไม่ได้ออนไลน์ในระบบ")
@@ -104,26 +107,30 @@ class CentralBossAgent:
 
                 logger.info(f"🔄 [Swarm Pipeline]: ส่งไม้ต่อให้ {w_key} (Step {idx+1}/{len(pipeline)})")
 
-                # ประกอบร่างบริบท หากเป็นคิวที่ 2 เป็นต้นไป ให้นำผลลัพธ์ของคิวแรกมาเป็นบริบท
+                # 2. ประกอบร่างบริบท (ส่งต่อความจำแบบ Inter-Agent Communication)
                 if idx > 0 and final_result:
                     prompt = f"คำสั่งดั้งเดิมของลูกค้า: {initial_message}\n\n[ข้อมูล/ผลลัพธ์ที่สกัดได้จากแผนกก่อนหน้า]:\n{final_result}\n\nโปรดสานต่องานนี้ในส่วนที่คุณรับผิดชอบและสรุปผล"
                 else:
                     prompt = current_message
 
-                # เรียกใช้งาน Worker ด้วยสถาปัตยกรรม Method แบบยืดหยุ่น
+                # 3. สั่งรันผ่าน Method Discovery (แบบ Dynamic)
                 if hasattr(worker_instance, "process_task"):
-                    final_result = await worker_instance.process_task(user_id, prompt, current_file)
+                    res = worker_instance.process_task(user_id, prompt, current_file)
+                    final_result = await res if asyncio.iscoroutine(res) else res
                 elif hasattr(worker_instance, "process_command"):
-                    final_result = await worker_instance.process_command(user_id, prompt, current_file, file_type)
+                    res = worker_instance.process_command(user_id, prompt, current_file, file_type)
+                    final_result = await res if asyncio.iscoroutine(res) else res
                 elif hasattr(worker_instance, "process_ceo_command"):
-                    final_result = await worker_instance.process_ceo_command(prompt, current_file, file_type)
+                    res = worker_instance.process_ceo_command(prompt, current_file, file_type)
+                    final_result = await res if asyncio.iscoroutine(res) else res
                 else:
-                    continue
+                    # Fallback ให้ Swarm Hub จัดการส่งให้
+                    final_result = await swarm_hub.delegate_task("CENTRAL_BOSS", w_key, user_id, prompt, current_file, file_type)
 
-                # 🛡️ Zero-Data Guard: แผนกแรกประมวลผลและลบไฟล์ไปแล้ว ห้ามส่ง Path ให้แผนกถัดไป
+                # 🛡️ Zero-Data Guard: แผนกแรกประมวลผลไฟล์ไปแล้ว ห้ามส่ง Path ให้แผนกถัดไปเพื่อป้องกันไฟล์รั่วไหล
                 current_file = None 
 
-            # สิ้นสุด Pipeline จัดส่งผลลัพธ์ให้ลูกค้าผ่าน Push API (⚡ อัปเกรดใช้ httpx)
+            # 4. สิ้นสุด Pipeline จัดส่งผลลัพธ์ให้ลูกค้าผ่าน Push API (⚡ อัปเกรดใช้ httpx แบบ Async)
             if final_result and self.line_token:
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
                 
@@ -136,7 +143,7 @@ class CentralBossAgent:
                 data = {"to": user_id, "messages": [payload]}
                 
                 async with httpx.AsyncClient() as http_client:
-                    res = await http_client.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data, timeout=15.0)
+                    res = await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=15.0)
                     res.raise_for_status()
                     logger.info(f"✅ [Swarm Delivery]: จัดส่งผลการประมวลผลเครือข่ายองค์กรให้ {user_id} สำเร็จ!")
 
@@ -144,9 +151,9 @@ class CentralBossAgent:
             logger.error(f"❌ [Swarm Execution Error]: {e}", exc_info=True)
             if self.line_token:
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.line_token}"}
-                data = {"to": user_id, "messages": [{"type": "text", "text": f"⚠️ ขออภัยครับ เกิดข้อขัดข้องระหว่างการประสานงานของทีมผู้เชี่ยวชาญ ทีมวิศวกรกำลังตรวจสอบครับ"}]}
+                data = {"to": user_id, "messages": [{"type": "text", "text": f"⚠️ ขออภัยครับ เกิดข้อขัดข้องระหว่างการประสานงานของทีมผู้เชี่ยวชาญข้ามแผนก ทีมวิศวกรกำลังเร่งตรวจสอบครับ"}]}
                 async with httpx.AsyncClient() as http_client:
-                    await http_client.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data, timeout=10.0)
+                    await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=10.0)
 
     async def route_task(self, user_id: str, message: str, bg_tasks: BackgroundTasks, incoming_message: str = "", file_path: str = None, file_type: str = None) -> str:
         """🧠 แกนสมอง Router ประเมินเจตนาลูกค้าและสร้างแผนผังการประชุม Swarm (Pipeline)"""
@@ -176,13 +183,13 @@ class CentralBossAgent:
         # 🎬 2. Fast-Track: APPROVAL WORKFLOW (ยืนยันสร้างสื่อ 4K)
         # ==========================================
         if "ยืนยันการสร้างคลิป" in message_lower or "ยืนยันสร้างเสียง" in message_lower:
-            worker_11 = swarm_hub._workers.get("WORKER_11_MEDIA")
+            worker_11 = swarm_hub._workers.get("WORKER_11_MEDIA_ENGINE")
             if worker_11:
                 media_type = "video_4k" if "คลิป" in message_lower else "voice"
-                bg_tasks.add_task(worker_11.process_media_production, user_id, "สคริปต์อัตโนมัติ", media_type)
+                bg_tasks.add_task(swarm_hub.delegate_task, "CENTRAL_BOSS", "WORKER_11_MEDIA_ENGINE", user_id, actual_message, file_path, file_type)
                 return (
                     "✅ ได้รับการอนุมัติระดับผู้บริหารเรียบร้อยครับ!\n"
-                    "ระบบได้จัดการหัก PRIME CREDITS และส่งคำสั่งเข้าสู่คิวสตูดิโอ 4K เรียบร้อยแล้วครับ\n\n"
+                    "ระบบได้จัดการหัก PRIME CREDITS และส่งคำสั่งเข้าสู่คิวโปรดักชันเรียบร้อยแล้วครับ\n\n"
                     "☕ ระหว่างนี้ท่านสามารถพักผ่อนได้เลยครับ เมื่อผลงานเสร็จสมบูรณ์ ระบบจะนำส่งให้ทันทีครับ"
                 )
 
@@ -196,35 +203,39 @@ class CentralBossAgent:
         คุณคือ 'Central Boss' ผู้บัญชาการ AI Swarm ของ SIRINTHANATTH PRIME
         หน้าที่: วิเคราะห์คำสั่งลูกค้าและจัดคิวแผนก (Pipeline) เพื่อทำงานร่วมกันแบบสอดประสาน
         
-        รายชื่อแผนกที่พร้อมใช้งาน:
-        - "WORKER_0_CEO": เลคาส่วนตัว CEO (ใช้วิเคราะห์คำสั่งบริหารสูงสุด หรือทำงานแทนประธาน)
+        รายชื่อแผนกที่พร้อมใช้งาน (Agent Network):
+        - "WORKER_0_CEO": เลคาส่วนตัว CEO (งานบริหารสูงสุด ควบคุมระบบ อนุมัติโค้ด)
         - "WORKER_1_REPORT": วิเคราะห์ Data, Excel, สรุปเอกสาร, ประเมินราคา
-        - "WORKER_2_RISK_QA": กฎหมาย, ความเสี่ยง, สัญญา
-        - "WORKER_3_AUDIO": ไฟล์เสียง, สังเคราะห์เสียง
-        - "WORKER_4_video": ไฟล์วิดีโอ, Storyboard
-        - "WORKER_5_GRAPHICS": ไฟล์ภาพ, กราฟิก, โฆษณา
-        - "WORKER_6_STRATEGY": กลยุทธ์การตลาด, แผนธุรกิจ
+        - "WORKER_2_RISK_QA": กฎหมาย, ความเสี่ยง, สัญญา, PDPA
+        - "WORKER_3_AUDIO": ไฟล์เสียง, สังเคราะห์เสียง, สคริปต์เสียง
+        - "WORKER_4_VIDEO": ไฟล์วิดีโอ, Storyboard, งานโปรดักชัน
+        - "WORKER_5_GRAPHICS_ADS": ไฟล์ภาพ, กราฟิก, โฆษณา, คอนเทนต์
+        - "WORKER_6_STRATEGY": กลยุทธ์การตลาด, แผนธุรกิจ, วิสัยทัศน์
         - "WORKER_7_FINANCE": การเงิน, บัญชี, ภาษี, จุดคุ้มทุน
         - "WORKER_8_ECOMMERCE": E-Commerce, สลิปโอนเงิน, ระบบ Logistics
-        - "WORKER_9_PRIME": สถาปัตยกรรม IT, Cyber Security, โค้ดโปรแกรม
+        - "WORKER_9_PRIME": ที่ปรึกษาส่วนตัว, วางสถาปัตยกรรมธุรกิจเบื้องต้น
         - "WORKER_10_ENTERPRISE": Big Data ระดับองค์กร, Supply Chain
+        - "WORKER_11_MEDIA_ENGINE": Engine ประมวลผลสื่อวิดีโอ/เสียงระดับสูง
+        - "WORKER_12_SELF_LEARNING": วิเคราะห์พฤติกรรม และเรียนรู้ข้อมูลใหม่
+        - "WORKER_13_IT_ARCHITECT": (Internal) วิศวกรระบบ ตรวจสอบและเขียนโค้ด ซ่อมเซิร์ฟเวอร์
 
-        เงื่อนไข:
-        1. หากเป็นบทสนทนาทักทายทั่วไป ให้ส่ง pipeline ว่าง: []
-        2. งานเฉพาะทางให้ใช้ 1 แผนก เช่น ["WORKER_9_PRIME"]
-        3. งานซับซ้อนให้เรียงลำดับ เช่น สแกนสัญญาและวางแผนธุรกิจ = ["WORKER_2_RISK_QA", "WORKER_6_STRATEGY"]
+        เงื่อนไขการส่งต่อ (Pipeline Logistics):
+        1. หากเป็นการสนทนาทั่วไป ทักทาย หรือถามสารทุกข์สุกดิบ ให้ส่ง pipeline เป็นค่าว่าง: []
+        2. งานเฉพาะทางให้ใช้ 1 แผนก เช่น ลูกค้าให้เขียนเว็บส่ง ["WORKER_13_IT_ARCHITECT"] หรือทำบัญชีส่ง ["WORKER_7_FINANCE"]
+        3. งานซับซ้อนให้เรียงลำดับ (Chain) เช่น สแกนสัญญาและวางแผนธุรกิจ = ["WORKER_2_RISK_QA", "WORKER_6_STRATEGY"]
+        4. หากประธาน (CEO) สั่งงาน ให้มี ["WORKER_0_CEO"] อยู่ด้วยเสมอ
         """
 
         prompt = f"""
-        วิเคราะห์การส่งไม้ต่อ (Pipeline) จากคำสั่งลูกค้า:
+        วิเคราะห์การส่งไม้ต่อ (Pipeline) จากคำสั่ง/ข้อมูลของลูกค้า:
         ข้อความ: {actual_message}
-        มีไฟล์แนบหรือไม่: {'มีไฟล์ประเภท ' + str(file_type) if file_type else 'ไม่มีไฟล์แนบ'}
+        สถานะไฟล์แนบ: {'มีไฟล์ประเภท ' + str(file_type) if file_type else 'ไม่มีไฟล์แนบ'}
         """
 
         try:
-            # 🧠 [อัปเกรด] ใช้ response_schema บังคับ AI คายข้อมูลเป็น JSON ตาม Class Pydantic เป๊ะๆ
-            res = await asyncio.to_thread(
-                self.client.models.generate_content,
+            # 🧠 [Native Async Pydantic Output]
+            # ใช้ client.aio.models.generate_content เพื่อดึงความเร็ว Native Async 100%
+            res = await self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -244,7 +255,7 @@ class CentralBossAgent:
                 if file_path:
                     routing_msg += "\n\n📂 (ข้อมูลเข้าสู่กระบวนการรักษาความลับ Zero-Data Retention เรียบร้อยครับ)"
                 
-                # โยนเข้า Executor เพื่อรันข้ามแผนกแบบ Asynchronous ไม่ให้ LINE ค้าง
+                # โยนเข้า Executor เพื่อรันข้ามแผนกแบบ Asynchronous ไม่ให้ LINE ค้าง (Non-Blocking)
                 bg_tasks.add_task(self._execute_swarm_pipeline_and_push, user_id, pipeline, actual_message, file_path, user_tier, file_type)
                 return routing_msg
 
@@ -257,25 +268,20 @@ class CentralBossAgent:
         try:
             chat_prompt = f"ลูกค้า (ID: {user_id} - Tier: {user_tier}) ส่งข้อความมาว่า: {actual_message}"
             if file_type:
-                chat_prompt += f"\n[ลูกค้ารายนี้แนบไฟล์ {file_type} มาด้วย โปรดตอบรับอย่างเป็นมิตรและรอการวิเคราะห์เชิงลึก]"
+                chat_prompt += f"\n[ลูกค้ารายนี้แนบไฟล์ {file_type} มาด้วย โปรดตอบรับอย่างเป็นมิตรและแจ้งว่าระบบกำลังประมวลผลเชิงลึก]"
             
-            async def fetch_response():
-                return await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model_name,
-                    contents=chat_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self.system_instruction,
-                        temperature=0.6 
-                    )
+            # ⚡ ใช้ Native Async สำหรับการสนทนาเร็วสุดขีด
+            response = await self.client.aio.models.generate_content(
+                model=self.model_name,
+                contents=chat_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction,
+                    temperature=0.5 
                 )
+            )
             
-            response = await asyncio.wait_for(fetch_response(), timeout=12.0)
             return response.text if response.text else "รับทราบครับ ระบบได้รับข้อมูลและเตรียมดำเนินการต่อให้ครับ"
             
-        except asyncio.TimeoutError:
-            logger.warning(f"⚠️ [Central Boss Timeout]: ระบบด่านหน้าช้า สลับใช้ข้อความสำรองอัตโนมัติ")
-            return "ระบบได้รับข้อมูลเรียบร้อยแล้วครับ หากเป็นคำสั่งเฉพาะทาง ทีม AI ผู้เชี่ยวชาญกำลังรับช่วงต่อดำเนินการครับ"
         except Exception as e:
             logger.error(f"❌ [Central Boss Error]: {e}")
             return "ขออภัยครับ ระบบประสานงานส่วนกลางติดขัดชั่วคราว ทีมวิศวกรกำลังเร่งตรวจสอบให้ครับ"

@@ -4,12 +4,10 @@ import inspect
 import logging
 import uuid
 import time
-import httpx # ⚡ อัปเกรดเป็น Async HTTP ขั้นสุด (Non-Blocking 100%)
+import httpx # ⚡ อัปเกรดเป็น Async HTTP ขั้นสุดระดับ Enterprise
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Header, HTTPException, BackgroundTasks
-
-# LINE Messaging API SDK
 from linebot import LineBotApi, WebhookParser
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
@@ -30,10 +28,8 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Prime-API-Gateway")
 
-# กำหนดเฉพาะ Router (ลบ app.middleware ออกเพื่อป้องกัน Server Crash)
 router = APIRouter()
 
-# 🔑 โหลด Environment Variables
 LINE_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 LINE_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
 BASE_URL = os.environ.get("BASE_URL") or "https://prime-core-agent-601183279633.asia-southeast3.run.app"
@@ -41,7 +37,7 @@ BASE_URL = os.environ.get("BASE_URL") or "https://prime-core-agent-601183279633.
 line_bot_api = LineBotApi(LINE_TOKEN) if LINE_TOKEN else None
 parser = WebhookParser(LINE_SECRET) if LINE_SECRET else None
 
-# 🚀 เชื่อมต่อสมองกลส่วนกลาง Gemini
+# 🚀 เชื่อมต่อสมองกลส่วนกลาง (Cross-Model Supported)
 try:
     from core_services.ai_config import PrimeAIConfig
     client = PrimeAIConfig.get_client()
@@ -50,7 +46,7 @@ except ImportError:
     client = genai.Client(api_key=api_key) if api_key else None
 
 # =========================================================
-# 🧩 Dynamic Imports (สถาปัตยกรรม Graceful Degradation)
+# 🧩 Dynamic Imports (สถาปัตยกรรม Graceful Degradation ป้องกันเซิร์ฟเวอร์ล่ม)
 # =========================================================
 try: from security.pdpa_logger import PDPA_Logger; pdpa_logger = PDPA_Logger()
 except ImportError: pdpa_logger = None
@@ -73,11 +69,15 @@ except ImportError: ceo_secretary = None
 try: from services.elevenlabs_service import generate_voice_from_text
 except ImportError: generate_voice_from_text = None
 
+# นำเข้าระบบเครือข่าย Swarm Network
+try: from core_services.swarm_dispatcher import swarm_hub
+except ImportError: swarm_hub = None
+
 # =========================================================
 # 🌟 Advanced UI/UX: LINE Loading Animation API
 # =========================================================
 async def show_line_loading_animation(user_id: str, loading_seconds: int = 20) -> None:
-    """แสดงจุดไข่ปลา (...) อนิเมชันกำลังพิมพ์เพื่อปฏิสัมพันธ์ระดับพรีเมียม"""
+    """แสดงจุดไข่ปลา (...) อนิเมชันกำลังพิมพ์ให้ลูกค้าเห็นขณะ AI กำลังคิด ป้องกันความสับสน"""
     if not LINE_TOKEN or not user_id: return
     headers = {
         "Content-Type": "application/json",
@@ -86,39 +86,48 @@ async def show_line_loading_animation(user_id: str, loading_seconds: int = 20) -
     data = {"chatId": user_id, "loadingSeconds": loading_seconds}
     try:
         async with httpx.AsyncClient() as http_client:
-            await http_client.post("https://api.line.me/v2/bot/chat/loading/start", headers=headers, json=data, timeout=3.0)
+            await http_client.post("https://api.line.me/v2/bot/chat/loading/start", headers=headers, json=data, timeout=5.0)
     except Exception as e:
         logger.debug(f"⚠️ [Loading Animation Skipped]: {e}")
 
 # =========================================================
-# 🛠️ Core Transmission Functions (ระบบส่งสารระดับองค์กร)
+# 🛠️ Core Transmission Functions (ระบบสั่งการ LINE ขั้นสูง)
 # =========================================================
 async def send_line_custom_payload(user_id: str, payload: dict) -> None:
-    """⚡ ส่ง Flex Message หรือ Custom JSON อย่างปลอดภัย พร้อมระบบซ่อมแซมโค้ดอัตโนมัติ"""
+    """⚡ ส่ง Flex Message หรือ Custom JSON Payload แบบ Asynchronous ปลอดภัย 100%"""
     if not LINE_TOKEN or not user_id: return
     
-    # 🛡️ Auto-Correction สำหรับ Flex Message ป้องกัน Error 400
+    # 🛡️ ระบบ Auto-Correction: ตรวจสอบและซ่อมแซมโครงสร้าง Flex Message
     if payload.get("type") == "flex":
         if "altText" not in payload:
             payload["altText"] = "SIRINTHANATTH PRIME ส่งเอกสารสำคัญให้คุณ"
         if "contents" not in payload and "body" in payload:
-            payload = {"type": "flex", "altText": payload["altText"], "contents": {"type": "bubble", "body": payload["body"]}}
+            payload = {
+                "type": "flex",
+                "altText": payload.get("altText"),
+                "contents": {
+                    "type": "bubble",
+                    "body": payload.get("body")
+                }
+            }
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LINE_TOKEN}"}
     data = {"to": user_id, "messages": [payload]}
     
     try:
         async with httpx.AsyncClient() as http_client:
-            res = await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=10.0)
+            res = await http_client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data, timeout=15.0)
             if res.status_code == 200:
                 logger.info("📤 [System]: ส่ง Executive Custom Payload สำเร็จ")
             else:
-                logger.error(f"❌ [LINE Push API Error {res.status_code}]: {res.text}")
+                logger.error(f"❌ [LINE API Error {res.status_code}]: {res.text}")
+    except httpx.TimeoutException:
+        logger.error("❌ [System Timeout]: LINE API ไม่ตอบสนองภายในเวลาที่กำหนด")
     except Exception as e:
         logger.error(f"❌ [System Error]: ส่ง Custom Payload ล้มเหลว -> {e}", exc_info=True)
 
 async def dispatch_line_message(user_id: str, reply_token: Optional[str], messages: list) -> None:
-    """สลับ Reply / Push อัจฉริยะแบบ Adaptive ป้องกัน Timeout ขั้นเด็ดขาด"""
+    """ระบบสลับ Reply / Push อัจฉริยะ (Adaptive Dispatcher) เพื่อลดการใช้ Push Quota"""
     if not messages: return
     try:
         if reply_token:
@@ -126,17 +135,19 @@ async def dispatch_line_message(user_id: str, reply_token: Optional[str], messag
         else:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
     except LineBotApiError as line_err:
-        logger.warning(f"🔄 [Auto-Retry]: Token หมดอายุ สลับไปใช้ Push Message แบบไร้รอยต่อ...")
+        logger.warning(f"🔄 [Auto-Retry]: Reply ล้มเหลว/Token หมดอายุ สลับไปใช้ Push Message แบบไร้รอยต่อ...")
         try:
             await asyncio.to_thread(line_bot_api.push_message, user_id, messages)
         except Exception as push_err:
             logger.error(f"❌ [Dispatch Error]: ส่ง Push สำรองล้มเหลว -> {push_err}")
+    except Exception as e:
+        logger.error(f"❌ [Dispatch Error]: ไม่สามารถส่งข้อความได้ -> {e}")
 
 # =========================================================
-# 🧠 The Ultimate AI Processing Pipeline (แกนประมวลผลสมองกลหลัก)
+# 🧠 The Ultimate AI Processing Pipeline (ท่อประมวลผลสมองกลหลัก)
 # =========================================================
-async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: Optional[str], file_path: Optional[str] = None, file_type: Optional[str] = None) -> None:
-    """กระบวนการคิดของ AI ใน Background (Non-Blocking)"""
+async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token: Optional[str], file_path: Optional[str] = None, file_type: Optional[str] = None, bg_tasks: Optional[BackgroundTasks] = None) -> None:
+    """ทำงานใน Background: ใช้เวลาคิดได้อย่างอิสระ ไร้ข้อจำกัด Timeout ของแอป LINE"""
     try:
         start_time = time.time()
         
@@ -149,6 +160,7 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             else:
                 reply_payload = await asyncio.to_thread(ceo_secretary.process_ceo_command, incoming_message, file_path, file_type)
                 
+            # เช็กเวลาเพื่อปรับ Token (LINE Reply Token หมดอายุใน 60 วินาที)
             if time.time() - start_time > 45.0: reply_token = None
             
             if isinstance(reply_payload, dict): 
@@ -163,28 +175,36 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
         # 🛡️ 2. [COMPLIANCE SHIELD]: กรองข้อมูลส่วนบุคคล (PDPA Zero-Risk)
         safe_message = guard.sanitize_pii(incoming_message) if (guard and hasattr(guard, 'sanitize_pii')) else incoming_message
 
-        # 🧠 3. [PREDICTIVE EMPATHY]: ดึงความทรงจำด้วย Vector DB
+        # 🧠 3. [PREDICTIVE EMPATHY]: ดึงกฎเหล็ก/ความจำ จาก Worker 12 (Self-Learning)
         golden_rules = ""
         if self_learning and hasattr(self_learning, 'get_rules_for_context'):
             try:
                 golden_rules = await asyncio.wait_for(self_learning.get_rules_for_context(safe_message), timeout=5.0)
             except asyncio.TimeoutError:
-                logger.warning("⚠️ [Timeout]: ดึง Golden Rules ไม่สำเร็จ ข้ามเพื่อความเร็ว")
+                logger.warning("⚠️ [Timeout]: ดึง Golden Rules ไม่สำเร็จใน 5 วิ ข้ามไปก่อนเพื่อความเร็ว")
 
         enhanced_message = f"{golden_rules}\n{safe_message}" if golden_rules else safe_message
 
-        # ⚙️ 4. [CENTRAL ROUTER]: ส่งให้ Boss Agent สับรางงาน
+        # ⚙️ 4. [CENTRAL ROUTER]: ส่งให้ Boss Agent ประเมินเจตนา ตัด Token และสั่งการ Worker
         reply_msg = ""
         if boss_agent:
             try:
-                if inspect.iscoroutinefunction(boss_agent.route_task):
-                    reply_msg = await boss_agent.route_task(user_id, enhanced_message, incoming_message, file_path, file_type)
-                else:
-                    reply_msg = await asyncio.to_thread(boss_agent.route_task, user_id, enhanced_message, incoming_message, file_path, file_type)
-            except Exception as boss_err:
-                logger.warning(f"⚠️ [Boss Agent Error]: {boss_err} -> สลับสู่โหมด Prime Brain")
+                # ปรับการส่งพารามิเตอร์ให้รองรับ signature ของ route_task อัตโนมัติ
+                boss_sig = inspect.signature(boss_agent.route_task)
+                kwargs = {"user_id": user_id, "message": enhanced_message}
+                if "incoming_message" in boss_sig.parameters: kwargs["incoming_message"] = incoming_message
+                if "file_path" in boss_sig.parameters: kwargs["file_path"] = file_path
+                if "file_type" in boss_sig.parameters: kwargs["file_type"] = file_type
+                if "bg_tasks" in boss_sig.parameters and bg_tasks: kwargs["bg_tasks"] = bg_tasks
 
-        # 🔄 5. [FALLBACK SYSTEM]: หากสมองหลักล่ม ใช้งาน Gemini โดยตรง (Auto-Healing)
+                if inspect.iscoroutinefunction(boss_agent.route_task):
+                    reply_msg = await boss_agent.route_task(**kwargs)
+                else:
+                    reply_msg = await asyncio.to_thread(boss_agent.route_task, **kwargs)
+            except Exception as boss_err:
+                logger.warning(f"⚠️ [Boss Agent Error]: {boss_err} -> Fallback to Prime Brain")
+
+        # 🔄 5. [FALLBACK SYSTEM]: ถ้าระบบ Boss ล่ม ให้ใช้ Gemini รุ่นเรือธง ตรงๆ
         if not reply_msg:
             if generate_intelligent_response:
                 if inspect.iscoroutinefunction(generate_intelligent_response):
@@ -192,27 +212,27 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
                 else:
                     reply_msg = await asyncio.to_thread(generate_intelligent_response, user_id, enhanced_message, file_path, file_type)
             else:
-                sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบด้วยความชาญฉลาดและเป็นมืออาชีพ {golden_rules}"
+                sys_instruct = f"คุณคือเลขาอัจฉริยะ SIRINTHANATTH PRIME ตอบสั้นกระชับ เป็นมืออาชีพ {golden_rules}"
                 response = await asyncio.to_thread(
                     client.models.generate_content,
                     model='gemini-3.7-flash',
                     contents=enhanced_message,
                     config=types.GenerateContentConfig(system_instruction=sys_instruct)
                 )
-                reply_msg = response.text if response.text else "ระบบบันทึกข้อมูลเรียบร้อยแล้วครับ"
+                reply_msg = response.text if response.text else "ระบบได้รับข้อมูลเรียบร้อยแล้วครับ"
 
-        # ⚖️ 6. [OUTPUT SANITIZER]: แนบคำเตือนกฎหมายการเงินอัตโนมัติ
+        # ⚖️ 6. [OUTPUT SANITIZER]: แนบคำเตือนจำกัดความรับผิดชอบอัตโนมัติ (ก.ล.ต. / สคบ.)
         if guard and hasattr(guard, 'attach_financial_disclaimer'):
             reply_msg = guard.attach_financial_disclaimer(reply_msg)
 
-        # 🚀 7. [FLEX ROUTING]: ตรวจสอบการส่งกลับเป็น Flex
+        # 🚀 ฟีเจอร์พิเศษ: ถ้า AI เจน JSON ออกมา ให้โยนเข้า Custom Payload
         if isinstance(reply_msg, dict) and reply_msg.get("type") in ["flex", "template"]:
             await send_line_custom_payload(user_id, reply_msg)
             return
 
         messages_to_send = [TextSendMessage(text=str(reply_msg))]
 
-        # 🎙️ 8. [VOICE AI SYNTHESIS]: สร้างเสียงพากย์ตอบกลับด้วย ElevenLabs
+        # 🎙️ 7. [VOICE AI SYNTHESIS]: แปลงเสียงพูดกลับ (ElevenLabs)
         if file_type == 'audio' and generate_voice_from_text:
             try:
                 if inspect.iscoroutinefunction(generate_voice_from_text):
@@ -226,122 +246,22 @@ async def process_ai_and_reply(user_id: str, incoming_message: str, reply_token:
             except Exception as audio_err:
                 logger.error(f"⚠️ [Voice Module Error]: {audio_err}")
         
-        # ปรับ Token หมดอายุหากประมวลผลนานกว่า 45 วินาที
         if time.time() - start_time > 45.0: reply_token = None 
 
-        # 📤 9. [FINAL DISPATCH]: ส่งให้ลูกค้า
+        # 📤 8. [DISPATCH]: ส่งข้อมูลกลับหาลูกค้า
         await dispatch_line_message(user_id, reply_token, messages_to_send)
         
     except Exception as e: 
         logger.error(f"❌ [Critical Pipeline Error]: {e}", exc_info=True)
-        await dispatch_line_message(user_id, None, [TextSendMessage(text="ขออภัยครับ ระบบพบความซับซ้อนเชิงเทคนิค ทีมวิศวกรกำลังเร่งเคลียร์ทราฟฟิกให้ครับ")])
+        await dispatch_line_message(user_id, None, [TextSendMessage(text="ขออภัยครับ ระบบประมวลผลล้ำลึกกำลังจัดเรียงข้อมูลเครือข่ายใหม่ ทีมวิศวกรกำลังเร่งตรวจสอบให้ครับ")])
     finally:
-        # 🧹 10. [ZERO-DATA RETENTION]: ทำลายข้อมูลชั่วคราวทิ้งทันที 100% ตามกฎ PDPA
+        # 🧹 9. [ZERO-DATA RETENTION]: ทำลายข้อมูลชั่วคราวทิ้งทันที 100% ป้องกันข้อมูลส่วนบุคคลรั่วไหล
         if file_path and os.path.exists(file_path):
             try: 
                 os.remove(file_path)
-                logger.info(f"🧹 [Zero-Data]: ลบไฟล์ประวัติส่วนบุคคลเรียบร้อย ({file_path})")
+                logger.info(f"🧹 [Zero-Data]: ทำลายไฟล์ลับชั่วคราวสำเร็จ ({file_path})")
             except Exception as cleanup_err: 
                 logger.error(f"⚠️ [Cleanup Failed]: {cleanup_err}")
-
-# =========================================================
-# 🌐 Webhook Gateway (ด่านหน้าสกัดและแยกประเภทข้อมูล)
-# =========================================================
-@router.post("/webhook")
-async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
-    """รองรับผู้ใช้งานพร้อมกัน 10,000+ Requests อย่างเสถียร (Event-Driven)"""
-    if not parser or not line_bot_api:
-        return {"status": "ok", "message": "Verify Only Mode"}
-        
-    body = await request.body()
-    try: 
-        events = parser.parse(body.decode('utf-8'), x_line_signature)
-    except InvalidSignatureError: 
-        logger.warning("🚨 [Security Alert]: ตรวจพบการปลอมแปลง Signature! บล็อกการเข้าถึงทันที")
-        raise HTTPException(status_code=400, detail="Invalid signature. Access Denied.")
-        
-    for event in events:
-        
-        # 🌟 ระบบต้อนรับ VVIP
-        if isinstance(event, FollowEvent):
-            welcome_msg = "ยินดีต้อนรับเข้าสู่ศูนย์บัญชาการอัจฉริยะ SIRINTHANATTH PRIME ครับ 👑 พิมพ์ 'เมนู' เพื่อดูบริการของเราได้เลยครับ"
-            if boss_agent and hasattr(boss_agent, '_get_liff_welcome_message'):
-                welcome_msg = boss_agent._get_liff_welcome_message(tier="GUEST")
-            background_tasks.add_task(dispatch_line_message, event.source.user_id, event.reply_token, [TextSendMessage(text=welcome_msg)])
-            continue
-
-        if not isinstance(event, MessageEvent):
-            continue
-
-        user_id = event.source.user_id
-        reply_token = event.reply_token
-        message_type = event.message.type
-        incoming_message, file_path, file_type = "", None, None
-
-        if reply_token in ["00000000000000000000000000000000", "ffffffffffffffffffffffffffffffff"]:
-            continue # ข้าม Webhook Verification
-
-        # ⚡ แสดง Loading Animation แจ้งลูกค้าว่า AI กำลังทำงาน
-        background_tasks.add_task(show_line_loading_animation, user_id, 20)
-
-        # 📝 โหมดข้อความและคำสั่งระบบ
-        if message_type == 'text': 
-            incoming_message = event.message.text.strip()
-
-            if incoming_message == "PRIME: UNLOCK CEO":
-                reply_msg = (f"👑 [SYSTEM OVERRIDE SUCCESS]\n\n"
-                             f"ท่านประธานครับ รหัสการยืนยันตัวตน (LINE ID) ของท่านคือ:\n\n"
-                             f"{user_id}\n\n"
-                             f"นำรหัสนี้ไปตั้งค่าในระบบเพื่อปลดล็อก God Mode ครับ")
-                background_tasks.add_task(dispatch_line_message, user_id, reply_token, [TextSendMessage(text=reply_msg)])
-                continue
-
-        # 👾 โหมดวิเคราะห์สติกเกอร์ (Sticker Vision Translation)
-        elif message_type == 'sticker':
-            package_id = event.message.package_id
-            sticker_id = event.message.sticker_id
-            incoming_message = f"[ผู้ใช้ส่งสติกเกอร์ Pkg:{package_id} ID:{sticker_id}] โปรดตอบกลับสติกเกอร์นี้อย่างเป็นมิตร"
-            file_type = "sticker"
-
-        # 🖼️ โหมดมัลติมีเดีย (ดาวน์โหลดแบบ Super Fast Async)
-        elif message_type in ['audio', 'image', 'video', 'file']:
-            message_id = event.message.id
-            try:
-                def _reply_loading():
-                    try:
-                        line_bot_api.reply_message(reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดและวิเคราะห์ไฟล์ กรุณารอสักครู่นะครับ ⏳"))
-                    except: pass
-                background_tasks.add_task(_reply_loading)
-                
-                # สร้างชื่อและเส้นทางเก็บไฟล์
-                ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ".pdf"
-                os.makedirs("/tmp", exist_ok=True)
-                file_path = f"/tmp/file_{uuid.uuid4().hex}{ext}"
-                
-                # 🚀 อัปเกรด: ดาวน์โหลดด้วย httpx แบบ Asynchronous 100% ไม่บล็อกเซิร์ฟเวอร์
-                async with httpx.AsyncClient() as http_client:
-                    headers = {"Authorization": f"Bearer {LINE_TOKEN}"}
-                    response = await http_client.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers, timeout=30.0)
-                    if response.status_code == 200:
-                        with open(file_path, "wb") as f:
-                            f.write(response.content)
-                    else:
-                        raise Exception(f"LINE API Error: {response.status_code}")
-                
-                incoming_message = f"[System: ลูกค้าอัปโหลดไฟล์ {message_type.upper()}] โปรดวิเคราะห์และสรุปผล"
-                file_type = message_type
-                reply_token = None # ใช้ Token ตอบรับไปแล้ว
-                
-            except Exception as e: 
-                logger.error(f"❌ [Fast Async Download Error]: {e}")
-                continue
-        else: 
-            continue
-    
-        # 🚀 โยนเข้าท่อประมวลผลสมองกล (Background Task)
-        background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type)
-        
-    return {"status": "OK", "message": "Enterprise Pipeline Processed"}
 
 # =========================================================
 # 🌐 Web Chat Sandbox Gateway (หน้าต่างจำลองบนเว็บ)
@@ -355,13 +275,140 @@ async def demo_chat_endpoint(req: DemoChatRequest, background_tasks: BackgroundT
     """รองรับหน้าต่าง AI Sandbox บนเว็บไซต์ SIRINTHANATTH PRIME"""
     try:
         if boss_agent:
-            if asyncio.iscoroutinefunction(boss_agent.route_task):
-                reply = await boss_agent.route_task(req.user_id, req.message, background_tasks)
+            # ตรวจสอบว่า route_task ต้องการพารามิเตอร์ใดบ้าง
+            sig = inspect.signature(boss_agent.route_task)
+            kwargs = {"user_id": req.user_id, "message": req.message}
+            if "incoming_message" in sig.parameters: kwargs["incoming_message"] = req.message
+            if "bg_tasks" in sig.parameters: kwargs["bg_tasks"] = background_tasks
+            
+            if inspect.iscoroutinefunction(boss_agent.route_task):
+                reply = await boss_agent.route_task(**kwargs)
             else:
-                reply = await asyncio.to_thread(boss_agent.route_task, req.user_id, req.message, background_tasks)
+                reply = await asyncio.to_thread(boss_agent.route_task, **kwargs)
         else:
             reply = "ระบบจำลองแชตทำงานสมบูรณ์แล้วครับ กรุณารอการเชื่อมต่อจากสมองกลหลัก"
         return {"reply": reply}
     except Exception as e:
         logger.error(f"❌ [Demo Chat API Error]: {e}")
         return {"reply": "ขัดข้องทางเทคนิคในการเชื่อมต่อสมองกลครับ"}
+
+# =========================================================
+# 🌐 Webhook Gateway (ด่านหน้ารับข้อความจาก LINE OA)
+# =========================================================
+@router.post("/webhook")
+async def line_webhook(request: Request, background_tasks: BackgroundTasks, x_line_signature: str = Header(None)):
+    """ด่านหน้ารับข้อความจาก LINE OA ออกแบบมาเพื่อป้องกัน Timeout 100% (Event-Driven Architecture)"""
+    if not parser or not line_bot_api:
+        logger.warning("⚠️ Webhook Parser ไม่พร้อมทำงาน ส่ง 200 OK เพื่อให้ Verify ผ่าน")
+        return {"status": "ok", "message": "Verify Only Mode"}
+        
+    body = await request.body()
+    try: 
+        events = parser.parse(body.decode('utf-8'), x_line_signature)
+    except InvalidSignatureError: 
+        logger.warning("🚨 [Security Alert]: ตรวจพบการปลอมแปลง Signature! บล็อกการเข้าถึงทันที")
+        raise HTTPException(status_code=400, detail="Invalid signature. Access Denied.")
+        
+    for event in events:
+        
+        # 🌟 ระบบต้อนรับ VVIP ผ่านหน้าต่าง LIFF อัตโนมัติ
+        if isinstance(event, FollowEvent):
+            welcome_msg = "ยินดีต้อนรับเข้าสู่ศูนย์บัญชาการอัจฉริยะ SIRINTHANATTH PRIME ครับ พิมพ์คำว่า 'เมนู' หรือ 'แพ็กเกจ' เพื่อดูบริการระดับโลกของเราได้เลยครับ"
+            if boss_agent and hasattr(boss_agent, '_get_liff_welcome_message'):
+                welcome_msg = boss_agent._get_liff_welcome_message(tier="GUEST")
+            background_tasks.add_task(dispatch_line_message, event.source.user_id, event.reply_token, [TextSendMessage(text=welcome_msg)])
+            continue
+
+        if not isinstance(event, MessageEvent):
+            continue
+
+        user_id = event.source.user_id
+        reply_token = event.reply_token
+        message_type = event.message.type
+        incoming_message, file_path, file_type = "", None, None
+
+        # 🛡️ ระบบกรอง LINE Verification
+        if reply_token in ["00000000000000000000000000000000", "ffffffffffffffffffffffffffffffff"]:
+            logger.info("✅ [System]: ตอบรับการทดสอบ Webhook จาก LINE เรียบร้อย")
+            continue
+
+        # ==========================================
+        # ⚡ 1. โชว์จุดไข่ปลา (Loading Animation) ทันทีที่รับข้อความ
+        # ==========================================
+        background_tasks.add_task(show_line_loading_animation, user_id, 20)
+
+        # ==========================================
+        # 📝 2. โหมดข้อความและการกดปุ่ม
+        # ==========================================
+        if message_type == 'text': 
+            incoming_message = event.message.text.strip()
+
+            if incoming_message == "PRIME: UNLOCK CEO":
+                reply_msg = (f"👑 [SYSTEM OVERRIDE SUCCESS]\n"
+                             f"ท่านประธานครับ LINE ID ของท่านคือ:\n\n"
+                             f"{user_id}\n\n"
+                             f"กรุณาคัดลอกรหัสนี้ไปใส่ในไฟล์ .env (CEO_LINE_ID) เพื่อปลดล็อกระบบระดับมหาภาคครับ")
+                background_tasks.add_task(dispatch_line_message, user_id, reply_token, [TextSendMessage(text=reply_msg)])
+                continue
+
+            if incoming_message.startswith("ACTION:PROMO_ACCEPT:"):
+                promo_id = incoming_message.split(":")[-1]
+                background_tasks.add_task(dispatch_line_message, user_id, reply_token, [TextSendMessage(text=f"✅ แคมเปญรหัส [{promo_id}] ถูกส่งไปยังระบบเผยแพร่แล้วครับ!")])
+                continue
+                
+            if incoming_message.startswith("ACTION:PROMO_MODIFY:"):
+                promo_id = incoming_message.split(":")[-1]
+                background_tasks.add_task(dispatch_line_message, user_id, reply_token, [TextSendMessage(text=f"📝 รับทราบครับ! แคมเปญ [{promo_id}] ต้องการปรับปรุงส่วนไหน พิมพ์บอกผมได้เลยครับ!")])
+                continue
+
+        # ==========================================
+        # 👾 3. โหมดวิเคราะห์สติกเกอร์ (Sticker Vision)
+        # ==========================================
+        elif message_type == 'sticker':
+            # ดักจับสติกเกอร์และแปลผลให้ AI เข้าใจ ป้องกันอาการบอทเงียบ
+            package_id = getattr(event.message, 'package_id', 'N/A')
+            sticker_id = getattr(event.message, 'sticker_id', 'N/A')
+            incoming_message = f"[System Alert: ลูกค้าส่งสติกเกอร์ทักทาย (Package ID: {package_id}, Sticker ID: {sticker_id}) โปรดกล่าวทักทายและตอบกลับสติกเกอร์นี้ด้วยความสุภาพและเป็นมิตร]"
+            file_type = "sticker"
+
+        # ==========================================
+        # 🖼️ 4. โหมดมัลติมีเดีย (รูปภาพ เสียง วิดีโอ PDF)
+        # ==========================================
+        elif message_type in ['audio', 'image', 'video', 'file']:
+            message_id = event.message.id
+            try:
+                def _reply_loading():
+                    try:
+                        line_bot_api.reply_message(reply_token, TextSendMessage(text="ระบบกำลังอัปโหลดและวิเคราะห์ไฟล์ระดับองค์กร กรุณารอสักครู่นะครับ ⏳"))
+                    except Exception as e:
+                        logger.error(f"Loading Reply Error: {e}")
+                
+                background_tasks.add_task(_reply_loading)
+                
+                message_content = await asyncio.to_thread(line_bot_api.get_message_content, message_id)
+                ext = ".m4a" if message_type == 'audio' else ".jpg" if message_type == 'image' else ".mp4" if message_type == 'video' else ".pdf"
+                file_name = getattr(event.message, 'file_name', f"file_{uuid.uuid4().hex}{ext}") if message_type == 'file' else f"file_{uuid.uuid4().hex}{ext}"
+                os.makedirs("/tmp", exist_ok=True)
+                file_path = f"/tmp/{file_name}"
+                
+                # เขียนไฟล์แบบปลอดภัยด้วย Thread
+                def save_media():
+                    with open(file_path, 'wb') as fd:
+                        for chunk in message_content.iter_content(chunk_size=8192): 
+                            if chunk: fd.write(chunk)
+                await asyncio.to_thread(save_media)
+                
+                incoming_message = f"[System Alert: ลูกค้าอัปโหลดไฟล์ {message_type.upper()} สำเร็จ ช่วยวิเคราะห์เอกสาร/ภาพ/วิดีโอนี้อย่างละเอียดบนพื้นฐานความปลอดภัย]"
+                file_type = message_type
+                reply_token = None # รีเซ็ต Token เพราะใช้ตอบกลับไปแล้ว 1 ครั้ง ป้องกันข้อผิดพลาดซ้ำซ้อน
+                
+            except Exception as e: 
+                logger.error(f"❌ File download error: {e}", exc_info=True)
+                continue
+        else: 
+            continue
+    
+        # 🚀 5. โยนเข้าคิวประมวลผล AI หลังบ้าน (แก้ปัญหา Timeout สมบูรณ์แบบ)
+        background_tasks.add_task(process_ai_and_reply, user_id, incoming_message, reply_token, file_path, file_type, background_tasks)
+        
+    return {"status": "OK", "message": "Enterprise Pipeline Processed"}
