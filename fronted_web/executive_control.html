@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+    body {
+        margin: 0; font-family: 'Prompt', sans-serif;
+        background: radial-gradient(circle at center, rgba(10,14,23,1) 0%, rgba(2,2,2,1) 100%);
+        color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
+    }
+
+    /* ✨ เลเซอร์วิ่งด้านบนสุด[cite: 1, 4] */
+    .laser-sweep {
+        position: fixed; top: 0; left: -100%; width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
+        animation: laserMove 5s infinite linear; z-index: 1001;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.7);
+    }
+    @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
+
+    /* 🚀 3D Typography & 4K Sharp Look[cite: 3, 4, 6] */
+    .title-3d {
+        font-size: 3.5rem; font-weight: 800; text-align: center; margin-bottom: 50px;
+        color: #00e5ff; text-transform: uppercase; letter-spacing: 2px;
+        text-shadow: 0 1px 0 #0099aa, 0 2px 0 #008899, 0 3px 0 #007788, 
+                     0 5px 10px rgba(0,0,0,0.8), 0 0 20px rgba(0, 229, 255, 0.6), 0 0 40px rgba(0, 229, 255, 0.4);
+    }
+
+    .dashboard-panel {
+        background: rgba(12, 16, 26, 0.85); border: 1px solid rgba(0, 229, 255, 0.2); 
+        border-radius: 16px; padding: 40px; text-align: center;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    }
+
+    .btn-container { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+
+    /* ✨ ปุ่ม 3D คมชัด 4K พร้อมไฟนีออน[cite: 1, 4, 6] */
+    .btn-3d-neon {
+        position: relative; padding: 15px 35px; border-radius: 12px;
+        font-family: 'Prompt', sans-serif; font-size: 1.1rem; font-weight: 800; cursor: pointer;
+        text-transform: uppercase; letter-spacing: 1px; transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: 1px solid rgba(255, 255, 255, 0.2); background: linear-gradient(135deg, rgba(10, 25, 45, 0.95), rgba(2, 8, 18, 0.98));
+        color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 18px rgba(0, 0, 0, 0.9);
+    }
+
+    /* ไฟนีออนสะท้อนพื้น (Floor Light Glow)[cite: 1, 6] */
+    .btn-3d-neon::after {
+        content: ''; position: absolute; bottom: -10px; left: 10%; width: 80%; height: 8px;
+        border-radius: 50%; filter: blur(8px); opacity: 0.5; transition: all 0.35s ease; pointer-events: none;
+    }
+
+    /* สีเฉพาะของแต่ละปุ่ม[cite: 7] */
+    .btn-approve { color: #00ff88; border-color: #00ff88; }
+    .btn-approve::after { background: #00ff88; }
+    .btn-approve:hover { 
+        transform: translateY(-3px); color: #fff; background: #00cc6a;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 25px rgba(0, 255, 136, 0.6), 0 0 20px #00ff88;
+    }
+    .btn-approve:hover::after { bottom: -15px; opacity: 1; filter: blur(12px); width: 90%; left: 5%; background: #00ff88; }
+
+    .btn-modify { color: #FFD700; border-color: #FFD700; }
+    .btn-modify::after { background: #FFD700; }
+    .btn-modify:hover { 
+        transform: translateY(-3px); color: #000; background: #FFD700;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 25px rgba(255, 215, 0, 0.6), 0 0 20px #FFD700;
+    }
+    .btn-modify:hover::after { bottom: -15px; opacity: 1; filter: blur(12px); width: 90%; left: 5%; background: #FFD700; }
+
+    .btn-reject { color: #ff0055; border-color: #ff0055; }
+    .btn-reject::after { background: #ff0055; }
+    .btn-reject:hover { 
+        transform: translateY(-3px); color: #fff; background: #cc0044;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 25px rgba(255, 0, 85, 0.6), 0 0 20px #ff0055;
+    }
+    .btn-reject:hover::after { bottom: -15px; opacity: 1; filter: blur(12px); width: 90%; left: 5%; background: #ff0055; }
+
+    .btn-3d-neon:active { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.9); }
+</style>
+</head>
+<body>
+    <div class="laser-sweep"></div>
+    <div class="dashboard-panel">
+        <h1 class="title-3d">SIRINTHANATTH PRIME</h1>
+        <p style="color: #aaa; margin-bottom: 30px;">รอการอนุมัติเพื่อดำเนินการผ่านระบบ Macro อัตโนมัติ</p>
+        <div class="btn-container">
+            <button class="btn-3d-neon btn-approve">✅ อนุมัติ (Approve)</button>
+            <button class="btn-3d-neon btn-modify">📝 แก้ไข (Modify)</button>
+            <button class="btn-3d-neon btn-reject">❌ ปฏิเสธ (Reject)</button>
+        </div>
+    </div>
+</body>
+</html>
