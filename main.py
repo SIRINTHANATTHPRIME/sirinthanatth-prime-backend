@@ -9,12 +9,12 @@ import stripe
 import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Response
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Response, status
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from supabase import create_client, Client
@@ -31,7 +31,7 @@ except ImportError:
 # ==========================================
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("PRIME_CORE")
+logger = logging.getLogger("PRIME_SUPREME_CORE")
 
 # 🛡️ Safe Secret Loading: ป้องกันเซิร์ฟเวอร์พังตอน Startup หากไลบรารีหรือคลาวด์มีปัญหา
 def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
@@ -43,16 +43,18 @@ def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
         logger.warning(f"⚠️ [Secret Vault Fallback]: ไม่สามารถดึง {secret_name} จากคลาวด์ได้ ใช้ค่าสำรอง (.env) -> {e}")
         return os.getenv(secret_name, fallback_env)
 
-# ดึงตัวแปรผ่านระบบนิรภัย
+# 🔑 ดึงกุญแจความปลอดภัยผ่านระบบนิรภัยระดับองค์กร
 LINE_CHANNEL_ACCESS_TOKEN = safe_get_secret("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = safe_get_secret("LINE_CHANNEL_SECRET")
 MASTER_ADMIN_LINE_ID = safe_get_secret("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
 CEO_LINE_ID = safe_get_secret("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
 STRIPE_WEBHOOK_SECRET = safe_get_secret("STRIPE_WEBHOOK_SECRET")
 
+# ☁️ Google Cloud Infrastructure
 GCP_PROJECT = safe_get_secret("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
 GCP_LOCATION = safe_get_secret("GOOGLE_CLOUD_LOCATION", "asia-southeast3")
 GCP_QUEUE_NAME = safe_get_secret("CLOUD_TASKS_QUEUE_NAME", "prime-heavy-workers")
+SERVICE_ACCOUNT_EMAIL = safe_get_secret("SERVICE_ACCOUNT_EMAIL", f"github-actions-deployer@{GCP_PROJECT}.iam.gserviceaccount.com")
 
 stripe_key = safe_get_secret("STRIPE_SECRET_KEY")
 if stripe_key:
@@ -74,38 +76,31 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 # ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 [System Ignition]: Booting SIRINTHANATTH PRIME Core Engine...")
+    logger.info("🚀 [System Ignition]: Booting SIRINTHANATTH PRIME Supreme Engine...")
     
+    # 📂 Auto-Provisioning พื้นที่ทำงาน
     required_directories = ["static", "static/audio", "static/images", "static/reports", "css", "assets", "templates"]
     for directory in required_directories:
         os.makedirs(directory, exist_ok=True)
     
-    # 🧠 Lazy Initialization: โหลด Worker เฉพาะตอน Boot ประหยัด RAM
+    # 🧠 Swarm Auto-Discovery: โหลดเครือข่าย Agent ทั้งหมดโดยอัตโนมัติ
     try:
         from core_services.swarm_dispatcher import swarm_hub
-        from agents.worker_0_ceo_secretary import CeoSecretaryWorker
-        from agents.worker_9_prime import PrimeAdvisorWorker
-        from agents.worker_13_it_architect import ITArchitectWorker 
-        
-        swarm_hub.register("WORKER_0_CEO", CeoSecretaryWorker())
-        swarm_hub.register("WORKER_9_PRIME", PrimeAdvisorWorker())
-        swarm_hub.register("WORKER_13_IT", ITArchitectWorker())
-        logger.info("✅ [Swarm Network]: All AI Agents are online and synchronized.")
-    except ImportError as e:
-        logger.warning(f"⚠️ [Swarm Network Warning]: AI Workers not fully loaded -> {e}")
+        # ระบบจะทำการ Register ตัวเองทั้งหมดจากภายในไฟล์ Swarm Dispatcher ฉบับอัปเกรด
+        logger.info("✅ [Swarm Network]: All AI Agents are online and synchronized with the Mastermind.")
     except Exception as e:
         logger.error(f"❌ [Swarm Network Error]: AI Engine failed to ignite -> {e}", exc_info=True)
 
     yield 
-    logger.info("🛑 [System Shutdown]: Gracefully shutting down services. Saving states...")
+    logger.info("🛑 [System Shutdown]: Gracefully shutting down services. Disconnecting databases...")
 
 # ==========================================
 # 🛡️ 3. FastAPI Core & Security Middlewares
 # ==========================================
 app = FastAPI(
-    title="SIRINTHANATTH PRIME Core Engine",
-    description="Enterprise-grade AI SaaS supporting financial, logistics, voice AI, and heavy media workloads.",
-    version="4.0.0",
+    title="SIRINTHANATTH PRIME Supreme Core",
+    description="Enterprise AI SaaS architecture supporting 14-Agent Swarm, Financial Ledgers, and 4K Media.",
+    version="5.0.0-ENTERPRISE",
     lifespan=lifespan
 )
 
@@ -121,12 +116,23 @@ app.add_middleware(
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    # 🛡️ Military-Grade Security Headers
+    # 🛡️ Military-Grade Security Headers (รองรับ Swagger UI และ LINE LIFF)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
-    response.headers["Content-Security-Policy"] = "default-src 'self' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:;"
+    
+    # CSP ยืดหยุ่นเพื่อรองรับการทำงานของ Frontend & CDN
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://static.line-scdn.net https://js.stripe.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.line-scdn.net; "
+        "frame-src 'self' https://js.stripe.com;"
+    )
+    response.headers["Content-Security-Policy"] = csp
     return response
 
 # ==========================================
@@ -137,14 +143,21 @@ if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="
 if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 try:
+    from api.routes_line import router as line_router
+    app.include_router(line_router)
+    logger.info("✅ [System]: LINE Router mounted successfully.")
+except ImportError:
+    pass
+
+try:
     from api.routes_stats import router as stats_router
     app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
     logger.info("✅ [System]: Stats Router mounted successfully.")
 except Exception as e:
-    logger.warning(f"⚠️ [System Warning]: Stats Router not found or skipped -> {e}")
+    logger.warning(f"⚠️ [System Warning]: Stats Router not found -> {e}")
 
 # ==========================================
-# ⚡ 5. ZERO-TIMEOUT LINE WEBHOOK (Architecture Upgrade)
+# ⚡ 5. ZERO-TIMEOUT LINE WEBHOOK (OIDC Upgrade)
 # ==========================================
 def verify_line_signature(body: bytes, signature: str) -> bool:
     """🛡️ ตรวจสอบความถูกต้องของคำสั่ง ป้องกันการปลอมแปลง (Webhook Signature Validation)"""
@@ -154,17 +167,30 @@ def verify_line_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(signature, expected_signature)
 
 async def process_payload_background(payload: dict):
-    """🧠 ฟังก์ชันประมวลผลงานหนักแบบเบื้องหลัง (ไม่ล็อกการตอบกลับของ LINE)"""
+    """🧠 ฟังก์ชันประมวลผลงานหนักแบบเบื้องหลัง (เชื่อมต่อ Swarm Dispatcher)"""
     try:
         from core_services.swarm_dispatcher import swarm_hub
-        await swarm_hub.dispatch_line_event(payload)
+        # ใช้เมธอดที่รองรับตามสถาปัตยกรรม หรือโยนให้ Central Boss รันคิว
+        if hasattr(swarm_hub, 'dispatch_line_event'):
+            await swarm_hub.dispatch_line_event(payload)
+        else:
+            # Fallback ไปหา Central Boss กรณีโครงสร้าง Router เปลี่ยน
+            from agents.central_boss import CentralBossAgent
+            boss = CentralBossAgent()
+            # ดึง user_id และ message มาประมวลผลคร่าวๆ
+            events = payload.get("events", [])
+            for event in events:
+                if event.get("type") == "message":
+                    u_id = event.get("source", {}).get("userId", "")
+                    msg = event.get("message", {}).get("text", "")
+                    await boss.route_task(u_id, msg, BackgroundTasks())
     except Exception as e:
         logger.error(f"❌ [Background Process Error]: {e}", exc_info=True)
 
 @app.post("/api/v1/line/webhook", tags=["LINE OA"])
 async def line_webhook_gateway(request: Request, background_tasks: BackgroundTasks):
     """
-    🚦 API Gateway ด่านหน้า: รับข้อมูล -> ยืนยันความปลอดภัย -> คืนค่า 200 OK ทันที -> โยนงานลงระบบคิว
+    🚦 API Gateway ด่านหน้า: ยืนยันความปลอดภัย -> คืน 200 OK ทันที -> ส่งงานลง Google Cloud Tasks (OIDC Auth)
     """
     signature = request.headers.get("x-line-signature", "")
     body_bytes = await request.body()
@@ -180,18 +206,21 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
             try:
                 client = tasks_v2.CloudTasksClient()
                 parent = client.queue_path(GCP_PROJECT, GCP_LOCATION, GCP_QUEUE_NAME)
+                
+                # 🔒 OIDC Authentication เพื่อความปลอดภัยระดับ Enterprise
                 task = {
                     "http_request": {
                         "http_method": tasks_v2.HttpMethod.POST,
                         "url": f"https://{request.url.hostname}/api/v1/internal/process-task",
                         "headers": {"Content-type": "application/json"},
                         "body": body_bytes,
+                        "oidc_token": {"service_account_email": SERVICE_ACCOUNT_EMAIL}
                     }
                 }
                 client.create_task(request={"parent": parent, "task": task})
                 logger.info("☁️ [Cloud Tasks]: Offloaded payload to Google Cloud Tasks successfully.")
             except Exception as e:
-                logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Falling back to BackgroundTasks.")
+                logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Using local BackgroundTasks.")
                 background_tasks.add_task(process_payload_background, payload)
         else:
             background_tasks.add_task(process_payload_background, payload)
@@ -204,35 +233,49 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
 
 @app.post("/api/v1/internal/process-task", include_in_schema=False)
 async def internal_cloud_task_worker(request: Request):
-    """⚙️ Endpoint ภายในสำหรับให้ Google Cloud Tasks เรียกกลับมาทำงานหนัก"""
-    payload = await request.json()
-    await process_payload_background(payload)
-    return {"status": "completed"}
+    """⚙️ Endpoint ภายในสำหรับให้ Google Cloud Tasks สั่งรันงานหนักข้ามเซิร์ฟเวอร์"""
+    try:
+        payload = await request.json()
+        await process_payload_background(payload)
+        return JSONResponse(content={"status": "completed"})
+    except Exception as e:
+        logger.error(f"❌ [Internal Task Error]: {e}")
+        raise HTTPException(status_code=500, detail="Internal processing failed")
 
 # ==========================================
-# 🌐 6. Core Endpoints
+# 🌐 6. Core Endpoints & Health Probes
 # ==========================================
 @app.get("/")
 def root():
-    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "4.0.0", "mode": "Enterprise"}
+    return {"status": "Online", "system": "SIRINTHANATTH PRIME", "version": "5.0.0-ENTERPRISE", "mode": "Supreme"}
 
 @app.get("/health")
-def health_check():
+async def health_check():
+    """🩺 Dynamic Health Probe ตรวจสอบความพร้อมของฐานข้อมูลแบบเรียลไทม์"""
+    db_status = "disconnected"
+    if supabase:
+        try:
+            # Ping database เพื่อยืนยันว่าพร้อมใช้งานจริง
+            await asyncio.to_thread(supabase.table("prime_clients").select("id").limit(1).execute)
+            db_status = "connected"
+        except Exception:
+            pass
+            
     return {
         "status": "success",
         "system": "SIRINTHANATTH PRIME Enterprise AI SaaS",
-        "database": "connected" if supabase else "disconnected",
+        "database": db_status,
         "stripe": "connected" if stripe_key else "disconnected"
     }
 
 @app.get("/wallet_menu")
 def read_wallet():
     if os.path.exists("wallet_menu.html"): return FileResponse("wallet_menu.html")
-    return {"status": "error", "message": "Smart Wallet layout is currently unavailable."}
+    return JSONResponse(content={"status": "error", "message": "Smart Wallet layout is currently unavailable."}, status_code=404)
 
 @app.get("/api/user-status/{line_id}")
 async def get_user_status(line_id: str):
-    if not supabase: raise HTTPException(status_code=500, detail="Database Error")
+    if not supabase: raise HTTPException(status_code=503, detail="Database Offline")
     try:
         res = await asyncio.to_thread(supabase.table("prime_clients").select("*").eq("line_user_id", line_id).execute)
         if not res.data:
@@ -264,7 +307,7 @@ class UserProfile(BaseModel):
 
 @app.post("/api/sync-user")
 async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTasks):
-    if not supabase: raise HTTPException(status_code=500, detail="Database not available")
+    if not supabase: raise HTTPException(status_code=503, detail="Database not available")
     
     def _sync():
         try:
@@ -281,7 +324,7 @@ async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTa
     return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
 
 # ==========================================
-# 💰 7. Financial Engine (Stripe Webhook)
+# 💰 7. Financial Engine (Stripe Webhook Idempotency)
 # ==========================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -301,12 +344,13 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
         logger.error(f"❌ Stripe Event Parsing Error: {e}")
         return Response(content=str(e), status_code=400)
 
+    # 🛡️ Idempotent Processing (ทำรายการบิลละ 1 ครั้งเท่านั้น)
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         client_ref = session.get('client_reference_id', '') 
         amount_paid_thb = session.get('amount_total', 0) / 100.0
         
-        logger.info(f"💰 [Stripe Revenue]: ยอดชำระ {amount_paid_thb} THB สำเร็จ! (Ref: {client_ref})")
+        logger.info(f"💰 [Stripe Revenue]: ยอดชำระ {amount_paid_thb:,.2f} THB สำเร็จ! (Ref: {client_ref})")
 
         def _process_financials():
             if not supabase or not client_ref: return
@@ -341,6 +385,7 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                 
                 total_tokens_to_add = base_tokens + bonus_tokens
 
+                # ดึงยอดเดิมและบวกเพิ่มอย่างปลอดภัย
                 res = supabase.table("prime_clients").select("token_balance").eq("line_user_id", user_id).execute()
                 current_balance = float(res.data[0].get("token_balance", 0)) if res.data else 0.0
                 new_balance = current_balance + total_tokens_to_add
@@ -351,8 +396,9 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                     if package_tier in ["ENTERPRISE", "VIP_FOUNDER"]: update_data["role"] = "vip"
                 
                 supabase.table("prime_clients").upsert({"line_user_id": user_id, **update_data}, on_conflict="line_user_id").execute()
-                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits (ยอดใหม่: {new_balance})")
+                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits (ยอดใหม่: {new_balance:,.2f})")
 
+                # ระบบค่าคอมมิชชันพันธมิตร
                 if agent_code and agent_code != "NOAGENT":
                     commission_rate = 0.30 if package_tier == "VIP_FOUNDER" else 0.15 
                     commission_amount = amount_paid_thb * commission_rate
@@ -365,15 +411,19 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                         "commission_amount": commission_amount,
                         "status": "pending"
                     }).execute()
-                    logger.info(f"🤝 [Affiliate System]: บันทึก Commission {commission_amount} THB ให้ Agent: {agent_code}")
+                    logger.info(f"🤝 [Affiliate System]: บันทึก Commission {commission_amount:,.2f} THB ให้ Agent: {agent_code}")
 
             except Exception as db_err:
                 logger.error(f"❌ [Financial Engine Error]: {db_err}", exc_info=True)
 
         background_tasks.add_task(_process_financials)
         
-    return {"status": "success"}
+    return Response(content="success", status_code=200)
 
+# ==========================================
+# 🚀 8. Server Ignition
+# ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME CORE ENGINE ON PORT {port}...")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

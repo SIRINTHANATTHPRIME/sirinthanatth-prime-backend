@@ -1,28 +1,34 @@
-from email.mime import message
 import os
-import re
 import json
 import hashlib
 import logging
 import asyncio
-from typing import Dict, Any, Literal
-from urllib import response
+from typing import Dict, Any, Literal, Optional
 from google import genai
 from google.genai import types
-from pydantic import BaseModel, Field
-from services import semantic_cache
-from services.semantic_cache import SemanticCacheManager
-semantic_cache = SemanticCacheManager()
+from pydantic import BaseModel, Field, ConfigDict
+
+# นำเข้าระบบแคช (หากไม่มีให้จำลองคลาสว่างเปล่าเพื่อไม่ให้แอปพัง)
+try:
+    from services.semantic_cache import SemanticCacheManager
+    semantic_cache = SemanticCacheManager()
+except ImportError:
+    class DummyCache:
+        async def get_cached_response(self, text): return None
+        async def set_cached_response(self, text, response): pass
+    semantic_cache = DummyCache()
 
 # =========================================================
 # 🛡️ Pydantic Schema: 2-in-1 (แยกคิวงาน + อ่านใจลูกค้า)
 # =========================================================
 class TaskClassificationSchema(BaseModel):
+    model_config = ConfigDict(strict=True) # 🛡️ บังคับ AI คายข้อมูลให้ตรง Data Type 100%
+    
     task_type: Literal["media_render", "standard_chat", "complex_strategy"] = Field(
         ..., description="media_render (วิดีโอ/เสียง), standard_chat (แชททั่วไป), complex_strategy (วิเคราะห์ลึก/กลยุทธ์/กฎหมาย)"
     )
     customer_sentiment: Literal["positive", "neutral", "frustrated", "urgent"] = Field(
-        ..., description="สภาวะอารมณ์ของลูกค้า ณ วินาทีนี้"
+        ..., description="สภาวะอารมณ์ของลูกค้า ณ วินาทีนี้ (Predictive Empathy)"
     )
     recommended_tone: str = Field(
         ..., description="น้ำเสียงที่ AI ควรใช้ตอบกลับ เช่น 'ต้องขออภัยและกระชับ', 'นุ่มนวลและเห็นอกเห็นใจ', 'เป็นทางการและหนักแน่น'"
@@ -36,16 +42,20 @@ try:
 except ImportError:
     class PrimeAIConfig:
         CORE_MODEL = "gemini-3.7-flash" # 🚀 ด่านหน้า: รวดเร็ว ประหยัด
-        EXECUTIVE_MODEL = "gemini-3.1-pro-preview" # 🧠 สมองกลลึก: ฉลาด ซับซ้อน
+        EXECUTIVE_MODEL = "gemini-3.7-pro" # 🧠 สมองกลลึก: ฉลาด ซับซ้อน
         @staticmethod
-        def get_client():
+        def get_client() -> Optional[genai.Client]:
             api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
-            if api_key: return genai.Client(api_key=api_key)
-            return genai.Client(
-                vertexai=True, 
-                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
-                location="asia-southeast3"
-            )
+            if api_key: return genai.Client(api_key=api_key, http_options={'timeout': 150.0})
+            try:
+                return genai.Client(
+                    vertexai=True, 
+                    project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                    location=os.getenv("GOOGLE_CLOUD_REGION", "asia-southeast3"),
+                    http_options={'timeout': 150.0}
+                )
+            except Exception:
+                return None
 
 try:
     from services.subscription_manager import SubscriptionManager
@@ -73,29 +83,40 @@ class HybridTaskDispatcher:
         self.client = PrimeAIConfig.get_client()
         
         self.router_model = getattr(PrimeAIConfig, "CORE_MODEL", "gemini-3.7-flash")
-        self.executive_model = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.1-pro-preview")
+        self.executive_model = getattr(PrimeAIConfig, "EXECUTIVE_MODEL", "gemini-3.7-pro")
 
         redis_url = os.getenv("UPSTASH_REDIS_REST_URL")
         redis_token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
         self.redis = Redis(url=redis_url, token=redis_token) if redis_url and redis_token and Redis else None
 
     async def process_task(self, user_id: str, message: str) -> str:
-        # 2. ⚡ ดักจับด้วย Semantic Cache (ตรวจสอบความเหมือน > 90%)
+        """ประมวลผลคำสั่งพื้นฐาน พร้อมระบบ Semantic Cache"""
+        if not self.client:
+            return "⚠️ ระบบประมวลผล AI ออฟไลน์ชั่วคราวเนื่องจากขาดการเชื่อมต่อ (API Key Missing)"
+
+        # ⚡ 1. ดักจับด้วย Semantic Cache (ตรวจสอบความเหมือน > 90%)
         cached_response = await semantic_cache.get_cached_response(message)
         if cached_response:
-            return cached_response # ส่งคำตอบจาก RAM กลับทันที (ต้นทุน 0 บาท)
+            logger.info("🎯 [Cache Hit]: พบคำตอบในคลังสมองความจำ ส่งผลลัพธ์กลับทันที (ต้นทุน 0 บาท)")
+            return cached_response 
 
-        # ---------------------------------------------------------
-        # 3. ถ้าไม่เคยมีคนถามคำถามนี้เลย ค่อยปลุก Gemini API ให้ทำงาน
-        # ---------------------------------------------------------
+        # 🧠 2. ถ้าไม่เคยมีคนถามคำถามนี้เลย ปลุก Gemini API ให้ทำงานแบบ Native Async
         logger.info("🧠 [AI Engine]: ไม่พบในแคช กำลังประมวลผลคำตอบใหม่...")
-        response = await self.client.models.generate_content(...)
-        final_text = response.text
+        try:
+            response = await self.client.aio.models.generate_content(
+                model=self.router_model,
+                contents=message,
+                config=types.GenerateContentConfig(temperature=0.5)
+            )
+            final_text = response.text if response.text else "ระบบได้รับข้อมูลเรียบร้อยแล้วครับ"
 
-        # 4. 💾 นำคำตอบใหม่ที่ AI คิดเสร็จแล้ว กลับไปฝากไว้ในแคช
-        await semantic_cache.set_cached_response(message, final_text)
+            # 💾 3. นำคำตอบใหม่ที่ AI คิดเสร็จแล้ว กลับไปฝากไว้ในแคช
+            await semantic_cache.set_cached_response(message, final_text)
 
-        return final_text
+            return final_text
+        except Exception as e:
+            logger.error(f"❌ [AI Processing Error]: {e}", exc_info=True)
+            return "⚠️ เกิดข้อขัดข้องในระบบประมวลผลสมองกล ทีมวิศวกรกำลังตรวจสอบครับ"
 
     async def _ai_classify_task(self, payload: Dict[Any, Any]) -> dict:
         """🧠 วิเคราะห์ 2-in-1: จัดคิวงาน + อ่านอารมณ์ลูกค้า (Predictive Empathy)"""
@@ -107,6 +128,7 @@ class HybridTaskDispatcher:
         
         if not payload: return default_result
 
+        # ดึงบริบทไม่เกิน 500 ตัวอักษรเพื่อประหยัด Token และเพิ่มความเร็วในการอ่านใจ
         payload_str = json.dumps(payload, ensure_ascii=False)[:500] 
         
         cache_key = None
@@ -117,7 +139,7 @@ class HybridTaskDispatcher:
                 
                 cached_data = await self.redis.get(cache_key)
                 if cached_data:
-                    logger.info(f"⚡ [Edge Cache Hit]: ดึงเส้นทางและอารมณ์จาก RAM -> {cached_data}")
+                    logger.info("⚡ [Edge Cache Hit]: ดึงเส้นทางและอารมณ์จาก RAM อย่างรวดเร็ว")
                     return json.loads(cached_data) if isinstance(cached_data, (str, bytes)) else cached_data
             except Exception as e:
                 logger.warning(f"⚠️ [Redis Cache Error]: {e}")
@@ -136,9 +158,9 @@ class HybridTaskDispatcher:
         """
         
         try:
-            async def _classify():
-                return await asyncio.to_thread(
-                    self.client.models.generate_content,
+            # ⚡ Native Async API Call
+            response = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
                     model=self.router_model,
                     contents=f"ประเมิน Payload และอารมณ์ลูกค้า: {payload_str}",
                     config=types.GenerateContentConfig(
@@ -147,9 +169,9 @@ class HybridTaskDispatcher:
                         response_mime_type="application/json",
                         response_schema=TaskClassificationSchema
                     )
-                )
-            
-            response = await asyncio.wait_for(_classify(), timeout=4.0)
+                ),
+                timeout=4.0 # 🛡️ Circuit Breaker ป้องกันคอขวด
+            )
             
             if response.text:
                 decision = json.loads(response.text)
@@ -157,13 +179,14 @@ class HybridTaskDispatcher:
                 decision = default_result
 
             if self.redis and cache_key:
-                await self.redis.setex(cache_key, 7200, json.dumps(decision, ensure_ascii=False)) 
+                # อัปเดตคำสั่ง Upstash Redis ที่ถูกต้อง
+                await self.redis.set(cache_key, json.dumps(decision, ensure_ascii=False), ex=7200) 
 
             logger.info(f"🧠 [Empathy Router]: อารมณ์ '{decision.get('customer_sentiment', 'neutral').upper()}' -> ลงคิว '{decision.get('task_type', 'standard_chat').upper()}'")
             return decision
             
         except asyncio.TimeoutError:
-            logger.warning("⚠️ [Router Timeout]: ตอบกลับช้ากว่า 4 วิ -> Fallback")
+            logger.warning("⚠️ [Router Timeout]: AI ตอบกลับช้ากว่า 4 วิ -> ตัดเข้าโหมด Fallback อัตโนมัติ")
             return default_result
         except Exception as e:
             logger.warning(f"⚠️ [Router Error]: ประเมินโหลดงานล้มเหลว ({e}) -> Fallback")
@@ -193,16 +216,16 @@ class HybridTaskDispatcher:
                     return {
                         "status": "error", 
                         "engine": "none", 
-                        "message": "⚠️ ขออภัยครับ แพ็กเกจของคุณยังไม่รองรับฟีเจอร์นี้ กรุณาอัปเกรดสิทธิ์ผ่าน Smart Wallet ครับ"
+                        "message": "⚠️ ขออภัยครับ แพ็กเกจของคุณยังไม่รองรับฟีเจอร์นี้ กรุณาอัปเกรดสิทธิ์ระดับพรีเมียมผ่าน Smart Wallet ครับ"
                     }
 
             if final_task_type == "media_render":
                 if self.sub_manager:
                     payment_check = await self.sub_manager.deduct_media_fee(user_id, 49.0)
                     if payment_check and payment_check.get("status") == "error":
-                        return {"status": "error", "message": payment_check.get("msg", "ยอดเงินไม่พอ")}
+                        return {"status": "error", "message": payment_check.get("msg", "ยอดเงินไม่เพียงพอสำหรับการสร้างสื่อ 4K")}
 
-                logger.info(f"⚡ [Hybrid Switcher]: โหมด MEDIA ENGINE สำหรับ {user_id}")
+                logger.info(f"🎬 [Hybrid Switcher]: โหมด MEDIA ENGINE สำหรับ {user_id}")
                 result = await self._run_heavy_media_engine(payload)
                 return {"status": "success", "engine": "prime-media-engine", "cost": self._calculate_tokens(10, self.MEDIA_HEAVY_WEIGHT), "data": result}
             
@@ -218,7 +241,7 @@ class HybridTaskDispatcher:
 
         except Exception as e:
             logger.error(f"❌ Error in HybridTaskDispatcher: {str(e)}", exc_info=True)
-            return {"status": "error", "message": "เกิดข้อผิดพลาดในการจ่ายคิวงานระบบ กรุณาลองใหม่อีกครั้งครับ"}
+            return {"status": "error", "message": "เกิดข้อผิดพลาดระดับวิศวกรรมในการจ่ายคิวงานเครือข่าย กรุณาลองใหม่อีกครั้งครับ"}
 
     async def _run_standard_agent(self, payload: Dict[Any, Any]) -> Dict[str, Any]:
         """จำลองการทำงานของ Core Agent (ใช้โมเดล Flash)"""

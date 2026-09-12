@@ -20,11 +20,11 @@ jobs:
 
     steps:
       - name: 📥 Checkout Source Code
-        uses: actions/checkout@v4 # 🟢 แก้ไขเป็น v4 (Stable ล่าสุด)
+        uses: actions/checkout@v4
 
       - name: 🔐 Authenticate to Google Cloud (Workload Identity)
         id: auth
-        uses: google-github-actions/auth@v2 # 🟢 แก้ไขเป็น v2 (Stable ล่าสุดของ Google)
+        uses: google-github-actions/auth@v2
         with:
           project_id: 'swift-area-503915-a1'
           workload_identity_provider: 'projects/601183279633/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
@@ -50,8 +50,12 @@ jobs:
             --max-instances=10
             --timeout=300
             --cpu-boost
+            --startup-probe=initial-delay-seconds=0,period-seconds=10,failure-threshold=3,timeout-seconds=240
+            --set-env-vars=ENVIRONMENT=production
+            --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }}
 
       - name: ✅ Deployment Success Notification
         run: |
           echo "✅ SIRINTHANATTH PRIME Architecture Deployed Successfully!"
           echo "🌐 Live Endpoint URL: ${{ steps.deploy.outputs.url }}"
+          echo "🔖 System Updated to Commit: ${{ github.sha }}"

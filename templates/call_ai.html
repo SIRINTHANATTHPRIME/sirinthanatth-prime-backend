@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#070c18">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>SIRINTHANATTH PRIME | Executive Voice Room</title>
     
-    <!-- 🚀 Performance Optimization: Preconnect & DNS Prefetch -->
+    <!-- 🚀 Performance Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://elevenlabs.io">
@@ -16,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        /* 🎨 CSS Variables ระดับ Enterprise */
+        /* 🎨 Enterprise CSS Variables */
         :root {
             --primary-gold: #D4AF37;
             --primary-dark: #070c18;
@@ -77,6 +79,7 @@
             border-radius: 50%; margin-right: 8px;
             box-shadow: 0 0 10px var(--secure-green);
             animation: blink 2s infinite ease-in-out;
+            will-change: opacity;
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         
@@ -116,9 +119,10 @@
             width: 130px; height: 130px;
             background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0) 70%);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            animation: pulse 2s infinite cubic-bezier(0.25, 1, 0.5, 1);
+            animation: pulse 2.5s infinite cubic-bezier(0.25, 1, 0.5, 1);
             border: 1px solid rgba(212, 175, 55, 0.4);
             box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+            will-change: transform, box-shadow; /* 🚀 GPU Acceleration */
         }
         @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.5); }
@@ -156,9 +160,10 @@
         /* Loading Overlay ตอนตรวจสอบยอดเงิน */
         #loadingOverlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(7, 12, 24, 0.85); backdrop-filter: blur(5px);
+            background: rgba(7, 12, 24, 0.85); backdrop-filter: blur(8px); /* Blur เนียนตาขึ้น */
             border-radius: 24px; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 100;
+            transition: opacity 0.4s ease;
         }
         .spinner {
             width: 40px; height: 40px; border: 4px solid rgba(212, 175, 55, 0.3);
@@ -175,17 +180,17 @@
         <!-- Loading ป้องกันคนกดโทรตอนยังเช็กยอดเงินไม่เสร็จ -->
         <div id="loadingOverlay">
             <div class="spinner"></div>
-            <span style="font-size: 0.9rem; color: var(--primary-gold); font-weight: 600;">Authenticating...</span>
+            <span style="font-size: 0.9rem; color: var(--primary-gold); font-weight: 600;" aria-live="polite">Authenticating...</span>
         </div>
 
         <!-- แถบแสดงความปลอดภัย -->
-        <div class="secure-badge" id="securityBadge">
+        <div class="secure-badge" id="securityBadge" aria-live="polite">
             <div class="secure-dot" id="secDot"></div> <span id="securityText">INITIALIZING SECURE LINE...</span>
         </div>
 
         <div class="selector-box">
             <label for="agentSelect">เลือกที่ปรึกษาส่วนตัว (Executive Advisor)</label>
-            <select id="agentSelect" onchange="switchAgent()">
+            <select id="agentSelect" onchange="switchAgent()" aria-label="Select AI Advisor">
                 <option value="lUTamkMw7gOzZbFIwmq4">👨🏻 ธนัตถ์ ไพรม์ (Thanatth Prime)</option>
                 <option value="Qggl4b0xRMiqOwhPtVWT">👩🏻 สิรินทร์ ไพรม์ (Sirin Prime)</option>
             </select>
@@ -219,7 +224,8 @@
 
     <script>
         const LIFF_ID = "2011067128-fnWmOak4"; 
-        let globalUserId = "GUEST"; // เอาไว้ส่งให้ ElevenLabs หักเงินตรงคน
+        let globalUserId = "GUEST"; 
+        let isSwitching = false; // 🛡️ State Management ป้องกันผู้ใช้กดสลับรัวๆ
 
         // 🛡️ 1. ระบบยืนยันตัวตน (Authentication)
         async function initLIFF() {
@@ -235,8 +241,8 @@
             } catch (err) {
                 console.error("LIFF Initialization failed", err);
                 document.getElementById('securityText').innerText = "CONNECTION SECURED (WEB MODE)";
-                document.getElementById('loadingOverlay').style.display = 'none';
-                mountWidget(globalUserId); // ในเคสทดสอบบนเบราว์เซอร์ให้ใช้งานได้
+                fadeOutLoader();
+                mountWidget(globalUserId); 
             }
         }
         
@@ -246,18 +252,22 @@
             const secText = document.getElementById('securityText');
             const secDot = document.getElementById('secDot');
             const sysMsg = document.getElementById('systemMessage');
-            const loader = document.getElementById('loadingOverlay');
+            
+            // 🛡️ เพิ่ม AbortController เผื่อเซิร์ฟเวอร์ช้า
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 วินาที
 
             try {
-                // ยิง API เช็กเงินไปที่หลังบ้าน (เปลี่ยน URL ให้ตรงกับ Production)
-                const res = await fetch(`/api/v1/wallet/check?user_id=${userId}`);
+                const res = await fetch(`/api/v1/wallet/check?user_id=${encodeURIComponent(userId)}`, { 
+                    signal: controller.signal 
+                });
+                clearTimeout(timeoutId);
                 const data = await res.json();
 
                 if(data.balance >= 150 || data.is_exempt) {
                     secText.innerText = "SECURE END-TO-END ENCRYPTED";
-                    mountWidget(userId); // ปล่อยให้ปุ่มโทรปรากฏ
+                    mountWidget(userId); 
                 } else {
-                    // ล็อกระบบหากเครดิตไม่พอ
                     secBadge.style.background = 'rgba(255, 82, 82, 0.1)';
                     secBadge.style.borderColor = 'rgba(255, 82, 82, 0.3)';
                     secBadge.style.color = 'var(--alert-red)';
@@ -265,15 +275,14 @@
                     secDot.style.boxShadow = '0 0 10px var(--alert-red)';
                     secText.innerText = "ACCESS DENIED: INSUFFICIENT CREDITS";
                     
-                    sysMsg.innerHTML = "⚠️ <b>เครดิตของท่านไม่เพียงพอ</b><br>ระบบต้องการขั้นต่ำ 150 Credits เพื่อเริ่มสนทนา<br><br><a href='#' onclick='liff.closeWindow()' style='color: var(--primary-gold); font-weight: 600; text-decoration: none;'>กดที่นี่เพื่อกลับไปหน้าเติมเงิน</a>";
+                    sysMsg.innerHTML = "⚠️ <b>เครดิตของท่านไม่เพียงพอ</b><br>ระบบต้องการขั้นต่ำ 150 Credits เพื่อเริ่มสนทนา<br><br><a href='#' onclick='liff.closeWindow()' style='color: var(--primary-gold); font-weight: 600; text-decoration: none;'>กดที่นี่เพื่อกลับไปหน้าแชทหลัก</a>";
                 }
             } catch (error) {
-                console.error("API Error", error);
+                console.error("API Error or Timeout", error);
                 secText.innerText = "SECURE END-TO-END ENCRYPTED";
-                mountWidget(userId); // Fallback: กรณี API ล่มให้โทรได้ไปก่อน ไม่เสียโอกาสลูกค้า
+                mountWidget(userId); // Fallback: ให้โอกาสเชื่อมต่อกรณี API หลังบ้านขัดข้อง
             } finally {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 300);
+                fadeOutLoader();
             }
         }
 
@@ -286,16 +295,17 @@
             container.innerHTML = ''; 
             const newWidget = document.createElement('elevenlabs-convai');
             
-            // 🛡️ ตั้งค่าขั้นสูงของ Widget
             newWidget.setAttribute('agent-id', selectedAgentId);
-            // ฝัง Client Data ให้เซิร์ฟเวอร์รู้ว่า "ใครกำลังโทร" เพื่อดึงไปตัดเงินหรือบันทึก Log
             newWidget.setAttribute('client-data', JSON.stringify({ userId: userId, system: "SIRINTHANATTH_PRIME_VOICE" }));
             
             container.appendChild(newWidget);
         }
 
-        // 🔄 4. ฟังก์ชันสลับตัวตน AI แบบ Real-time
+        // 🔄 4. ฟังก์ชันสลับตัวตน AI แบบ Real-time (พร้อม Anti-Spam)
         function switchAgent() {
+            if(isSwitching) return;
+            isSwitching = true;
+
             const select = document.getElementById('agentSelect');
             const title = document.getElementById('agentTitle');
             const container = document.getElementById('widgetContainer');
@@ -307,13 +317,25 @@
             setTimeout(() => {
                 title.innerText = selectedAgentId === 'lUTamkMw7gOzZbFIwmq4' ? "ธนัตถ์ ไพรม์" : "สิรินทร์ ไพรม์";
                 title.style.opacity = '1';
-                mountWidget(globalUserId); // สร้าง Widget ใหม่พร้อมข้อมูล Client Data เดิม
+                mountWidget(globalUserId); 
                 container.style.opacity = '1';
+                
+                // คืนสถานะหลังสลับเสร็จสิ้น
+                setTimeout(() => { isSwitching = false; }, 200);
             }, 300);
         }
 
-        // เริ่มต้นทันทีที่หน้าเว็บโหลด
-        initLIFF();
+        // ตัวช่วยสำหรับเฟดหน้าต่างโหลดดิ้งให้เนียนขึ้น
+        function fadeOutLoader() {
+            const loader = document.getElementById('loadingOverlay');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 400);
+            }
+        }
+
+        // จุดเริ่มต้นการทำงาน
+        document.addEventListener("DOMContentLoaded", initLIFF);
     </script>
 </body>
 </html>
