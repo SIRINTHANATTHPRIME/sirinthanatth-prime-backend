@@ -41,6 +41,39 @@ class PrimeSecretVault:
         return cls._client
 
     @classmethod
+    def get_secret(cls, secret_id: str, version_id: str = "latest", fallback_env: str = "") -> str:
+        """ดึงกุญแจลับเข้าสู่ RAM พร้อมระบบ Auto-Refresh (TTL) และอ่านจาก Cloud Run Environment ตรงๆ"""
+        current_time = time.time()
+        
+        # 1. ⚡ ตรวจสอบจาก Cache และ TTL (ความเร็วระดับ 0.001ms)
+        if secret_id in cls._secret_cache:
+            secret_value, expire_time = cls._secret_cache[secret_id]
+            if current_time < expire_time:
+                return secret_value
+
+        # 2. ⚡ อ่านจาก Environment Variables ทันที! (Cloud Run เมานต์กุญแจมาให้แล้วอย่างปลอดภัย)
+        env_val = os.environ.get(secret_id)
+        if env_val:
+            cls._secret_cache[secret_id] = (env_val, current_time + cls.CACHE_TTL_SECONDS)
+            return env_val
+            
+        # 3. 🔄 หากหาไม่เจอจริงๆ ค่อยใช้ Google Cloud Secret Manager API
+        try:
+            with cls._lock:
+                client = cls._get_client()
+                if client:
+                    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1")
+                    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+                    response = client.access_secret_version(request={"name": name})
+                    secret_value = response.payload.data.decode("UTF-8")
+                    cls._secret_cache[secret_id] = (secret_value, current_time + cls.CACHE_TTL_SECONDS)
+                    return secret_value
+        except Exception as e:
+            logger.warning(f"⚠️ [Vault API]: ไม่สามารถดึง '{secret_id}' จากคลาวด์ได้ -> {e}")
+            
+        return fallback_env
+
+    @classmethod
     def _is_cloud_environment(cls) -> bool:
         """☁️ ตรวจสอบอัตโนมัติว่ารันบน Google Cloud Run หรือเครื่อง Local"""
         # K_SERVICE คือ Environment Variable ที่ Cloud Run จะฉีดเข้ามาให้อัตโนมัติ
