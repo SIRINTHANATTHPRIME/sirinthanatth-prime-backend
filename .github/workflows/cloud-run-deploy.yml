@@ -51,7 +51,6 @@ jobs:
             --timeout=300
             --cpu-boost
             --set-env-vars=ENVIRONMENT=production
-            --update-labels=ci-tool=github-actions
 
       - name: ✅ Deployment Success Notification
         run: |
