@@ -415,7 +415,10 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
 # ==========================================
 # 🚀 8. Server Ignition
 # ==========================================
+# เพิ่มโค้ดส่วนนี้ไว้ล่างสุดของไฟล์ main.py
 if __name__ == "__main__":
+    import os
+    import uvicorn
+    # บังคับอ่านพอร์ตจากระบบคลาวด์ ถ้าไม่มีให้ใช้ 8080
     port = int(os.environ.get("PORT", 8080))
-    logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME CORE ENGINE ON PORT {port}...")
     uvicorn.run("main:app", host="0.0.0.0", port=port)
