@@ -6,8 +6,6 @@ from typing import Dict, Any, Optional
 from google import genai
 from google.genai import types
 
-# 🌐 นำเข้าศูนย์บัญชาการระบบเครือข่ายส่งต่องาน (Swarm) และระบบการเงิน
-from core_services.swarm_dispatcher import swarm_hub
 try:
     from services.subscription_manager import SubscriptionManager
     sub_manager = SubscriptionManager()
@@ -235,5 +233,12 @@ class Worker11MediaEngine:
 # 🔗 3. ลงทะเบียนเข้าสู่ Swarm Network อัตโนมัติ (Backward & Forward Compatible)
 # ==========================================
 media_engine = Worker11MediaEngine()
-swarm_hub.register("worker_11", media_engine) # รองรับโค้ดเรียกใช้งานแบบเดิม
-swarm_hub.register("WORKER_11_MEDIA_ENGINE", media_engine) # รองรับการเรียกจาก Central Boss แบบใหม่
+
+# 🛠️ แก้ไข: ใช้ Lazy Import เพื่อป้องกัน Circular Import Deadlock 100%
+try:
+    from core_services.swarm_dispatcher import swarm_hub
+    if hasattr(swarm_hub, 'register'):
+        swarm_hub.register("worker_11", media_engine) 
+        swarm_hub.register("WORKER_11_MEDIA_ENGINE", media_engine) 
+except Exception as e:
+    logger.warning(f"⚠️ [System Alert]: ข้ามการลงทะเบียน Swarm ชั่วคราวเพื่อป้องกันการวนลูป ({e})")
