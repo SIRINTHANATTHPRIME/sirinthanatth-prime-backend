@@ -51,7 +51,7 @@ jobs:
             --timeout=300
             --cpu-boost
             --set-env-vars=ENVIRONMENT=production
-            --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }}
+            --update-labels=ci-tool=github-actions,commit-sha=${{ github.sha }}
 
       - name: ✅ Deployment Success Notification
         run: |
