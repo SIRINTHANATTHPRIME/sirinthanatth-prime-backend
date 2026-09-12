@@ -349,5 +349,3 @@ class SwarmHubSystem:
         async with httpx.AsyncClient() as client:
             await client.post(url, json=data, headers=headers)
 
-# 🚀 ทำการเซ็ตอินสแตนซ์ศูนย์กลางเพื่อให้ main.py นำไปเรียกใช้งาน
-swarm_hub = SwarmHubSystem()
