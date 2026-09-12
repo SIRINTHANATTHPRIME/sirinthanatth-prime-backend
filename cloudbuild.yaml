@@ -51,10 +51,9 @@ steps:
       - '--min-instances=0'
       - '--max-instances=10'
       - '--timeout=300'
-      - '--startup-probe=tcp,port=8080,initialDelaySeconds=0,timeoutSeconds=240,periodSeconds=10,failureThreshold=3'
       - '--set-env-vars=ENVIRONMENT=production'
       - '--update-labels=managed-by=cloudbuild,commit-sha=$COMMIT_SHA'
-
+      
 # แจ้งเตือนระบบให้รู้จัก Image ที่สร้างขึ้นบน Artifact Registry
 images:
   - 'asia-southeast3-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/prime-core-agent:$COMMIT_SHA'

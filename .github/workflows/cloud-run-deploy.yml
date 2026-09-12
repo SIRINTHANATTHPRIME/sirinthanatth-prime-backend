@@ -50,7 +50,6 @@ jobs:
             --max-instances=10
             --timeout=300
             --cpu-boost
-            --startup-probe=initial-delay-seconds=0,period-seconds=10,failure-threshold=3,timeout-seconds=240
             --set-env-vars=ENVIRONMENT=production
             --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }}
 
