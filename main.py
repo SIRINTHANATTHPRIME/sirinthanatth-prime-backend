@@ -136,6 +136,11 @@ async def add_security_headers(request: Request, call_next):
 # ==========================================
 # 📂 4. Static Files & Routers Mount
 # ==========================================
+# 🛠️ แก้ไข: บังคับสร้างโฟลเดอร์ก่อนเมานต์ ป้องกัน FastAPI แครชตอน Boot 100%
+required_directories = ["static", "static/audio", "static/images", "static/reports", "css", "assets", "templates"]
+for directory in required_directories:
+    os.makedirs(directory, exist_ok=True)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="css")
 if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
