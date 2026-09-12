@@ -58,7 +58,6 @@ images:
   - 'asia-southeast3-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/prime-core-agent:$COMMIT_SHA'
   - 'asia-southeast3-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/prime-core-agent:latest'
 
-# 🚀 บังคับเก็บ Log ลง Cloud Logging แบบเต็มรูปแบบ พร้อมเปิดใช้งานตัวแปรไดนามิก
+# 🚀 บังคับเก็บ Log ลง Cloud Logging แบบเต็มรูปแบบ
 options:
   logging: CLOUD_LOGGING_ONLY
-dynamic_substitutions: true
