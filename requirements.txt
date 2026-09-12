@@ -46,6 +46,6 @@ lxml>=5.1.0
 gunicorn>=21.2.0            
 pygame>=2.6.0               # ระบบเสียง (Voice Engine)
 SpeechRecognition>=3.10.0   # 🎙️ จำเป็นสำหรับระบบรับคำสั่งเสียง (voice_listener.py)
-click>=8.4.2                # 🔧 บังคับเวอร์ชันเพื่อแก้ปัญหา Conflict ของ gTTS
+click>=8.2                  # 🔧 บังคับเวอร์ชันเพื่อแก้ปัญหา Conflict ของ gTTS
 
 # หมายเหตุ: สำหรับเครื่อง Local ที่รันคำสั่งเสียง ให้ติดตั้ง PyAudio เพิ่มเติมผ่านคำสั่ง pip (ไม่จำเป็นต้องใส่สำหรับ Cloud Run)
