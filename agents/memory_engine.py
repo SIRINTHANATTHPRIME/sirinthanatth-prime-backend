@@ -13,32 +13,44 @@ from supabase import create_client, Client
 logger = logging.getLogger("Prime-Memory-Engine")
 
 # ==========================================
-# 🌐 1. ศูนย์บัญชาการ AI และฐานข้อมูล (Zero Downtime Config)
+# 🛡️ 1. Security & Secret Management Vault
+# ==========================================
+def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
+    """ระบบดึงกุญแจความปลอดภัยแบบนิรภัย รองรับการดึงจาก Google Cloud Secret Manager"""
+    try:
+        from core_services.secret_manager import PrimeSecretVault
+        val = PrimeSecretVault.get_secret(secret_name)
+        return val if val else os.getenv(secret_name, fallback_env)
+    except Exception:
+        return os.getenv(secret_name, fallback_env)
+
+# ==========================================
+# 🌐 2. ศูนย์บัญชาการ AI และฐานข้อมูล (Zero Downtime Config)
 # ==========================================
 try:
     from core_services.ai_config import PrimeAIConfig
 except ImportError:
     class PrimeAIConfig:
-        EMBEDDING_MODEL = "text-embedding-004" # 🚀 โมเดลฝังความจำมาตรฐานล่าสุดที่แม่นยำที่สุด
+        EMBEDDING_MODEL = "text-embedding-004" # 🚀 โมเดลฝังความจำมาตรฐานล่าสุด
         @staticmethod
         def get_client():
-            api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY")
+            api_key = safe_get_secret("AI_API_KEY") or safe_get_secret("GEMINI_API_KEY")
             if api_key: return genai.Client(api_key=api_key)
             return genai.Client(
                 vertexai=True, 
-                project=os.getenv("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
+                project=safe_get_secret("GOOGLE_CLOUD_PROJECT", "swift-area-503915-a1"), 
                 location="asia-southeast3"
             )
 
 client = PrimeAIConfig.get_client()
 EMBEDDING_MODEL_NAME = getattr(PrimeAIConfig, "EMBEDDING_MODEL", "text-embedding-004")
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
+SUPABASE_URL = safe_get_secret("SUPABASE_URL")
+SUPABASE_KEY = safe_get_secret("SUPABASE_SERVICE_ROLE_KEY") or safe_get_secret("SUPABASE_SERVICE_KEY")
 supabase: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # ==========================================
-# ⚙️ 2. ระบบหั่นข้อความอัจฉริยะ (Context-Aware Sliding Window Chunking)
+# ⚙️ 3. ระบบหั่นข้อความอัจฉริยะ (Context-Aware Sliding Window Chunking)
 # ==========================================
 def chunk_text(text: str, max_chars: int = 7000, overlap_paras: int = 1) -> List[str]:
     """หั่นข้อมูลเอกสารยาวๆ โดยเก็บรอยต่อความจำ (Overlap) ป้องกันบริบทขาดหาย"""
@@ -47,8 +59,7 @@ def chunk_text(text: str, max_chars: int = 7000, overlap_paras: int = 1) -> List
         
     paragraphs = [p.strip() + "." for p in re.split(r'\n\n|\.\s+', text) if p.strip()]
     
-    chunks = []
-    current_chunk = []
+    chunks, current_chunk = [], []
     current_len = 0
     
     for para in paragraphs:
@@ -67,7 +78,7 @@ def chunk_text(text: str, max_chars: int = 7000, overlap_paras: int = 1) -> List
     return chunks
 
 # ==========================================
-# 🧠 3. แกนประมวลผลความจำ (Async Vector Embedding Engine)
+# 🧠 4. แกนประมวลผลความจำ (Async Vector Embedding Engine)
 # ==========================================
 async def get_text_embedding(text: str, retries: int = 3) -> list:
     """แปลงข้อความเป็น Vector พร้อมระบบ Healing อัตโนมัติ ป้องกันคอขวด (Rate Limit)"""
@@ -77,7 +88,6 @@ async def get_text_embedding(text: str, retries: int = 3) -> list:
         
     for attempt in range(retries):
         try:
-            # ⚡ Asynchronous Threading เพื่อไม่บล็อกการทำงานของเซิร์ฟเวอร์หลัก
             result = await asyncio.to_thread(
                 client.models.embed_content,
                 model=EMBEDDING_MODEL_NAME,
@@ -100,20 +110,20 @@ async def get_text_embedding(text: str, retries: int = 3) -> list:
     return []
 
 # ==========================================
-# 🌐 4. ระบบสกัดความรู้จากเว็บไซต์ (Async Enterprise Web Scraper)
+# 🌐 5. ระบบสกัดความรู้จากเว็บไซต์ (Async Enterprise Web Scraper)
 # ==========================================
 async def extract_text_from_url(url: str) -> str:
     """ระบบเจาะข้อมูลเว็บไซต์ความเร็วสูงผ่าน HTTP/2 ป้องกันการโดนบล็อก (Anti-Bot Bypass)"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8',
         'Referer': 'https://www.google.com/'
     }
     
+    limits = httpx.Limits(max_keepalive_connections=10, max_connections=30)
     try:
-        # ⚡ HTTP/2 Async Connection
-        async with httpx.AsyncClient(http2=True, follow_redirects=True) as http_client:
+        async with httpx.AsyncClient(http2=True, follow_redirects=True, limits=limits, verify=False) as http_client:
             response = await http_client.get(url, headers=headers, timeout=20.0)
             response.raise_for_status()
             
@@ -131,7 +141,6 @@ async def extract_text_from_url(url: str) -> str:
             text = soup.get_text(separator=' ', strip=True)
             clean_text = ' '.join(text.split())
             
-            # บล็อกเนื้อหาที่ยาวผิดปกติเพื่อป้องกัน Database Overflow
             return clean_text[:50000]
             
     except httpx.TimeoutException:
@@ -153,7 +162,6 @@ async def process_and_save_link_knowledge(url: str, added_by: str = "CEO") -> Tu
     base_title = f"Knowledge_URL_{url.split('//')[-1][:30]}"
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    # 🚀 Parallel Processing: สาดข้อมูลเข้าฐานข้อมูลพร้อมกันทั้งหมด (ไม่บล็อกคิว)
     tasks = []
     for i, chunk in enumerate(chunks):
         title = f"{base_title}_Part{i+1}"
@@ -168,7 +176,7 @@ async def process_and_save_link_knowledge(url: str, added_by: str = "CEO") -> Tu
     return False, "ดึงข้อมูลสำเร็จ แต่ไม่สามารถเชื่อมต่อระบบฐานข้อมูลเวกเตอร์เพื่อจัดเก็บได้"
 
 # ==========================================
-# 🏢 5. จัดการฐานข้อมูลความรู้บริษัท (Corporate Knowledge Base - RAG)
+# 🏢 6. จัดการฐานข้อมูลความรู้บริษัท (Corporate Knowledge Base - RAG)
 # ==========================================
 async def save_corporate_knowledge(title: str, content: str) -> bool:
     """ประทับความรู้บริษัทลงสมองกลระยะยาว"""
@@ -204,7 +212,7 @@ async def recall_corporate_knowledge(query: str) -> str:
             return supabase.rpc('match_corporate_knowledge', { 
                 'query_embedding': query_vector, 
                 'match_threshold': 0.70, 
-                'match_count': 4 # ดึงข้อมูลที่เกี่ยวข้องกันมากที่สุด 4 ส่วนประกอบร่าง
+                'match_count': 4
             }).execute()
 
         response = await asyncio.to_thread(_rpc_search)
@@ -216,7 +224,7 @@ async def recall_corporate_knowledge(query: str) -> str:
         return ""
 
 # ==========================================
-# 🧠 6. ระบบจัดเก็บและดึงประวัติการคุยลูกค้า (Chat Memory RAG)
+# 🧠 7. ระบบจัดเก็บและดึงประวัติการคุยลูกค้า (Chat Memory RAG)
 # ==========================================
 async def save_memory(line_user_id: str, chat_summary: str):
     """บันทึกบริบทประวัติส่วนตัวของลูกค้า (Personal Vector Memory)"""

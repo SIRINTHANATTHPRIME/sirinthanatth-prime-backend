@@ -196,12 +196,12 @@
         </div>
 
         <button class="btn-topup" onclick="sendTopupMessage()">💳 อัปเกรดแพ็กเกจ / เติม PRIME CREDITS</button>
-        <button class="btn-history" onclick="showSystemModal('📊 Audit Trail System', 'กำลังประมวลผลฐานข้อมูลเชิงลึก...<br><br>ฟีเจอร์รายงานประวัติการเบิกจ่ายและ Audit Trail จะพร้อมให้ใช้งานในอัปเดตถัดไปของ SIRINTHANATTH PRIME ครับ')">📊 ประวัติการใช้งาน (Audit Trail)</button>
+        <button class="btn-history" onclick="showSystemModal('📊 Audit Trail System', 'กำลังประมวลผลฐานข้อมูลเชิงลึก...<br><br>ฟีเจอร์รายงานประวัติการเบิกจ่ายและ Audit Trail จะพร้อมให้ใช้งานในอัปเดตถัดไปครับ')">📊 ประวัติการใช้งาน (Audit Trail)</button>
 
         <div id="loadingStatus" class="loading-text"><div class="spinner-mini"></div> Synchronizing with Ledger...</div>
     </div>
 
-    <!-- 🛡️ Custom System Modal (แทนที่ Alert ธรรมดา) -->
+    <!-- 🛡️ Custom System Modal -->
     <div id="systemModal" class="modal-overlay">
         <div class="modal-box" id="systemModalBox">
             <h3 id="modalTitle">SYSTEM MESSAGE</h3>
@@ -212,9 +212,10 @@
 
     <script>
         const LIFF_ID = "2011067128-fnWmOak4"; 
-        const CLOUD_RUN_API_URL = "https://prime-core-agent-601183279633.asia-southeast3.run.app";
+        
+        // 🚀 อัปเกรด: Dynamic API Routing รองรับ Localhost และ Cloud Run อัตโนมัติ
+        const API_BASE_URL = window.location.origin;
 
-        // 🛡️ Custom Modal Helpers
         function showSystemModal(title, body) {
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalBody').innerHTML = body;
@@ -234,7 +235,6 @@
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 const currentVal = Math.floor(progress * (end - start) + start);
-                // จัด Format ตัวเลขให้มีลูกน้ำ (Commas)
                 obj.innerHTML = currentVal.toLocaleString('en-US');
                 if (progress < 1) window.requestAnimationFrame(step);
                 else obj.innerHTML = end.toLocaleString('en-US'); 
@@ -242,25 +242,24 @@
             window.requestAnimationFrame(step);
         }
 
-        // 📡 ดึงข้อมูล Wallet จากฐานข้อมูลจริง
+        // 📡 ดึงข้อมูล Wallet จากฐานข้อมูลจริง (เชื่อมต่อ Endpoint ใหม่ใน main.py)
         async function fetchWalletBalance(userId) {
             try {
-                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/wallet/check?user_id=${userId}`);
+                const response = await fetch(`${API_BASE_URL}/api/user-status/${userId}`);
                 if (!response.ok) throw new Error("API Error");
                 const data = await response.json();
 
-                // อัปเดต Tier (แพ็กเกจปัจจุบัน)
                 if (data.tier) {
                     document.getElementById("userTier").innerText = data.tier.replace('_', ' ');
                 }
 
                 const balanceElement = document.getElementById("tokenBalance");
-                if (data.is_exempt) {
-                    // 👑 โหมดพระเจ้า (Unlimited VVIP)
+                
+                // 👑 ตรวจสอบโหมด VVIP/ADMIN ตามโครงสร้าง Backend ล่าสุด
+                if (data.tier === "VIP_FOUNDER" || data.tier === "ADMIN" || data.tier === "VIP") {
                     balanceElement.innerHTML = "UNLIMITED";
                     balanceElement.classList.add("unlimited");
                 } else {
-                    // วิ่งแอนิเมชันจาก 0 ถึงยอดเงินจริง
                     const finalBalance = parseFloat(data.balance) || 0;
                     animateValue("counterValue", 0, finalBalance, 1500);
                 }
@@ -285,13 +284,10 @@
                     if(profile.pictureUrl) {
                         document.getElementById("userPicture").src = profile.pictureUrl;
                     }
-                    
-                    // เรียกฐานข้อมูลจริง
                     await fetchWalletBalance(profile.userId);
-
                 } else {
-                    document.getElementById("userName").innerText = "ผู้เยี่ยมชม (Guest)";
-                    document.getElementById("loadingStatus").innerText = "กรุณาเปิดผ่านแอปพลิเคชัน LINE เพื่อซิงค์ข้อมูลบัญชี";
+                    // 🚀 บังคับ Login ทันทีหากไม่ได้รันผ่านแอป LINE ป้องกันบั๊ก Guest
+                    liff.login();
                 }
             } catch (err) {
                 console.error("LIFF Init failed: ", err);
@@ -299,7 +295,6 @@
             }
         }
 
-        // ฟังก์ชันสั่งให้บอทคายลิงก์เติมเงินออกมาในช่องแชท
         function sendTopupMessage() {
             if (liff.isLoggedIn() && liff.isInClient()) {
                 liff.sendMessages([

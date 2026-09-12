@@ -1,24 +1,25 @@
 # ==============================================================================
-# 🚀 SIRINTHANATTH PRIME - Enterprise Requirements (v4.0.0)
+# 🚀 SIRINTHANATTH PRIME - Enterprise Requirements (v4.1.0)
 # ปรับแต่งสำหรับ Python 3.12, FastAPI Async Architecture และ Google Cloud Run
 # ==============================================================================
 
 # --- 1. Core Web Framework & Server (ระบบแกนกลาง) ---
 fastapi>=0.110.0
-uvicorn[standard]>=0.28.0   # ⚡ อัปเกรด! ใส่ [standard] เพื่อดึง uvloop (C-based) รันเซิร์ฟเวอร์เร็วขึ้น 200%
-orjson>=3.9.0               # ⚡ เพิ่มใหม่! ระบบอ่าน/เขียน JSON ที่เร็วที่สุดในโลก (เร็วกว่า json ปกติของ Python 3 เท่า)
+uvicorn[standard]>=0.28.0   # ⚡ ดึง uvloop (C-based) รันเซิร์ฟเวอร์เร็วขึ้น
+orjson>=3.9.0               # ⚡ ระบบอ่าน/เขียน JSON ที่เร็วกว่าปกติ 3 เท่า
 pydantic>=2.6.0
-pydantic-settings>=2.2.1    # ⚡ เพิ่มใหม่! จัดการ Environment Variables ให้ปลอดภัยและเป็นระเบียบสำหรับ Pydantic V2
+pydantic-settings>=2.2.1    # ⚡ จัดการ Environment Variables แบบ Typesafe
 python-dotenv>=1.0.1
+python-multipart>=0.0.9     # 📁 จำเป็นสำหรับระบบอัปโหลดไฟล์ของ FastAPI (CEO Secretary)
 
 # --- 2. Network & API Clients (ระบบเชื่อมต่อเครือข่าย) ---
-httpx>=0.27.0               # ⚡ เพิ่มใหม่! ระบบ Async HTTP แบบใหม่ (ใช้แทน requests เพื่อแก้ปัญหา Timeout เวลาคุยกับ LINE)
-requests>=2.31.0            # (เก็บไว้สำหรับ Library เก่าๆ ที่ยังต้องใช้)
-aiohttp>=3.9.3              # จำเป็นสำหรับระบบ Async ภายในบางตัว
+httpx>=0.27.0               # ⚡ Async HTTP (แก้ปัญหา Timeout ของ LINE)
+requests>=2.31.0            
+aiohttp>=3.9.3              
 
 # --- 3. Third-Party Integrations (ระบบเชื่อมต่อภายนอก) ---
-line-bot-sdk>=3.0.0         # ล็อกเวอร์ชันใหม่ล่าสุด รองรับ Async Webhook สมบูรณ์แบบ
-stripe>=8.0.0               # ล็อกเวอร์ชันใหม่ล่าสุด รองรับระบบการเงินที่เสถียร
+line-bot-sdk>=3.0.0         
+stripe>=8.0.0               
 
 # --- 4. Database & Caching (ระบบคลังข้อมูลและความจำ) ---
 supabase>=2.3.0
@@ -26,9 +27,9 @@ redis>=5.0.0
 upstash-redis>=1.0.0
 
 # --- 5. AI & Machine Learning (แกนสมองกล AI) ---
-google-generativeai>=0.4.0  # (Legacy Gemini SDK เผื่อมีโค้ดเก่าใช้)
-google-genai>=0.1.1         # New Official Gemini SDK (สำหรับ Gemini 3.7)
-elevenlabs>=1.0.0           # Voice AI ขั้่นสูง
+google-generativeai>=0.4.0  
+google-genai>=0.1.1         # New Official Gemini SDK 
+elevenlabs>=1.0.0           
 
 # --- 6. Google Cloud APIs (ระบบคลาวด์) ---
 google-api-python-client>=2.100.0
@@ -36,11 +37,15 @@ google-auth>=2.25.0
 google-cloud-secret-manager>=2.20.0
 google-cloud-tasks>=2.10.0
 
-# --- 7. Media Processing & Utils (ระบบจัดการภาพ เสียง และวิดีโอ 4K) ---
-moviepy>=1.0.3              # ระบบตัดต่อวิดีโอ
-gTTS>=2.5.1                 # ระบบแปลงข้อความเป็นเสียงพื้นฐาน
-Pillow>=10.2.0              # ระบบประมวลผลรูปภาพความละเอียดสูง
-beautifulsoup4>=4.12.3      # ระบบดึงข้อมูลจากเว็บไซต์ (Web Scraping)
-pygame>=2.6.0               # เพิ่มสำหรับระบบเสียง (Voice Engine)
-lxml>=5.1.0                 # เพิ่มเพื่อให้ BeautifulSoup ทำงานได้เร็วที่สุด
-gunicorn>=21.2.0            # เพิ่มสำหรับรันเป็น Process Manager บน Cloud Run
+# --- 7. Media Processing & Local Automation (ระบบจัดการสื่อและคำสั่งเสียง) ---
+moviepy>=1.0.3              
+gTTS>=2.5.1                 
+Pillow>=10.2.0              
+beautifulsoup4>=4.12.3      
+lxml>=5.1.0                 
+gunicorn>=21.2.0            
+pygame>=2.6.0               # ระบบเสียง (Voice Engine)
+SpeechRecognition>=3.10.0   # 🎙️ จำเป็นสำหรับระบบรับคำสั่งเสียง (voice_listener.py)
+click>=8.4.2                # 🔧 บังคับเวอร์ชันเพื่อแก้ปัญหา Conflict ของ gTTS
+
+# หมายเหตุ: สำหรับเครื่อง Local ที่รันคำสั่งเสียง ให้ติดตั้ง PyAudio เพิ่มเติมผ่านคำสั่ง pip (ไม่จำเป็นต้องใส่สำหรับ Cloud Run)

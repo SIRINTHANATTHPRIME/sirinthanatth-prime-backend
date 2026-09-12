@@ -3,6 +3,7 @@ import re
 import json
 import base64
 import hashlib
+import httpx
 import hmac
 import logging
 import stripe
@@ -12,7 +13,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Response, status
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Response, Header, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,19 +34,21 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PRIME_SUPREME_CORE")
 
-# 🛡️ Safe Secret Loading: ป้องกันเซิร์ฟเวอร์พังตอน Startup หากไลบรารีหรือคลาวด์มีปัญหา
 def safe_get_secret(secret_name: str, fallback_env: str = "") -> str:
+    """🛡️ Safe Secret Loading: ป้องกันเซิร์ฟเวอร์พังตอน Startup"""
     try:
         from core_services.secret_manager import PrimeSecretVault
         val = PrimeSecretVault.get_secret(secret_name)
         return val if val else os.getenv(secret_name, fallback_env)
     except Exception as e:
-        logger.warning(f"⚠️ [Secret Vault Fallback]: ไม่สามารถดึง {secret_name} จากคลาวด์ได้ ใช้ค่าสำรอง (.env) -> {e}")
+        logger.warning(f"⚠️ [Secret Vault Fallback]: ใช้ค่าสำรอง (.env) สำหรับ {secret_name} -> {e}")
         return os.getenv(secret_name, fallback_env)
 
-# 🔑 ดึงกุญแจความปลอดภัยผ่านระบบนิรภัยระดับองค์กร
+# 🔑 ดึงกุญแจความปลอดภัย
 LINE_CHANNEL_ACCESS_TOKEN = safe_get_secret("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = safe_get_secret("LINE_CHANNEL_SECRET")
+LINE_LOGIN_CLIENT_ID = safe_get_secret("LINE_LOGIN_CHANNEL_ID")
+LINE_LOGIN_SECRET = safe_get_secret("LINE_LOGIN_CHANNEL_SECRET")
 MASTER_ADMIN_LINE_ID = safe_get_secret("MASTER_ADMIN_LINE_ID", "U5ea62530173fdb932bb85acd9fd8fbd3")
 CEO_LINE_ID = safe_get_secret("CEO_LINE_ID", MASTER_ADMIN_LINE_ID)
 STRIPE_WEBHOOK_SECRET = safe_get_secret("STRIPE_WEBHOOK_SECRET")
@@ -78,15 +81,12 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
 async def lifespan(app: FastAPI):
     logger.info("🚀 [System Ignition]: Booting SIRINTHANATTH PRIME Supreme Engine...")
     
-    # 📂 Auto-Provisioning พื้นที่ทำงาน
     required_directories = ["static", "static/audio", "static/images", "static/reports", "css", "assets", "templates"]
     for directory in required_directories:
         os.makedirs(directory, exist_ok=True)
     
-    # 🧠 Swarm Auto-Discovery: โหลดเครือข่าย Agent ทั้งหมดโดยอัตโนมัติ
     try:
         from core_services.swarm_dispatcher import swarm_hub
-        # ระบบจะทำการ Register ตัวเองทั้งหมดจากภายในไฟล์ Swarm Dispatcher ฉบับอัปเกรด
         logger.info("✅ [Swarm Network]: All AI Agents are online and synchronized with the Mastermind.")
     except Exception as e:
         logger.error(f"❌ [Swarm Network Error]: AI Engine failed to ignite -> {e}", exc_info=True)
@@ -116,13 +116,11 @@ app.add_middleware(
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    # 🛡️ Military-Grade Security Headers (รองรับ Swagger UI และ LINE LIFF)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     
-    # CSP ยืดหยุ่นเพื่อรองรับการทำงานของ Frontend & CDN
     csp = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://static.line-scdn.net https://js.stripe.com; "
@@ -143,13 +141,6 @@ if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="
 if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 try:
-    from api.routes_line import router as line_router
-    app.include_router(line_router)
-    logger.info("✅ [System]: LINE Router mounted successfully.")
-except ImportError:
-    pass
-
-try:
     from api.routes_stats import router as stats_router
     app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
     logger.info("✅ [System]: Stats Router mounted successfully.")
@@ -159,25 +150,30 @@ except Exception as e:
 # ==========================================
 # ⚡ 5. ZERO-TIMEOUT LINE WEBHOOK (OIDC Upgrade)
 # ==========================================
-def verify_line_signature(body: bytes, signature: str) -> bool:
-    """🛡️ ตรวจสอบความถูกต้องของคำสั่ง ป้องกันการปลอมแปลง (Webhook Signature Validation)"""
-    if not LINE_CHANNEL_SECRET: return True
-    hash_val = hmac.new(LINE_CHANNEL_SECRET.encode('utf-8'), body, hashlib.sha256).digest()
-    expected_signature = base64.b64encode(hash_val).decode('utf-8')
-    return hmac.compare_digest(signature, expected_signature)
+def verify_line_signature(body: bytes, signature: str, secret: str) -> bool:
+    if not secret or not signature: return False
+    hash_val = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).digest()
+    return hmac.compare_digest(base64.b64encode(hash_val).decode('utf-8'), signature)
+
+async def send_line_reply(reply_token: str, text: str):
+    url = "https://api.line.me/v2/bot/message/reply"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+    }
+    data = {"replyToken": reply_token, "messages": [{"type": "text", "text": text}]}
+    async with httpx.AsyncClient() as client:
+        await client.post(url, json=data, headers=headers)
 
 async def process_payload_background(payload: dict):
-    """🧠 ฟังก์ชันประมวลผลงานหนักแบบเบื้องหลัง (เชื่อมต่อ Swarm Dispatcher)"""
     try:
         from core_services.swarm_dispatcher import swarm_hub
-        # ใช้เมธอดที่รองรับตามสถาปัตยกรรม หรือโยนให้ Central Boss รันคิว
         if hasattr(swarm_hub, 'dispatch_line_event'):
             await swarm_hub.dispatch_line_event(payload)
         else:
-            # Fallback ไปหา Central Boss กรณีโครงสร้าง Router เปลี่ยน
+            # Fallback Central Boss
             from agents.central_boss import CentralBossAgent
             boss = CentralBossAgent()
-            # ดึง user_id และ message มาประมวลผลคร่าวๆ
             events = payload.get("events", [])
             for event in events:
                 if event.get("type") == "message":
@@ -187,16 +183,15 @@ async def process_payload_background(payload: dict):
     except Exception as e:
         logger.error(f"❌ [Background Process Error]: {e}", exc_info=True)
 
-@app.post("/api/v1/line/webhook", tags=["LINE OA"])
+@app.post("/webhook", tags=["LINE OA Master Gateway"])
+@app.post("/api/v1/line/webhook", tags=["LINE OA Master Gateway"])
 async def line_webhook_gateway(request: Request, background_tasks: BackgroundTasks):
-    """
-    🚦 API Gateway ด่านหน้า: ยืนยันความปลอดภัย -> คืน 200 OK ทันที -> ส่งงานลง Google Cloud Tasks (OIDC Auth)
-    """
+    """🚦 Single-Source Gateway รองรับทั้ง 2 Endpoint ป้องกันการชนกัน"""
     signature = request.headers.get("x-line-signature", "")
     body_bytes = await request.body()
 
-    if not verify_line_signature(body_bytes, signature):
-        logger.warning("🚫 [Security]: Invalid LINE Signature detected. Dropping request.")
+    if not verify_line_signature(body_bytes, signature, LINE_CHANNEL_SECRET):
+        logger.warning("🚫 [Security]: Invalid LINE Signature detected.")
         raise HTTPException(status_code=403, detail="Invalid signature")
 
     try:
@@ -206,8 +201,6 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
             try:
                 client = tasks_v2.CloudTasksClient()
                 parent = client.queue_path(GCP_PROJECT, GCP_LOCATION, GCP_QUEUE_NAME)
-                
-                # 🔒 OIDC Authentication เพื่อความปลอดภัยระดับ Enterprise
                 task = {
                     "http_request": {
                         "http_method": tasks_v2.HttpMethod.POST,
@@ -220,7 +213,7 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
                 client.create_task(request={"parent": parent, "task": task})
                 logger.info("☁️ [Cloud Tasks]: Offloaded payload to Google Cloud Tasks successfully.")
             except Exception as e:
-                logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Using local BackgroundTasks.")
+                logger.warning(f"⚠️ [Cloud Tasks Fallback]: Failed to queue task ({e}). Using BackgroundTasks.")
                 background_tasks.add_task(process_payload_background, payload)
         else:
             background_tasks.add_task(process_payload_background, payload)
@@ -233,7 +226,6 @@ async def line_webhook_gateway(request: Request, background_tasks: BackgroundTas
 
 @app.post("/api/v1/internal/process-task", include_in_schema=False)
 async def internal_cloud_task_worker(request: Request):
-    """⚙️ Endpoint ภายในสำหรับให้ Google Cloud Tasks สั่งรันงานหนักข้ามเซิร์ฟเวอร์"""
     try:
         payload = await request.json()
         await process_payload_background(payload)
@@ -241,6 +233,27 @@ async def internal_cloud_task_worker(request: Request):
     except Exception as e:
         logger.error(f"❌ [Internal Task Error]: {e}")
         raise HTTPException(status_code=500, detail="Internal processing failed")
+
+class LiffVerifyRequest(BaseModel):
+    id_token: str
+
+@app.post("/api/line/verify-liff")
+async def verify_liff_user(payload: LiffVerifyRequest):
+    url = "https://api.line.me/oauth2/v2.1/verify"
+    data = {"id_token": payload.id_token, "client_id": LINE_LOGIN_CLIENT_ID}
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, data=data)
+        if response.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid LINE Login ID Token")
+        
+        user_info = response.json()
+        return {
+            "status": "authenticated",
+            "line_user_id": user_info.get("sub"),
+            "name": user_info.get("name"),
+            "picture": user_info.get("picture")
+        }
 
 # ==========================================
 # 🌐 6. Core Endpoints & Health Probes
@@ -251,11 +264,9 @@ def root():
 
 @app.get("/health")
 async def health_check():
-    """🩺 Dynamic Health Probe ตรวจสอบความพร้อมของฐานข้อมูลแบบเรียลไทม์"""
     db_status = "disconnected"
     if supabase:
         try:
-            # Ping database เพื่อยืนยันว่าพร้อมใช้งานจริง
             await asyncio.to_thread(supabase.table("prime_clients").select("id").limit(1).execute)
             db_status = "connected"
         except Exception:
@@ -271,7 +282,7 @@ async def health_check():
 @app.get("/wallet_menu")
 def read_wallet():
     if os.path.exists("wallet_menu.html"): return FileResponse("wallet_menu.html")
-    return JSONResponse(content={"status": "error", "message": "Smart Wallet layout is currently unavailable."}, status_code=404)
+    return JSONResponse(content={"status": "error", "message": "Smart Wallet layout unavailable."}, status_code=404)
 
 @app.get("/api/user-status/{line_id}")
 async def get_user_status(line_id: str):
@@ -287,13 +298,9 @@ async def get_user_status(line_id: str):
         
         msg = f"ยินดีต้อนรับกลับครับ ท่านผู้บริหารระดับ {tier}"
         if tier in ["VIP_FOUNDER", "VIP", "ADMIN"]: msg = "👑 ยินดีต้อนรับท่านประธาน! ระบบ VVIP ทำงานเต็มประสิทธิภาพพร้อมให้บริการทุกมิติครับ"
-        elif tier == "ENTERPRISE":
-            if balance < 2000: msg = "🏢 ท่านผู้บริหารครับ เพื่อให้ระบบคลังข้อมูลทำงานอย่างราบรื่น ขอแนะนำให้เติม PRIME CREDITS สำรองไว้ครับ"
-        elif tier == "PRIME":
-            if balance < 1000: msg = "💡 เพื่อให้การวิเคราะห์กลยุทธ์ธุรกิจและสร้างสื่อ 4K ดำเนินไปอย่างต่อเนื่อง ขอแนะนำให้เติม PRIME CREDITS ครับ"
-        elif tier == "ESSENTIAL":
-            if balance < 500: msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME เพื่อปลดล็อกที่ปรึกษาระดับสากลได้ทันทีครับ"
-        else: msg = "✨ ยินดีต้อนรับครับ! ยกระดับธุรกิจด้วยแพ็กเกจ PRIME หรือ ENTERPRISE เพื่อรับสิทธิพิเศษขั้นสูงสุดได้เสมอครับ"
+        elif tier == "ENTERPRISE" and balance < 2000: msg = "🏢 ขอแนะนำให้เติม PRIME CREDITS สำรองไว้เพื่อการทำงานที่ราบรื่นครับ"
+        elif tier == "PRIME" and balance < 1000: msg = "💡 ขอแนะนำให้เติม PRIME CREDITS เพื่อรักษาสถานะการประมวลผลขั้นสูงครับ"
+        elif tier == "ESSENTIAL" and balance < 500: msg = "🚀 ธุรกิจของคุณกำลังเติบโต! อัปเกรดเป็นแพ็กเกจ PRIME เพื่อปลดล็อกฟีเจอร์เพิ่มเติมครับ"
                 
         return {"tier": tier, "balance": balance, "message": msg}
     except Exception as e:
@@ -324,7 +331,7 @@ async def sync_user_profile(profile: UserProfile, background_tasks: BackgroundTa
     return {"status": "success", "message": "ซิงค์ข้อมูลผู้ใช้สำเร็จ"}
 
 # ==========================================
-# 💰 7. Financial Engine (Stripe Webhook Idempotency)
+# 💰 7. Financial Engine (Stripe Webhook)
 # ==========================================
 @app.post("/api/stripe-webhook")
 async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
@@ -332,19 +339,14 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
     sig_header = request.headers.get("stripe-signature")
 
     if not STRIPE_WEBHOOK_SECRET:
-        logger.warning("⚠️ STRIPE_WEBHOOK_SECRET is missing. Rejecting webhook.")
         return Response(content="Webhook secret missing", status_code=400)
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-    except stripe.error.SignatureVerificationError:
-        logger.error("❌ Stripe Signature Invalid (Potential Replay Attack)!")
-        return Response(content="Invalid signature", status_code=400)
     except Exception as e:
         logger.error(f"❌ Stripe Event Parsing Error: {e}")
         return Response(content=str(e), status_code=400)
 
-    # 🛡️ Idempotent Processing (ทำรายการบิลละ 1 ครั้งเท่านั้น)
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         client_ref = session.get('client_reference_id', '') 
@@ -364,13 +366,10 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             
             match = re.match(r'([A-Z_]+)_AGENT_([A-Z0-9]+)_LINE_([A-Za-z0-9]+)', client_ref)
             if match:
-                plan_name = match.group(1)
-                agent_code = match.group(2)
-                user_id = match.group(3)
-                
+                plan_name, agent_code, user_id = match.group(1), match.group(2), match.group(3)
                 if plan_name in ["ESSENTIAL", "PRIME", "ENTERPRISE", "VIP"]:
                     is_subscription = True
-                    package_tier = plan_name if plan_name != "VIP" else "VIP_FOUNDER"
+                    package_tier = "VIP_FOUNDER" if plan_name == "VIP" else plan_name
             elif client_ref.startswith('topup_'):
                 user_id = client_ref.replace('topup_', '')
 
@@ -378,14 +377,12 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
 
             try:
                 if is_subscription:
-                    if package_tier == "ESSENTIAL": bonus_tokens = 1000
-                    elif package_tier == "PRIME": bonus_tokens = 3000
-                    elif package_tier == "ENTERPRISE": bonus_tokens = 10000
-                    elif package_tier == "VIP_FOUNDER": base_tokens = 49000; bonus_tokens = 0 
+                    bonuses = {"ESSENTIAL": 1000, "PRIME": 3000, "ENTERPRISE": 10000, "VIP_FOUNDER": 0}
+                    bonus_tokens = bonuses.get(package_tier, 0)
+                    if package_tier == "VIP_FOUNDER": base_tokens = 49000
                 
                 total_tokens_to_add = base_tokens + bonus_tokens
 
-                # ดึงยอดเดิมและบวกเพิ่มอย่างปลอดภัย
                 res = supabase.table("prime_clients").select("token_balance").eq("line_user_id", user_id).execute()
                 current_balance = float(res.data[0].get("token_balance", 0)) if res.data else 0.0
                 new_balance = current_balance + total_tokens_to_add
@@ -396,22 +393,17 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                     if package_tier in ["ENTERPRISE", "VIP_FOUNDER"]: update_data["role"] = "vip"
                 
                 supabase.table("prime_clients").upsert({"line_user_id": user_id, **update_data}, on_conflict="line_user_id").execute()
-                logger.info(f"✅ [Financial Engine]: อัปเดตบัญชี {user_id} ระดับ {package_tier} รับ {total_tokens_to_add} Credits (ยอดใหม่: {new_balance:,.2f})")
-
-                # ระบบค่าคอมมิชชันพันธมิตร
+                
                 if agent_code and agent_code != "NOAGENT":
                     commission_rate = 0.30 if package_tier == "VIP_FOUNDER" else 0.15 
-                    commission_amount = amount_paid_thb * commission_rate
-                    
                     supabase.table("affiliate_transactions").insert({
                         "agent_code": agent_code,
                         "buyer_line_id": user_id,
                         "package_bought": package_tier,
                         "amount_paid": amount_paid_thb,
-                        "commission_amount": commission_amount,
+                        "commission_amount": amount_paid_thb * commission_rate,
                         "status": "pending"
                     }).execute()
-                    logger.info(f"🤝 [Affiliate System]: บันทึก Commission {commission_amount:,.2f} THB ให้ Agent: {agent_code}")
 
             except Exception as db_err:
                 logger.error(f"❌ [Financial Engine Error]: {db_err}", exc_info=True)
@@ -426,4 +418,4 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"🚀 IGNITING SIRINTHANATTH PRIME CORE ENGINE ON PORT {port}...")
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

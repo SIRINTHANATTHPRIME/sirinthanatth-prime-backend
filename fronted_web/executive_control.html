@@ -2,15 +2,20 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIRINTHANATTH PRIME | Executive Control</title>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;600;800&display=swap" rel="stylesheet">
+<!-- 🚀 นำเข้า LIFF SDK สำหรับระบบความปลอดภัยและสั่งงาน -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
 <style>
     body {
         margin: 0; font-family: 'Prompt', sans-serif;
         background: radial-gradient(circle at center, rgba(10,14,23,1) 0%, rgba(2,2,2,1) 100%);
-        color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden;
+        color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden;
     }
 
-    /* ✨ เลเซอร์วิ่งด้านบนสุด[cite: 1, 4] */
+    /* ✨ เลเซอร์วิ่งด้านบนสุด */
     .laser-sweep {
         position: fixed; top: 0; left: -100%; width: 100%; height: 2px;
         background: linear-gradient(90deg, transparent, #FFD700, #00e5ff, transparent);
@@ -19,38 +24,45 @@
     }
     @keyframes laserMove { 0% { left: -100%; } 100% { left: 100%; } }
 
-    /* 🚀 3D Typography & 4K Sharp Look[cite: 3, 4, 6] */
+    /* 🚀 3D Typography & 4K Sharp Look */
     .title-3d {
-        font-size: 3.5rem; font-weight: 800; text-align: center; margin-bottom: 50px;
+        font-size: 3.5rem; font-weight: 800; text-align: center; margin-bottom: 10px;
         color: #00e5ff; text-transform: uppercase; letter-spacing: 2px;
         text-shadow: 0 1px 0 #0099aa, 0 2px 0 #008899, 0 3px 0 #007788, 
                      0 5px 10px rgba(0,0,0,0.8), 0 0 20px rgba(0, 229, 255, 0.6), 0 0 40px rgba(0, 229, 255, 0.4);
     }
 
+    .plan-id-display {
+        font-size: 1.2rem; color: #FFD700; font-weight: 600; letter-spacing: 1px;
+        margin-bottom: 30px; background: rgba(255, 215, 0, 0.1); padding: 5px 15px; border-radius: 8px;
+        border: 1px solid rgba(255, 215, 0, 0.3); display: inline-block;
+    }
+
     .dashboard-panel {
         background: rgba(12, 16, 26, 0.85); border: 1px solid rgba(0, 229, 255, 0.2); 
-        border-radius: 16px; padding: 40px; text-align: center;
+        border-radius: 16px; padding: 40px; text-align: center; width: 90%; max-width: 700px;
         box-shadow: 0 15px 35px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
     }
 
-    .btn-container { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+    .btn-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
 
-    /* ✨ ปุ่ม 3D คมชัด 4K พร้อมไฟนีออน[cite: 1, 4, 6] */
+    /* ✨ ปุ่ม 3D คมชัด 4K พร้อมไฟนีออน */
     .btn-3d-neon {
         position: relative; padding: 15px 35px; border-radius: 12px;
         font-family: 'Prompt', sans-serif; font-size: 1.1rem; font-weight: 800; cursor: pointer;
         text-transform: uppercase; letter-spacing: 1px; transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid rgba(255, 255, 255, 0.2); background: linear-gradient(135deg, rgba(10, 25, 45, 0.95), rgba(2, 8, 18, 0.98));
         color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 18px rgba(0, 0, 0, 0.9);
+        flex: 1; min-width: 180px;
     }
 
-    /* ไฟนีออนสะท้อนพื้น (Floor Light Glow)[cite: 1, 6] */
+    /* ไฟนีออนสะท้อนพื้น (Floor Light Glow) */
     .btn-3d-neon::after {
         content: ''; position: absolute; bottom: -10px; left: 10%; width: 80%; height: 8px;
         border-radius: 50%; filter: blur(8px); opacity: 0.5; transition: all 0.35s ease; pointer-events: none;
     }
 
-    /* สีเฉพาะของแต่ละปุ่ม[cite: 7] */
+    /* สีเฉพาะของแต่ละปุ่ม */
     .btn-approve { color: #00ff88; border-color: #00ff88; }
     .btn-approve::after { background: #00ff88; }
     .btn-approve:hover { 
@@ -76,18 +88,102 @@
     .btn-reject:hover::after { bottom: -15px; opacity: 1; filter: blur(12px); width: 90%; left: 5%; background: #ff0055; }
 
     .btn-3d-neon:active { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 2px 5px rgba(0, 0, 0, 0.9); }
+
+    /* 🛡️ Modal UI */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9998; backdrop-filter: blur(5px); }
+    .modal-box {
+        display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 85%; max-width: 400px; background: rgba(10,14,23,0.98); border: 1px solid var(--primary-gold, #D4AF37);
+        border-radius: 20px; z-index: 9999; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(212,175,55,0.2);
+    }
+    .modal-box h3 { color: #D4AF37; margin-top: 0; font-size: 1.2rem; }
+    .modal-box p { color: #ccc; font-size: 0.9rem; line-height: 1.6; margin-bottom: 25px; }
+    .btn-modal { background: transparent; color: #fff; border: 1px solid #D4AF37; padding: 10px 30px; border-radius: 8px; font-family: 'Prompt'; cursor: pointer; transition: 0.3s; }
+    .btn-modal:hover { background: rgba(212,175,55,0.2); }
 </style>
 </head>
 <body>
     <div class="laser-sweep"></div>
+    
     <div class="dashboard-panel">
-        <h1 class="title-3d">SIRINTHANATTH PRIME</h1>
-        <p style="color: #aaa; margin-bottom: 30px;">รอการอนุมัติเพื่อดำเนินการผ่านระบบ Macro อัตโนมัติ</p>
+        <h1 class="title-3d">SUPREME OVERRIDE</h1>
+        <div id="planDisplay" class="plan-id-display">รหัสแผนงาน: กำลังตรวจสอบ...</div>
+        <p style="color: #aaa; margin-bottom: 30px;">โปรดพิจารณาและสั่งการเพื่อดำเนินการผ่านระบบ AI อัตโนมัติ</p>
+        
         <div class="btn-container">
-            <button class="btn-3d-neon btn-approve">✅ อนุมัติ (Approve)</button>
-            <button class="btn-3d-neon btn-modify">📝 แก้ไข (Modify)</button>
-            <button class="btn-3d-neon btn-reject">❌ ปฏิเสธ (Reject)</button>
+            <button class="btn-3d-neon btn-approve" onclick="dispatchAction('APPROVE')">✅ อนุมัติ (Approve)</button>
+            <button class="btn-3d-neon btn-modify" onclick="dispatchAction('MODIFY')">📝 แก้ไข (Modify)</button>
+            <button class="btn-3d-neon btn-reject" onclick="dispatchAction('REJECT')">❌ ปฏิเสธ (Reject)</button>
         </div>
     </div>
+
+    <!-- 🛡️ Custom System Modal -->
+    <div id="systemModal" class="modal-overlay">
+        <div class="modal-box" id="systemModalBox">
+            <h3 id="modalTitle">SYSTEM MESSAGE</h3>
+            <p id="modalBody">Description</p>
+            <button class="btn-modal" onclick="closeSystemModal()">รับทราบ</button>
+        </div>
+    </div>
+
+    <script>
+        const LIFF_ID = "2011067128-fnWmOak4"; // ใช้ LIFF ID หลักของระบบ
+        let currentPlanId = "UNKNOWN_PLAN";
+
+        function showSystemModal(title, body) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('systemModal').style.display = 'block';
+            document.getElementById('systemModalBox').style.display = 'block';
+        }
+
+        function closeSystemModal() {
+            document.getElementById('systemModal').style.display = 'none';
+        }
+
+        function extractPlanId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('plan_id')) {
+                currentPlanId = urlParams.get('plan_id');
+            }
+            document.getElementById('planDisplay').innerText = `รหัสแผนงาน: ${currentPlanId}`;
+        }
+
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                }
+            } catch (err) {
+                console.error("LIFF Init failed: ", err);
+                showSystemModal("⚠️ ขัดข้อง", "ไม่สามารถเชื่อมต่อกับระบบรักษาความปลอดภัยของ LINE ได้");
+            }
+        }
+
+        function dispatchAction(actionType) {
+            if (!liff.isLoggedIn() || !liff.isInClient()) {
+                showSystemModal("🔒 Security Notice", "เพื่อความปลอดภัยขั้นสูงสุด กรุณาทำรายการผ่านแอปพลิเคชัน LINE เท่านั้นครับ");
+                return;
+            }
+
+            const commandText = `ACTION:${actionType}:${currentPlanId}`;
+            
+            liff.sendMessages([{
+                type: "text",
+                text: commandText
+            }]).then(() => {
+                liff.closeWindow();
+            }).catch((err) => {
+                console.error("Send message error", err);
+                showSystemModal("⚠️ Network Error", "เกิดข้อผิดพลาดในการส่งคำสั่งเข้าเซิร์ฟเวอร์หลัก กรุณาลองใหม่อีกครั้งครับ");
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            extractPlanId();
+            initializeLiff();
+        });
+    </script>
 </body>
 </html>

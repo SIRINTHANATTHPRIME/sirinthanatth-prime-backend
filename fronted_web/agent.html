@@ -348,8 +348,9 @@
     </div>
 
     <script>
+        // 🚀 อัปเกรด: Dynamic API Routing รองรับการสเกล
+        const API_BASE_URL = window.location.origin;
         const MAX_VIP_QUOTA = 100;
-        const CLOUD_RUN_API_URL = 'https://prime-core-agent-601183279633.asia-southeast3.run.app';
         const LIFF_ID = "2011067128-fnWmOak4";
         
         let currentPaidCount = 0; 
@@ -380,51 +381,52 @@
         }
         function closeSystemModal() { document.getElementById('systemModal').style.display = 'none'; }
 
-        // 🔗 LIFF Initialization
-        async function initializeLiff() {
+        // 🔗 LIFF Initialization & VVIP Logic
+        async function initializeLiffAndCheckVvip() {
             try {
                 await liff.init({ liffId: LIFF_ID });
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const inviteCode = urlParams.get('code');
+
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     userLineId = profile.userId;
                     console.log("LIFF Connected:", profile.displayName);
+                    
+                    // หากผู้ใช้มีรหัสเชิญ ให้ทำการส่งคำขอยืนยันสิทธิ์ทันที
+                    if (inviteCode) await processVvipClaim(inviteCode);
+                } else {
+                    // 🛡️ Security Check: บังคับล็อกอินถ้าระบบตรวจพบรหัสเชิญ
+                    if (inviteCode) {
+                        liff.login({ redirectUri: window.location.href });
+                    }
                 }
             } catch (err) {
                 console.warn("LIFF Error / External Browser Mode", err);
             }
         }
 
-        // 🎟️ VVIP Link Claim Logic (God Mode Integration)
-        async function checkVvipInvite() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteCode = urlParams.get('code');
-            
-            if (inviteCode) {
-                if (userLineId === "WEB_GUEST" && liff.isLoggedIn() === false) {
-                    liff.login({ redirectUri: window.location.href });
-                    return;
-                }
+        async function processVvipClaim(inviteCode) {
+            showGlobalLoader("VERIFYING VVIP CLEARANCE...");
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/claim-vvip`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invite_token: inviteCode, user_id: userLineId })
+                });
                 
-                showGlobalLoader("VERIFYING VVIP CLEARANCE...");
-                try {
-                    const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/claim-vvip`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ invite_token: inviteCode, user_id: userLineId })
-                    });
-                    
-                    const result = await response.json();
-                    hideGlobalLoader();
-                    
-                    if (response.ok && result.status !== "error") {
-                        openSystemModal("👑 ACCESS GRANTED", `ยืนยันสิทธิ์ VVIP สำเร็จ!\n\nยินดีต้อนรับสู่ประสบการณ์ระดับสูงสุดของ SIRINTHANATTH PRIME\nสิทธิ์ของคุณได้ผูกกับบัญชี LINE เรียบร้อยแล้ว`);
-                    } else {
-                        openSystemModal("❌ ACCESS DENIED", result.msg || result.detail || "รหัสคำเชิญไม่ถูกต้องหรือถูกใช้งานไปแล้ว");
-                    }
-                } catch (error) {
-                    hideGlobalLoader();
-                    openSystemModal("⚠️ SYSTEM ERROR", "ไม่สามารถเชื่อมต่อฐานข้อมูลความปลอดภัยได้ กรุณาลองใหม่ในภายหลัง");
+                const result = await response.json();
+                hideGlobalLoader();
+                
+                if (response.ok && result.status !== "error") {
+                    openSystemModal("👑 ACCESS GRANTED", `ยืนยันสิทธิ์ VVIP สำเร็จ!\n\nยินดีต้อนรับสู่ประสบการณ์ระดับสูงสุดของ SIRINTHANATTH PRIME\nสิทธิ์ของคุณได้ผูกกับบัญชี LINE เรียบร้อยแล้ว`);
+                } else {
+                    openSystemModal("❌ ACCESS DENIED", result.msg || result.detail || "รหัสคำเชิญไม่ถูกต้องหรือถูกใช้งานไปแล้ว");
                 }
+            } catch (error) {
+                hideGlobalLoader();
+                openSystemModal("⚠️ SYSTEM ERROR", "ไม่สามารถเชื่อมต่อฐานข้อมูลความปลอดภัยได้ กรุณาลองใหม่ในภายหลัง");
             }
         }
 
@@ -442,8 +444,7 @@
             };
             
             try {
-                // ยิง API บันทึกลง Supabase (เชื่อมต่อกับ backend จริงที่เราอัปเกรดไว้)
-                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/agent/register`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/agent/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -467,17 +468,17 @@
             }
         }
 
-        // --- ระบบ UI เดิม ---
+        // --- ระบบ UI & Real-Time Sync ---
         async function fetchRealVipPaidCount() {
             try {
-                const response = await fetch(`${CLOUD_RUN_API_URL}/api/v1/stats/vip-quota`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/stats/vip-quota`, {
                     method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-cache'
                 });
-                if (!response.ok) throw new Error(`HTTP error!`);
+                if (!response.ok) return currentPaidCount;
                 const data = await response.json();
                 return parseInt(data.paid_count) || 0; 
             } catch (error) {
-                return currentPaidCount; 
+                return currentPaidCount; // Silent Fallback
             }
         }
 
@@ -529,8 +530,7 @@
                 });
             }
             
-            await initializeLiff();
-            await checkVvipInvite(); // ตรวจสอบรหัสเชิญหลังจาก LIFF พร้อม
+            await initializeLiffAndCheckVvip();
             
             await syncLiveQuota();
             setInterval(syncLiveQuota, 10000);
@@ -543,6 +543,7 @@
             toggleConsent();
         }
         function closeDisclaimer() { document.getElementById('disclaimerModal').style.display = 'none'; }
+        
         function toggleConsent() {
             const isChecked = document.getElementById('acceptCheck').checked;
             const btn = document.getElementById('confirmBtn');
@@ -551,6 +552,7 @@
             btn.style.color = isChecked ? '#000' : '#666'; 
             btn.style.cursor = isChecked ? 'pointer' : 'not-allowed';
         }
+        
         function proceedAfterConsent() {
             closeDisclaimer();
             document.getElementById('startAgentBtn').style.display = 'none'; 
