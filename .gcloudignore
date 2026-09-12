@@ -1,0 +1,12 @@
+.gcloudignore
+.git
+.github
+.gitignore
+venv/
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.env
+static/media/
+*.mp4
