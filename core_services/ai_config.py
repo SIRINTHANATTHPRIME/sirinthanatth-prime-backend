@@ -236,7 +236,6 @@ media_engine = Worker11MediaEngine()
 
 # 🛠️ แก้ไข: ใช้ Lazy Import เพื่อป้องกัน Circular Import Deadlock 100%
 try:
-    from core_services.swarm_dispatcher import swarm_hub
     if hasattr(swarm_hub, 'register'):
         swarm_hub.register("worker_11", media_engine) 
         swarm_hub.register("WORKER_11_MEDIA_ENGINE", media_engine) 

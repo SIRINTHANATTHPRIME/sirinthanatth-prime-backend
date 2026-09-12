@@ -136,14 +136,14 @@ async def add_security_headers(request: Request, call_next):
 # ==========================================
 # 📂 4. Static Files & Routers Mount
 # ==========================================
-# 🛠️ แก้ไข: บังคับสร้างโฟลเดอร์ก่อนเมานต์ ป้องกัน FastAPI แครชตอน Boot 100%
+# 🛠️ บังคับสร้างโฟลเดอร์ก่อน mount เสมอ ป้องกัน FastAPI Crash 100%
 required_directories = ["static", "static/audio", "static/images", "static/reports", "css", "assets", "templates"]
 for directory in required_directories:
     os.makedirs(directory, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-if os.path.exists("css"): app.mount("/css", StaticFiles(directory="css"), name="css")
-if os.path.exists("assets"): app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+app.mount("/css", StaticFiles(directory="css"), name="css")
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 try:
     from api.routes_stats import router as stats_router
@@ -151,7 +151,6 @@ try:
     logger.info("✅ [System]: Stats Router mounted successfully.")
 except Exception as e:
     logger.warning(f"⚠️ [System Warning]: Stats Router not found -> {e}")
-
 # ==========================================
 # ⚡ 5. ZERO-TIMEOUT LINE WEBHOOK (OIDC Upgrade)
 # ==========================================
